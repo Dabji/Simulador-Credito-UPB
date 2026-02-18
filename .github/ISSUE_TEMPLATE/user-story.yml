@@ -1,80 +1,201 @@
-name: "📖 Nueva Historia de Usuario"
-description: "Formulario estructurado para Historias de Usuario del Simulador UPB."
+name: "📖 Nueva Historia de Usuario / New User Story"
+description: "Formulario para Historias de Usuario del Simulador UPB / User Story form for UPB Simulator."
 title: "[US]: "
-labels: ["historia-de-usuario", "triage"]
+labels: ["user-story", "triage"]
 body:
+  # ── Header / Encabezado ──
   - type: markdown
     attributes:
       value: |
-        ### 📑 Formato de Historia de Usuario - Proyecto Integrador I
-  
+        ## 📑 Historia de Usuario / User Story
+        Complete todos los campos del formulario. / Fill in all the form fields.
+
+  # ── Sprint ──
   - type: dropdown
     id: sprint
     attributes:
-      label: Sprint
+      label: "Sprint"
+      description: "Seleccione el sprint / Select the sprint"
       options:
-        - Sprint 1 (LDAP & Auth)
-        - Sprint 2 (Motor Financiero)
-        - Sprint 3 (Interfaz & Reportes)
+        - "Sprint 1 (LDAP & Auth)"
+        - "Sprint 2 (Financial Engine / Motor Financiero)"
+        - "Sprint 3 (UI & Reports / Interfaz & Reportes)"
     validations:
       required: true
 
+  # ── SRS Requirement ID / ID del Requerimiento ──
   - type: input
     id: rf_id
     attributes:
-      label: ID del Requerimiento (SRS)
-      placeholder: "Ej: RF-02"
+      label: "Requirement ID (SRS) / ID del Requerimiento (SRS)"
+      description: "Identificador del requerimiento en el documento SRS. / Requirement identifier from the SRS document."
+      placeholder: "e.g. / Ej: RF-02"
     validations:
       required: true
 
+  # ── Priority / Prioridad ──
   - type: dropdown
-    id: prioridad
+    id: priority
     attributes:
-      label: Prioridad
+      label: "Priority / Prioridad"
+      description: "Nivel de prioridad de la historia. / Priority level of the story."
       options:
-        - Alta
-        - Media
-        - Baja
+        - "🔴 High / Alta"
+        - "🟡 Medium / Media"
+        - "🟢 Low / Baja"
     validations:
       required: true
 
-  - type: input
-    id: rol
+  # ── Related Epic / Épica Relacionada ──
+  - type: dropdown
+    id: epic
     attributes:
-      label: "Como..." (Rol de usuario)
-      placeholder: "Estudiante, Administrador o Invitado"
+      label: "Related Epic / Épica Relacionada"
+      description: "Épica a la que pertenece esta historia. / Epic this story belongs to."
+      options:
+        - "Authentication / Autenticación"
+        - "Financial Engine / Motor de Cálculo"
+        - "UI & Reports / Interfaz & Reportes"
+        - "Database / Base de Datos"
+        - "Other / Otra"
     validations:
       required: true
 
-  - type: textarea
-    id: quiero
-    attributes:
-      label: "Quiero..." (Acción)
-      placeholder: "Describa la funcionalidad deseada"
-    validations:
-      required: true
-
-  - type: textarea
-    id: para
-    attributes:
-      label: "Para..." (Valor de negocio)
-      placeholder: "Describa el beneficio esperado"
-    validations:
-      required: true
-
-  - type: textarea
-    id: criterios
-    attributes:
-      label: ✅ Criterios de Aceptación
-      description: Use una lista con guiones para los criterios.
-      placeholder: "- Debe validar correo @upb.edu.co\n- Debe retornar error 401 si falla."
-    validations:
-      required: true
-
+  # ── Affected Components / Componentes Afectados ──
   - type: checkboxes
-    id: validacion_sm
+    id: components
     attributes:
-      label: Validación de Scrum Master
+      label: "Affected Components / Componentes Afectados"
+      description: "Seleccione los componentes involucrados. / Select the involved components."
       options:
-        - label: Esta historia cumple con el estándar de calidad del proyecto.
+        - label: "Backend (Node.js)"
+        - label: "Frontend (React)"
+        - label: "Database (MySQL)"
+        - label: "API / Integration"
+
+  # ── Separator ──
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ### 🎯 Story Definition / Definición de la Historia
+
+  # ── Role / Rol ──
+  - type: dropdown
+    id: role
+    attributes:
+      label: "As a... / Como... (User Role / Rol de usuario)"
+      description: "Seleccione el rol del usuario. / Select the user role."
+      options:
+        - "Student / Estudiante"
+        - "Administrator / Administrador"
+        - "Guest / Invitado"
+    validations:
+      required: true
+
+  # ── I want / Quiero ──
+  - type: textarea
+    id: want
+    attributes:
+      label: "I want... / Quiero... (Action / Acción)"
+      description: "Describa la funcionalidad deseada. / Describe the desired functionality."
+      placeholder: "e.g. simulate a credit with French amortization / Ej: simular un crédito con amortización francesa"
+    validations:
+      required: true
+
+  # ── So that / Para ──
+  - type: textarea
+    id: so_that
+    attributes:
+      label: "So that... / Para... (Business Value / Valor de negocio)"
+      description: "Describa el beneficio esperado. / Describe the expected benefit."
+      placeholder: "e.g. I can compare payment options before applying / Ej: poder comparar opciones de pago antes de solicitar"
+    validations:
+      required: true
+
+  # ── Separator ──
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ### ✅ Acceptance Criteria / Criterios de Aceptación
+
+  # ── Criterion 1 ──
+  - type: input
+    id: criteria_1
+    attributes:
+      label: "Criterion 1 / Criterio 1"
+      placeholder: "e.g. The system must validate @upb.edu.co email / Ej: El sistema debe validar correo @upb.edu.co"
+    validations:
+      required: true
+
+  # ── Criterion 2 ──
+  - type: input
+    id: criteria_2
+    attributes:
+      label: "Criterion 2 / Criterio 2"
+      placeholder: "e.g. Show error if down payment < 20% / Ej: Mostrar error si cuota inicial < 20%"
+    validations:
+      required: true
+
+  # ── Criterion 3 ──
+  - type: input
+    id: criteria_3
+    attributes:
+      label: "Criterion 3 / Criterio 3"
+      placeholder: "e.g. Amortization table updates in real time / Ej: La tabla de amortización se actualiza en tiempo real"
+
+  # ── Criterion 4 (optional) ──
+  - type: input
+    id: criteria_4
+    attributes:
+      label: "Criterion 4 (optional) / Criterio 4 (opcional)"
+      placeholder: "Add another criterion if needed / Agregue otro criterio si es necesario"
+
+  # ── Criterion 5 (optional) ──
+  - type: input
+    id: criteria_5
+    attributes:
+      label: "Criterion 5 (optional) / Criterio 5 (opcional)"
+      placeholder: "Add another criterion if needed / Agregue otro criterio si es necesario"
+
+  # ── Separator ──
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ### 📎 Additional Info / Información Adicional
+
+  # ── References / Referencias ──
+  - type: textarea
+    id: references
+    attributes:
+      label: "References / Referencias"
+      description: "Links to SRS sections, Figma designs, etc. / Enlaces a secciones del SRS, diseños Figma, etc."
+      placeholder: "SRS Section 3.2 / Figma: https://..."
+      render: text
+
+  # ── Additional Notes / Notas adicionales ──
+  - type: textarea
+    id: notes
+    attributes:
+      label: "Additional Notes / Notas adicionales"
+      description: "Any extra context or details. / Cualquier contexto o detalle extra."
+      placeholder: "e.g. Depends on US-003 / Ej: Depende de la US-003"
+      render: text
+
+  # ── Separator ──
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ### 🔒 Quality Control / Control de Calidad
+
+  # ── Scrum Master Validation ──
+  - type: checkboxes
+    id: sm_validation
+    attributes:
+      label: "Scrum Master Validation / Validación del Scrum Master"
+      options:
+        - label: "This story meets the project quality standard. / Esta historia cumple con el estándar de calidad del proyecto."
           required: true

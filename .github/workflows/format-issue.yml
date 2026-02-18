@@ -1,60 +1,88 @@
-name: Formatear US como Tabla
+name: Format User Story / Formatear Historia de Usuario
 on:
   issues:
     types: [opened]
 
 jobs:
   format_issue:
-    if: contains(github.event.issue.labels.*.name, 'historia-de-usuario')
+    if: contains(github.event.issue.labels.*.name, 'user-story')
     runs-on: ubuntu-latest
     permissions:
       issues: write
     steps:
-      - name: Transformar Formulario a Tabla
-        uses: actions/github-script@v6
+      - name: Transform Form to Formatted Table
+        uses: actions/github-script@v7
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
             const issue = context.payload.issue;
             const body = issue.body;
-            
+
+            // Extract field values from the YAML form submission
             const extract = (header) => {
               const regex = new RegExp(`### ${header}\\s+([\\s\\S]*?)(?=###|$)`, 'i');
               const match = body.match(regex);
-              return match ? match[1].trim() : 'N/A';
+              return match ? match[1].trim().replace(/^_No response_$/i, '—') : '—';
             };
 
-            const sprint = extract('Sprint');
-            const rf_id = extract('ID del Requerimiento \\(SRS\\)');
-            const prioridad = extract('Prioridad');
-            const rol = extract('Como\\.\\.\\.');
-            const quiero = extract('Quiero\\.\\.\\.');
-            const para = extract('Para\\.\\.\\.');
-            const criterios = extract('✅ Criterios de Aceptación');
+            const sprint     = extract('Sprint');
+            const rfId       = extract('Requirement ID \\(SRS\\) \\/ ID del Requerimiento \\(SRS\\)');
+            const priority   = extract('Priority \\/ Prioridad');
+            const epic       = extract('Related Epic \\/ Épica Relacionada');
+            const components = extract('Affected Components \\/ Componentes Afectados');
+            const role       = extract('As a\\.\\.\\. \\/ Como\\.\\.\\.');
+            const want       = extract('I want\\.\\.\\. \\/ Quiero\\.\\.\\.');
+            const soThat     = extract('So that\\.\\.\\. \\/ Para\\.\\.\\.');
+            const c1         = extract('Criterion 1 \\/ Criterio 1');
+            const c2         = extract('Criterion 2 \\/ Criterio 2');
+            const c3         = extract('Criterion 3 \\/ Criterio 3');
+            const c4         = extract('Criterion 4 \\(optional\\) \\/ Criterio 4 \\(opcional\\)');
+            const c5         = extract('Criterion 5 \\(optional\\) \\/ Criterio 5 \\(opcional\\)');
+            const references = extract('References \\/ Referencias');
+            const notes      = extract('Additional Notes \\/ Notas adicionales');
 
-            const newBody = `
-            # 📖 Historia de Usuario: ${issue.title}
+            // Build criteria list
+            const criteria = [c1, c2, c3, c4, c5]
+              .filter(c => c && c !== '—')
+              .map((c, i) => `- [ ] ${c}`)
+              .join('\n');
 
-            | Campo | Detalle |
+            const date = new Date().toISOString().split('T')[0];
+
+            const newBody = `# 📖 User Story / Historia de Usuario: ${issue.title}
+
+            | Field / Campo | Detail / Detalle |
             | :--- | :--- |
             | **Sprint** | ${sprint} |
-            | **Ref. SRS** | ${rf_id} |
-            | **Prioridad** | ${prioridad} |
-            | **Rol** | ${rol} |
-            | **Fecha Creación** | ${new Date().toLocaleDateString()} |
+            | **SRS Ref.** | ${rfId} |
+            | **Priority / Prioridad** | ${priority} |
+            | **Epic / Épica** | ${epic} |
+            | **Components** | ${components} |
+            | **Role / Rol** | ${role} |
+            | **Created / Creado** | ${date} |
 
             ---
 
-            ### 🎯 Definición de la Historia
-            **Como** ${rol}, **quiero** ${quiero} **para** ${para}.
-
-            ### ✅ Criterios de Aceptación
-            ${criterios}
+            ### 🎯 Story Definition / Definición de la Historia
+            **As / Como** ${role}, **I want / quiero** ${want} **so that / para** ${soThat}.
 
             ---
-            **Control de Calidad (Scrum Master)**
-            - [x] Validado para desarrollo.
-            `;
+
+            ### ✅ Acceptance Criteria / Criterios de Aceptación
+            ${criteria}
+
+            ---
+
+            ### 📎 References / Referencias
+            ${references}
+
+            ### 📝 Notes / Notas
+            ${notes}
+
+            ---
+            **🔒 Quality Control / Control de Calidad (Scrum Master)**
+            - [x] Validated for development / Validado para desarrollo.
+            `.replace(/^            /gm, '');
 
             await github.rest.issues.update({
               owner: context.repo.owner,
