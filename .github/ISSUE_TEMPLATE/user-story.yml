@@ -1,0 +1,80 @@
+name: "📖 Nueva Historia de Usuario"
+description: "Formulario estructurado para Historias de Usuario del Simulador UPB."
+title: "[US]: "
+labels: ["historia-de-usuario", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### 📑 Formato de Historia de Usuario - Proyecto Integrador I
+  
+  - type: dropdown
+    id: sprint
+    attributes:
+      label: Sprint
+      options:
+        - Sprint 1 (LDAP & Auth)
+        - Sprint 2 (Motor Financiero)
+        - Sprint 3 (Interfaz & Reportes)
+    validations:
+      required: true
+
+  - type: input
+    id: rf_id
+    attributes:
+      label: ID del Requerimiento (SRS)
+      placeholder: "Ej: RF-02"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: prioridad
+    attributes:
+      label: Prioridad
+      options:
+        - Alta
+        - Media
+        - Baja
+    validations:
+      required: true
+
+  - type: input
+    id: rol
+    attributes:
+      label: "Como..." (Rol de usuario)
+      placeholder: "Estudiante, Administrador o Invitado"
+    validations:
+      required: true
+
+  - type: textarea
+    id: quiero
+    attributes:
+      label: "Quiero..." (Acción)
+      placeholder: "Describa la funcionalidad deseada"
+    validations:
+      required: true
+
+  - type: textarea
+    id: para
+    attributes:
+      label: "Para..." (Valor de negocio)
+      placeholder: "Describa el beneficio esperado"
+    validations:
+      required: true
+
+  - type: textarea
+    id: criterios
+    attributes:
+      label: ✅ Criterios de Aceptación
+      description: Use una lista con guiones para los criterios.
+      placeholder: "- Debe validar correo @upb.edu.co\n- Debe retornar error 401 si falla."
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: validacion_sm
+    attributes:
+      label: Validación de Scrum Master
+      options:
+        - label: Esta historia cumple con el estándar de calidad del proyecto.
+          required: true

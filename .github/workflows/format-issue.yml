@@ -1,0 +1,64 @@
+name: Formatear US como Tabla
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  format_issue:
+    if: contains(github.event.issue.labels.*.name, 'historia-de-usuario')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Transformar Formulario a Tabla
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const issue = context.payload.issue;
+            const body = issue.body;
+            
+            const extract = (header) => {
+              const regex = new RegExp(`### ${header}\\s+([\\s\\S]*?)(?=###|$)`, 'i');
+              const match = body.match(regex);
+              return match ? match[1].trim() : 'N/A';
+            };
+
+            const sprint = extract('Sprint');
+            const rf_id = extract('ID del Requerimiento \\(SRS\\)');
+            const prioridad = extract('Prioridad');
+            const rol = extract('Como\\.\\.\\.');
+            const quiero = extract('Quiero\\.\\.\\.');
+            const para = extract('Para\\.\\.\\.');
+            const criterios = extract('✅ Criterios de Aceptación');
+
+            const newBody = `
+            # 📖 Historia de Usuario: ${issue.title}
+
+            | Campo | Detalle |
+            | :--- | :--- |
+            | **Sprint** | ${sprint} |
+            | **Ref. SRS** | ${rf_id} |
+            | **Prioridad** | ${prioridad} |
+            | **Rol** | ${rol} |
+            | **Fecha Creación** | ${new Date().toLocaleDateString()} |
+
+            ---
+
+            ### 🎯 Definición de la Historia
+            **Como** ${rol}, **quiero** ${quiero} **para** ${para}.
+
+            ### ✅ Criterios de Aceptación
+            ${criterios}
+
+            ---
+            **Control de Calidad (Scrum Master)**
+            - [x] Validado para desarrollo.
+            `;
+
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: newBody
+            });
