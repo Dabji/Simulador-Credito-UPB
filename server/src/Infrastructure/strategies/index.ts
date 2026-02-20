@@ -1,0 +1,1 @@
+export { FrenchAmortizationStrategy } from './FrenchAmortizationStrategy';

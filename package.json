@@ -1,0 +1,20 @@
+{
+  "name": "simulador-credito-upb",
+  "version": "1.0.0",
+  "description": "Simulador de Crédito Educativo UPB - Monorepo",
+  "private": true,
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev:server": "npm run dev --workspace=server",
+    "dev:client": "npm run dev --workspace=client",
+    "build:server": "npm run build --workspace=server",
+    "build:client": "npm run build --workspace=client",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}
