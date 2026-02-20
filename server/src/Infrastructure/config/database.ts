@@ -5,23 +5,34 @@
 // ============================================================
 
 import { Sequelize } from 'sequelize';
+import fs from 'fs';
+import path from 'path';
 import dotenv from 'dotenv';
 
-dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
 
 export class Database {
   private static instance: Database | null = null;
   private readonly sequelize: Sequelize;
 
   private constructor() {
+    const useSSL = process.env['DB_SSL'] === 'true';
+
+    // Leer certificado CA para conexiones SSL (Aiven Cloud)
+    const caPath = path.resolve(__dirname, '../../../certs/ca.pem');
+    const dialectOptions = useSSL && fs.existsSync(caPath)
+      ? { ssl: { ca: fs.readFileSync(caPath, 'utf8'), rejectUnauthorized: true } }
+      : undefined;
+
     this.sequelize = new Sequelize({
       dialect: 'mysql',
       host: process.env['DB_HOST'] ?? 'localhost',
       port: Number(process.env['DB_PORT'] ?? 3306),
-      database: process.env['DB_NAME'] ?? 'simulador_credito_upb',
-      username: process.env['DB_USER'] ?? 'root',
+      database: process.env['DB_NAME'] ?? 'defaultdb',
+      username: process.env['DB_USER'] ?? 'avnadmin',
       password: process.env['DB_PASSWORD'] ?? '',
       logging: process.env['NODE_ENV'] === 'development' ? console.log : false,
+      dialectOptions,
       pool: {
         max: 10,
         min: 0,

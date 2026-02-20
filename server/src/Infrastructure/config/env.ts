@@ -4,21 +4,23 @@
 // ============================================================
 
 import { z } from 'zod';
+import path from 'path';
 import dotenv from 'dotenv';
 
-dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
 
 const envSchema = z.object({
   // Server
   PORT: z.string().default('3000'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 
-  // Database
+  // Database (Aiven Cloud)
   DB_HOST: z.string().default('localhost'),
-  DB_PORT: z.string().default('3306'),
-  DB_NAME: z.string().default('simulador_credito_upb'),
-  DB_USER: z.string().default('root'),
+  DB_PORT: z.string().default('13557'),
+  DB_NAME: z.string().default('defaultdb'),
+  DB_USER: z.string().default('avnadmin'),
   DB_PASSWORD: z.string().default(''),
+  DB_SSL: z.string().default('true'),
 
   // LDAP
   LDAP_URL: z.string().url().optional(),
