@@ -1,39 +1,35 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 /* ── Custom UPB Theme ────────────────────────────────────── */
-@layer base {
-  :root {
-    --color-upb-green: #006838;
-    --color-upb-gold: #FFD100;
-    --color-upb-dark: #1a1a2e;
-  }
+@theme {
+  --color-upb-green: #006838;
+  --color-upb-gold: #FFD100;
+  --color-upb-dark: #1a1a2e;
+}
 
+@layer base {
   body {
     @apply bg-gray-50 text-gray-900 antialiased;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 }
 
-@layer components {
-  .btn-primary {
-    @apply bg-green-700 hover:bg-green-800 text-white font-semibold 
-           py-2 px-4 rounded-lg transition-colors duration-200;
-  }
+@utility btn-primary {
+  @apply bg-green-700 hover:bg-green-800 text-white font-semibold
+         py-2 px-4 rounded-lg transition-colors duration-200;
+}
 
-  .btn-secondary {
-    @apply bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold 
-           py-2 px-4 rounded-lg transition-colors duration-200;
-  }
+@utility btn-secondary {
+  @apply bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-semibold
+         py-2 px-4 rounded-lg transition-colors duration-200;
+}
 
-  .card {
-    @apply bg-white rounded-xl shadow-md p-6 border border-gray-100;
-  }
+@utility card {
+  @apply bg-white rounded-xl shadow-md p-6 border border-gray-100;
+}
 
-  .input-field {
-    @apply w-full px-4 py-2 border border-gray-300 rounded-lg 
-           focus:ring-2 focus:ring-green-500 focus:border-transparent
-           outline-none transition-all duration-200;
-  }
+@utility input-field {
+  @apply w-full px-4 py-2 border border-gray-300 rounded-lg
+         focus:ring-2 focus:ring-green-500 focus:border-transparent
+         outline-none transition-all duration-200;
 }
