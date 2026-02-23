@@ -53,7 +53,7 @@ function validateEnv(): EnvConfig {
 
   if (!result.success) {
     console.error('❌ Variables de entorno inválidas:');
-    console.error(JSON.stringify(result.error.issues, null, 2));
+    console.error(result.error.format());
     process.exit(1);
   }
 

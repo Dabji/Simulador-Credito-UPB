@@ -106,16 +106,34 @@ export const swaggerDocument: JsonObject = {
                 schema: {
                   type: 'object',
                   properties: {
-                    token: { type: 'string' },
                     user: {
                       type: 'object',
                       properties: {
                         id: { type: 'string' },
-                        username: { type: 'string' },
+                        email: { type: 'string', format: 'email' },
+                        firstName: { type: 'string' },
+                        lastName: { type: 'string' },
+                        identificationNumber: { type: 'string' },
                         role: { type: 'string' },
+                        isActive: { type: 'boolean' },
+                        createdAt: { type: 'string', format: 'date-time' },
+                        updatedAt: { type: 'string', format: 'date-time' },
                       },
+                      required: [
+                        'id',
+                        'email',
+                        'firstName',
+                        'lastName',
+                        'identificationNumber',
+                        'role',
+                        'isActive',
+                        'createdAt',
+                        'updatedAt',
+                      ],
                     },
+                    token: { type: 'string' },
                   },
+                  required: ['user', 'token'],
                 },
               },
             },
@@ -178,6 +196,18 @@ export const swaggerDocument: JsonObject = {
         responses: {
           '200': {
             description: 'Simulación exitosa',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    credit: { $ref: '#/components/schemas/Credit' },
+                    schedule: { $ref: '#/components/schemas/AmortizationSchedule' },
+                  },
+                  required: ['credit', 'schedule'],
+                },
+              },
+            },
           },
           '401': {
             description: 'No autorizado',
@@ -281,6 +311,53 @@ export const swaggerDocument: JsonObject = {
           },
         },
         required: ['error'],
+      },
+      Credit: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          userId: { type: 'string', format: 'uuid' },
+          amount: { type: 'number', example: 10000000 },
+          annualRate: { type: 'number', example: 0.125 },
+          termMonths: { type: 'integer', example: 36 },
+          amortizationType: {
+            type: 'string',
+            enum: ['FRENCH'],
+            example: 'FRENCH',
+          },
+          monthlyPayment: { type: 'number', example: 334819.45 },
+          totalInterest: { type: 'number', example: 2053500.2 },
+          totalPayment: { type: 'number', example: 12053500.2 },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+        },
+        required: [
+          'id',
+          'userId',
+          'amount',
+          'annualRate',
+          'termMonths',
+          'amortizationType',
+          'monthlyPayment',
+          'totalInterest',
+          'totalPayment',
+          'createdAt',
+          'updatedAt',
+        ],
+      },
+      AmortizationSchedule: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            period: { type: 'integer', example: 1 },
+            payment: { type: 'number', example: 334819.45 },
+            interest: { type: 'number', example: 104166.67 },
+            principal: { type: 'number', example: 230652.78 },
+            balance: { type: 'number', example: 9769347.22 },
+          },
+          required: ['period', 'payment', 'interest', 'principal', 'balance'],
+        },
       },
     },
   },
