@@ -3,7 +3,11 @@ import type { FormEvent } from 'react';
 import { api } from '../../../shared/services/api';
 
 interface SimulationResult {
-  credit: Record<string, unknown>;
+  credit: {
+    monthlyPayment: number;
+    totalInterest: number;
+    totalPayment: number;
+  };
   schedule: Array<{
     period: number;
     payment: number;
@@ -68,7 +72,7 @@ export function SimulatorPage() {
       <div className="card max-w-lg">
         <form onSubmit={handleSimulate} className="space-y-4">
           {error && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
+            <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm" role="alert">
               {error}
             </div>
           )}
@@ -123,7 +127,7 @@ export function SimulatorPage() {
           <button
             type="submit"
             disabled={loading}
-            className="btn-primary w-full disabled:opacity-50"
+            className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Calculando...' : 'Simular Crédito'}
           </button>
@@ -134,23 +138,23 @@ export function SimulatorPage() {
       {result && (
         <div className="space-y-6">
           {/* Resumen */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="card text-center">
               <p className="text-sm text-gray-500">Cuota Mensual</p>
-              <p className="text-2xl font-bold text-green-700">
-                {formatCurrency(result.credit['monthlyPayment'] as number)}
+              <p className="text-2xl font-bold text-upb-green">
+                {formatCurrency(result.credit.monthlyPayment)}
               </p>
             </div>
             <div className="card text-center">
               <p className="text-sm text-gray-500">Total Intereses</p>
-              <p className="text-2xl font-bold text-yellow-600">
-                {formatCurrency(result.credit['totalInterest'] as number)}
+              <p className="text-2xl font-bold text-upb-gold-dark">
+                {formatCurrency(result.credit.totalInterest)}
               </p>
             </div>
             <div className="card text-center">
               <p className="text-sm text-gray-500">Total a Pagar</p>
               <p className="text-2xl font-bold text-gray-800">
-                {formatCurrency(result.credit['totalPayment'] as number)}
+                {formatCurrency(result.credit.totalPayment)}
               </p>
             </div>
           </div>
@@ -162,24 +166,24 @@ export function SimulatorPage() {
             </h2>
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b-2 border-green-200">
-                  <th className="text-left py-2">Período</th>
-                  <th className="text-right py-2">Cuota</th>
-                  <th className="text-right py-2">Interés</th>
-                  <th className="text-right py-2">Capital</th>
-                  <th className="text-right py-2">Saldo</th>
+                <tr className="border-b-2 border-upb-green/20">
+                  <th className="text-left py-2 px-2">Período</th>
+                  <th className="text-right py-2 px-2">Cuota</th>
+                  <th className="text-right py-2 px-2">Interés</th>
+                  <th className="text-right py-2 px-2">Capital</th>
+                  <th className="text-right py-2 px-2">Saldo</th>
                 </tr>
               </thead>
               <tbody>
                 {result.schedule.map((row) => (
-                  <tr key={row.period} className="border-b border-gray-100">
-                    <td className="py-2">{row.period}</td>
-                    <td className="text-right">{formatCurrency(row.payment)}</td>
-                    <td className="text-right">{formatCurrency(row.interest)}</td>
-                    <td className="text-right">
+                  <tr key={row.period} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-2 px-2">{row.period}</td>
+                    <td className="text-right py-2 px-2">{formatCurrency(row.payment)}</td>
+                    <td className="text-right py-2 px-2">{formatCurrency(row.interest)}</td>
+                    <td className="text-right py-2 px-2">
                       {formatCurrency(row.principal)}
                     </td>
-                    <td className="text-right">{formatCurrency(row.balance)}</td>
+                    <td className="text-right py-2 px-2">{formatCurrency(row.balance)}</td>
                   </tr>
                 ))}
               </tbody>
