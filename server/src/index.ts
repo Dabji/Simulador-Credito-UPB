@@ -1,5 +1,7 @@
 // ============================================================
-// Entry Point: Server
+// Punto de entrada: Servidor
+// Inicializa la base de datos, crea la app Express y
+// levanta el servidor HTTP en el puerto configurado.
 // ============================================================
 
 import { createApp } from './Infrastructure/http/app';
@@ -8,7 +10,7 @@ import { env } from './Infrastructure/config/env';
 
 async function bootstrap(): Promise<void> {
   try {
-    // 1. Conectar a MySQL
+    // 1. Conectar a MySQL (Singleton)
     const db = Database.getInstance();
     await db.connect();
 
@@ -24,6 +26,7 @@ async function bootstrap(): Promise<void> {
     app.listen(port, () => {
       console.log(`🚀 Servidor corriendo en http://localhost:${port}`);
       console.log(`📋 Health check: http://localhost:${port}/api/health`);
+      console.log(`📚 Swagger docs: http://localhost:${port}/api/docs`);
       console.log(`🌍 Entorno: ${env.NODE_ENV}`);
     });
   } catch (error) {
