@@ -39,12 +39,12 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-800 to-green-950">
-      <div className="card w-full max-w-md mx-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-upb-green to-green-950 px-4">
+      <div className="card w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-green-800">UPB</h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className="text-3xl font-bold text-upb-green">UPB</h1>
+          <p className="text-gray-500 mt-2">
             Simulador de Crédito Educativo
           </p>
         </div>
@@ -52,7 +52,7 @@ export function LoginPage() {
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
+            <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm" role="alert">
               {error}
             </div>
           )}
@@ -71,6 +71,7 @@ export function LoginPage() {
               onChange={(e) => setUsername(e.target.value)}
               className="input-field"
               placeholder="usuario@upb.edu.co"
+              autoComplete="username"
               required
             />
           </div>
@@ -89,6 +90,7 @@ export function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               className="input-field"
               placeholder="••••••••"
+              autoComplete="current-password"
               required
             />
           </div>
