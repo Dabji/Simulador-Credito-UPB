@@ -1,37 +1,45 @@
 // ============================================================
-// Singleton Pattern: Database Connection
+// Patrón Singleton: Conexión a Base de Datos
 // Garantiza una única instancia de conexión a MySQL usando
-// Sequelize. Thread-safe mediante el patrón Singleton.
+// Sequelize. Consume las variables de entorno ya validadas.
 // ============================================================
 
 import { Sequelize } from 'sequelize';
 import fs from 'fs';
 import path from 'path';
-import dotenv from 'dotenv';
-
-dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
+import { env } from './env';
 
 export class Database {
   private static instance: Database | null = null;
   private readonly sequelize: Sequelize;
 
+  /**
+   * Constructor privado — solo se invoca desde getInstance().
+   * Configura Sequelize usando las variables validadas de `env`.
+   */
   private constructor() {
-    const useSSL = process.env['DB_SSL'] === 'true';
+    const useSSL = env.DB_SSL === 'true';
 
     // Leer certificado CA para conexiones SSL (Aiven Cloud)
     const caPath = path.resolve(__dirname, '../../../certs/ca.pem');
-    const dialectOptions = useSSL && fs.existsSync(caPath)
-      ? { ssl: { ca: fs.readFileSync(caPath, 'utf8'), rejectUnauthorized: true } }
-      : undefined;
+    const dialectOptions =
+      useSSL && fs.existsSync(caPath)
+        ? {
+            ssl: {
+              ca: fs.readFileSync(caPath, 'utf8'),
+              rejectUnauthorized: true,
+            },
+          }
+        : undefined;
 
     this.sequelize = new Sequelize({
       dialect: 'mysql',
-      host: process.env['DB_HOST'] ?? 'localhost',
-      port: Number(process.env['DB_PORT'] ?? 3306),
-      database: process.env['DB_NAME'] ?? 'defaultdb',
-      username: process.env['DB_USER'] ?? 'avnadmin',
-      password: process.env['DB_PASSWORD'] ?? '',
-      logging: process.env['NODE_ENV'] === 'development' ? console.log : false,
+      host: env.DB_HOST,
+      port: Number(env.DB_PORT),
+      database: env.DB_NAME,
+      username: env.DB_USER,
+      password: env.DB_PASSWORD,
+      logging: env.NODE_ENV === 'development' ? console.log : false,
       dialectOptions,
       pool: {
         max: 10,
@@ -46,7 +54,8 @@ export class Database {
     });
   }
 
-  // ── Singleton accessor ──────────────────────────────────────
+  // ── Accessor Singleton ──────────────────────────────────────
+  /** Retorna la instancia única de Database, creándola si no existe */
   static getInstance(): Database {
     if (!Database.instance) {
       Database.instance = new Database();
@@ -54,11 +63,14 @@ export class Database {
     return Database.instance;
   }
 
-  // ── Public API ──────────────────────────────────────────────
+  // ── API Pública ─────────────────────────────────────────────
+
+  /** Retorna la instancia de Sequelize subyacente */
   getSequelize(): Sequelize {
     return this.sequelize;
   }
 
+  /** Autentica la conexión contra MySQL */
   async connect(): Promise<void> {
     try {
       await this.sequelize.authenticate();
@@ -69,12 +81,14 @@ export class Database {
     }
   }
 
+  /** Cierra la conexión y destruye la instancia Singleton */
   async disconnect(): Promise<void> {
     await this.sequelize.close();
     Database.instance = null;
     console.log('🔌 Conexión a MySQL cerrada.');
   }
 
+  /** Sincroniza los modelos Sequelize con la base de datos */
   async sync(force = false): Promise<void> {
     await this.sequelize.sync({ force });
     console.log('📦 Modelos sincronizados con la base de datos.');
