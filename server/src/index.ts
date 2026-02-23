@@ -10,13 +10,18 @@ import { env } from './Infrastructure/config/env';
 
 async function bootstrap(): Promise<void> {
   try {
-    // 1. Conectar a MySQL (Singleton)
-    const db = Database.getInstance();
-    await db.connect();
+    // 1. Intentar conectar a MySQL (Singleton)
+    try {
+      const db = Database.getInstance();
+      await db.connect();
 
-    // 2. Sincronizar modelos (en producción usar migraciones)
-    if (env.NODE_ENV === 'development') {
-      await db.sync(false);
+      // 2. Sincronizar modelos (en producción usar migraciones)
+      if (env.NODE_ENV === 'development') {
+        await db.sync(false);
+      }
+    } catch (dbError) {
+      console.warn('⚠️  No se pudo conectar a MySQL. El servidor arrancará sin BD.');
+      console.warn('   Detalle:', dbError instanceof Error ? dbError.message : dbError);
     }
 
     // 3. Iniciar servidor Express
