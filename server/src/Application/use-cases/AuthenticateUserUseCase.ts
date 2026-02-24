@@ -5,6 +5,7 @@
 
 import { User, UserRole } from '../../Core/entities/User';
 import type { IUserRepository } from '../../Core/repositories/IUserRepository';
+import { UnauthorizedError } from '../../Core/errors/AppError';
 
 // Interfaz para el servicio de autenticación (LDAP, local, etc.)
 export interface IAuthService {
@@ -49,7 +50,7 @@ export class AuthenticateUserUseCase {
     );
 
     if (!ldapUser) {
-      throw new Error('Credenciales inválidas');
+      throw new UnauthorizedError('Credenciales inválidas');
     }
 
     // 2. Buscar o crear el usuario en la BD local

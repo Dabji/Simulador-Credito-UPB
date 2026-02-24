@@ -3,6 +3,7 @@
 // ============================================================
 
 import type { Request, Response, NextFunction } from 'express';
+import { UnauthorizedError } from '../../../Core/errors/AppError';
 import { JwtTokenService } from '../../auth/JwtTokenService';
 
 const tokenService = new JwtTokenService();
@@ -13,13 +14,13 @@ export interface AuthenticatedRequest extends Request {
 
 export function authGuard(
   req: AuthenticatedRequest,
-  res: Response,
+  _res: Response,
   next: NextFunction,
 ): void {
   const authHeader = req.headers.authorization;
 
   if (!authHeader?.startsWith('Bearer ')) {
-    res.status(401).json({ error: 'Token de autenticación requerido' });
+    next(new UnauthorizedError('Token de autenticación requerido'));
     return;
   }
 
@@ -27,7 +28,7 @@ export function authGuard(
   const payload = tokenService.verify(token);
 
   if (!payload) {
-    res.status(401).json({ error: 'Token inválido o expirado' });
+    next(new UnauthorizedError('Token inválido o expirado'));
     return;
   }
 
