@@ -11,7 +11,7 @@ import type {
   IAmortizationStrategy,
   AmortizationResult,
 } from '../../Core/strategies/IAmortizationStrategy';
-import { BadRequestError } from '../../Core/errors/AppError';
+import { BadRequestError } from '../../Core/errors';
 
 export interface SimulateCreditInput {
   userId: string;

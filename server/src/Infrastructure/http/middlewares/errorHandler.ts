@@ -9,7 +9,7 @@
 // ============================================================
 
 import type { Request, Response, NextFunction } from 'express';
-import { AppError } from '../../../Core/errors/AppError';
+import { AppError } from '../../../Core/errors';
 import { logger } from '../../logger';
 import { env } from '../../config/env';
 
@@ -84,7 +84,7 @@ export function errorHandler(
   // ── Error no operacional (bug / inesperado) ─────────────
   logger.error('Error inesperado no controlado', {
     message: err.message,
-    stack: err.stack,
+    ...(process.env.NODE_ENV !== 'production' && { stack: err.stack }),
     method: req.method,
     path: req.originalUrl,
   });

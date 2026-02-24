@@ -5,7 +5,7 @@
 
 import { FinancialParameter } from '../../Core/entities/FinancialParameter';
 import type { IFinancialParameterRepository } from '../../Core/repositories/IFinancialParameterRepository';
-import { NotFoundError } from '../../Core/errors/AppError';
+import { NotFoundError } from '../../Core/errors';
 
 export interface UpdateParameterInput {
   id: string;

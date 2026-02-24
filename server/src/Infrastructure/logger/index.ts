@@ -27,13 +27,33 @@ const SENSITIVE_KEYS: ReadonlySet<string> = new Set([
 const REDACTED = '[REDACTED]';
 
 /**
+ * Regex que detecta valores sensibles embebidos en strings
+ * (ej.: "password=abc123" o "token: xyz").
+ */
+const SENSITIVE_PATTERN = new RegExp(
+  `(${[...SENSITIVE_KEYS].join('|')})[\\s]*[=:][\\s]*[^\\s,;]+`,
+  'gi',
+);
+
+/**
+ * Censura valores sensibles que aparezcan dentro de un string.
+ */
+function redactSensitiveString(str: string): string {
+  return str.replace(SENSITIVE_PATTERN, (match) => {
+    const sep = match.includes('=') ? '=' : ':';
+    const key = match.slice(0, match.indexOf(sep)).trim();
+    return `${key}${sep}${REDACTED}`;
+  });
+}
+
+/**
  * Redacta recursivamente valores de campos sensibles en un objeto.
  * Opera sobre una copia para no mutar el original.
  */
 function redactSensitiveData(data: unknown): unknown {
   if (data === null || data === undefined) return data;
 
-  if (typeof data === 'string') return data;
+  if (typeof data === 'string') return redactSensitiveString(data);
 
   if (Array.isArray(data)) {
     return data.map((item) => redactSensitiveData(item));
@@ -58,6 +78,11 @@ function redactSensitiveData(data: unknown): unknown {
  * Formato personalizado que redacta datos sensibles antes de serializar.
  */
 const redactFormat = winston.format((info) => {
+  // Redactar valores sensibles dentro del mensaje
+  if (typeof info.message === 'string') {
+    info.message = redactSensitiveString(info.message);
+  }
+
   if (info.metadata && typeof info.metadata === 'object') {
     info.metadata = redactSensitiveData(info.metadata);
   }
@@ -96,7 +121,7 @@ const fileFormat = winston.format.combine(
 );
 
 // ── Directorio de logs ──────────────────────────────────────
-const LOG_DIR = path.resolve(__dirname, '../../../../logs');
+const LOG_DIR = path.resolve(process.cwd(), 'logs');
 fs.mkdirSync(LOG_DIR, { recursive: true });
 
 // ── Transportes ─────────────────────────────────────────────

@@ -7,7 +7,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { SimulateCreditUseCase } from '../../../Application/use-cases/SimulateCreditUseCase';
 import { AmortizationType } from '../../../Core/entities/Credit';
 import type { IAmortizationStrategy } from '../../../Core/strategies/IAmortizationStrategy';
-import { AppError, BadRequestError } from '../../../Core/errors/AppError';
+import { AppError, BadRequestError } from '../../../Core/errors';
 import { SequelizeCreditRepository } from '../../persistence/repositories/SequelizeCreditRepository';
 import { FrenchAmortizationStrategy } from '../../strategies/FrenchAmortizationStrategy';
 import { logger } from '../../logger';

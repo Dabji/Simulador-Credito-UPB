@@ -5,7 +5,7 @@
 
 import { User, UserRole } from '../../Core/entities/User';
 import type { IUserRepository } from '../../Core/repositories/IUserRepository';
-import { UnauthorizedError } from '../../Core/errors/AppError';
+import { UnauthorizedError } from '../../Core/errors';
 
 // Interfaz para el servicio de autenticación (LDAP, local, etc.)
 export interface IAuthService {

@@ -5,7 +5,7 @@
 import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import { AuthenticateUserUseCase } from '../../../Application/use-cases/AuthenticateUserUseCase';
-import { AppError, BadRequestError, UnauthorizedError } from '../../../Core/errors/AppError';
+import { AppError, BadRequestError, UnauthorizedError } from '../../../Core/errors';
 import { SequelizeUserRepository } from '../../persistence/repositories/SequelizeUserRepository';
 import { LdapAuthService } from '../../auth/LdapAuthService';
 import { JwtTokenService } from '../../auth/JwtTokenService';
