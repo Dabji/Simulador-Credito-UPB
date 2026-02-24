@@ -5,7 +5,7 @@
 import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import { AuthenticateUserUseCase } from '../../../Application/use-cases/AuthenticateUserUseCase';
-import { BadRequestError, UnauthorizedError } from '../../../Core/errors/AppError';
+import { AppError, BadRequestError, UnauthorizedError } from '../../../Core/errors/AppError';
 import { SequelizeUserRepository } from '../../persistence/repositories/SequelizeUserRepository';
 import { LdapAuthService } from '../../auth/LdapAuthService';
 import { JwtTokenService } from '../../auth/JwtTokenService';
@@ -46,13 +46,11 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction): P
       token: result.token,
     });
   } catch (error) {
-    if (error instanceof BadRequestError) {
+    if (error instanceof AppError) {
       next(error);
-      return;
+    } else {
+      next(new UnauthorizedError('Error de autenticación'));
     }
-    next(new UnauthorizedError(
-      error instanceof Error ? error.message : 'Error de autenticación',
-    ));
   }
 });
 

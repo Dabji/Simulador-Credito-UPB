@@ -6,6 +6,7 @@
 
 import winston from 'winston';
 import path from 'path';
+import fs from 'fs';
 import { env } from '../config/env';
 
 // ── Campos sensibles que se deben redactar ──────────────────
@@ -60,6 +61,15 @@ const redactFormat = winston.format((info) => {
   if (info.metadata && typeof info.metadata === 'object') {
     info.metadata = redactSensitiveData(info.metadata);
   }
+
+  // Redactar claves de nivel superior (excluyendo campos estándar de Winston)
+  const STANDARD_KEYS = new Set(['level', 'message', 'timestamp']);
+  for (const key of Object.keys(info)) {
+    if (!STANDARD_KEYS.has(key) && typeof info[key] === 'object' && info[key] !== null) {
+      (info as Record<string, unknown>)[key] = redactSensitiveData(info[key]);
+    }
+  }
+
   return info;
 });
 
@@ -87,6 +97,7 @@ const fileFormat = winston.format.combine(
 
 // ── Directorio de logs ──────────────────────────────────────
 const LOG_DIR = path.resolve(__dirname, '../../../../logs');
+fs.mkdirSync(LOG_DIR, { recursive: true });
 
 // ── Transportes ─────────────────────────────────────────────
 const transports: winston.transport[] = [
@@ -130,6 +141,13 @@ export const logger = winston.createLogger({
 logger.exceptions.handle(
   new winston.transports.File({
     filename: path.join(LOG_DIR, 'exceptions.log'),
+    format: fileFormat,
+  }),
+);
+
+logger.rejections.handle(
+  new winston.transports.File({
+    filename: path.join(LOG_DIR, 'rejections.log'),
     format: fileFormat,
   }),
 );

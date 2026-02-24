@@ -75,7 +75,6 @@ export function errorHandler(
     const response = buildErrorResponse(
       err.message,
       err.statusCode,
-      err.stack,
     );
 
     res.status(err.statusCode).json(response);

@@ -7,7 +7,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { SimulateCreditUseCase } from '../../../Application/use-cases/SimulateCreditUseCase';
 import { AmortizationType } from '../../../Core/entities/Credit';
 import type { IAmortizationStrategy } from '../../../Core/strategies/IAmortizationStrategy';
-import { BadRequestError } from '../../../Core/errors/AppError';
+import { AppError, BadRequestError } from '../../../Core/errors/AppError';
 import { SequelizeCreditRepository } from '../../persistence/repositories/SequelizeCreditRepository';
 import { FrenchAmortizationStrategy } from '../../strategies/FrenchAmortizationStrategy';
 import { logger } from '../../logger';
@@ -51,10 +51,11 @@ router.post('/simulate', async (req: Request, res: Response, next: NextFunction)
       schedule: result.schedule,
     });
   } catch (error) {
-    next(error instanceof Error
-      ? new BadRequestError(error.message)
-      : new BadRequestError('Error al simular crédito'),
-    );
+    if (error instanceof AppError) {
+      next(error);
+    } else {
+      next(new BadRequestError('Error al simular crédito'));
+    }
   }
 });
 

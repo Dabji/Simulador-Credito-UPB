@@ -24,7 +24,7 @@ async function bootstrap(): Promise<void> {
       }
     } catch (dbError) {
       logger.warn('No se pudo conectar a MySQL. El servidor arrancará sin BD.', {
-        detail: dbError instanceof Error ? dbError.message : String(dbError),
+        detail: dbError instanceof Error ? dbError.message : JSON.stringify(dbError),
       });
     }
 
