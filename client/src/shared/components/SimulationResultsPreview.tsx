@@ -1,36 +1,109 @@
 /* ─────────────────────────────────────────────────────────────
    COMPONENTE: SimulationResultsPreview
-   Sección de resultados con datos estáticos de placeholder.
-   Muestra el diseño completo (cards, gráfico, tabla, observaciones,
-   botones) sin ningún cálculo real — pendiente integración backend.
+   Muestra resultados REALES de la simulación (HU-13).
+   Recibe summary + schedule del backend vía props.
+   Mantiene diseño visual idéntico al prototipo original.
 ───────────────────────────────────────────────────────────────── */
 
 import { useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { SummaryCard } from './SummaryCard';
 import { DonutChartPlaceholder } from './DonutChartPlaceholder';
+import { saveSimulation } from '../services/api';
+import type { SimulationSummaryDTO, SimulationInputDTO } from '../services/api';
 
-/* Filas de ejemplo para la tabla de amortización */
-const PLACEHOLDER_ROWS = [
-  { period: 1, date: '01/03/2026', initialBalance: '$ 5.360.000', principal: '$ 1.292.000', interest: '$ 48.240', payment: '$ 1.340.240', finalBalance: '$ 4.068.000' },
-  { period: 2, date: '01/04/2026', initialBalance: '$ 4.068.000', principal: '$ 1.303.000', interest: '$ 36.612', payment: '$ 1.339.612', finalBalance: '$ 2.765.000' },
-  { period: 3, date: '01/05/2026', initialBalance: '$ 2.765.000', principal: '$ 1.315.000', interest: '$ 24.885', payment: '$ 1.339.885', finalBalance: '$ 1.450.000' },
-  { period: 4, date: '01/06/2026', initialBalance: '$ 1.450.000', principal: '$ 1.437.000', interest: '$ 13.050', payment: '$ 1.450.050', finalBalance: '$ 0' },
-];
+/* ── Tipo compartido para el diálogo de confirmación modal ──────────────
+   Mismo patrón que en SimulationForm para consistencia visual.
+   Se usa para: Guardar simulación y Nueva simulación.
+──────────────────────────────────────────────────────────────── */
+interface ConfirmDialogState {
+  open: boolean;
+  title: string;
+  message: string;
+  confirmLabel: string;
+  confirmColor: string;
+  onConfirm: () => void;
+}
+
+const DIALOG_CLOSED: ConfirmDialogState = {
+  open: false, title: '', message: '',
+  confirmLabel: 'Confirmar', confirmColor: '#A85BFF',
+  onConfirm: () => undefined,
+};
+
+/* Formatea un número como COP sin decimales */
+function cop(value: number): string {
+  return new Intl.NumberFormat('es-CO', {
+    style: 'currency', currency: 'COP', minimumFractionDigits: 0,
+  }).format(value);
+}
+
+/* Formatea fecha ISO "YYYY-MM-DD" a "DD/MM/YYYY" */
+function fmtDate(iso: string): string {
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
 
 interface SimulationResultsPreviewProps {
+  summary: SimulationSummaryDTO;
+  input: SimulationInputDTO;
   onNewSimulation: () => void;
 }
 
-export function SimulationResultsPreview({ onNewSimulation }: SimulationResultsPreviewProps) {
+export function SimulationResultsPreview({ summary, input, onNewSimulation }: SimulationResultsPreviewProps) {
   const [starred, setStarred]           = useState(false);
-  const [observations, setObservations] = useState('');
-  const [toastVisible, setToastVisible] = useState(false);
+  const [observations, setObservations] = useState(input.observations ?? '');
+  const [toastMsg, setToastMsg]         = useState<string | null>(null);
+  const [saving, setSaving]             = useState(false);
+  /* Diálogo de confirmación — reutilizable para Guardar y Nueva simulación */
+  const [dialog, setDialog]             = useState<ConfirmDialogState>(DIALOG_CLOSED);
 
-  /* Muestra toast "pendiente backend" al intentar guardar */
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 3000);
+  };
+
+  /* Abre el diálogo modal con opciones personalizadas */
+  const confirm = (
+    title: string,
+    message: string,
+    onConfirm: () => void,
+    confirmLabel = 'Confirmar',
+    confirmColor = '#A85BFF',
+  ) => setDialog({ open: true, title, message, onConfirm, confirmLabel, confirmColor });
+
+  const closeDialog = () => setDialog(DIALOG_CLOSED);
+
+  /* Guardar simulación — pide confirmación antes de enviar al backend */
   const handleSave = () => {
-    setToastVisible(true);
-    setTimeout(() => setToastVisible(false), 3000);
+    if (!starred) {
+      showToast('Marca la estrella ★ para poder guardar la simulación.');
+      return;
+    }
+    confirm(
+      'Guardar simulación',
+      '¿Deseas guardar esta simulación? Se registrará con las observaciones y el estado actual.',
+      async () => {
+        setSaving(true);
+        const res = await saveSimulation({ ...input, starred: true, observations });
+        setSaving(false);
+        if (res.error) { showToast(`Error: ${res.error}`); return; }
+        showToast(`Simulación guardada (ID: ${res.data?.id ?? '—'}) ✅`);
+      },
+      'Guardar',
+      '#A85BFF',
+    );
+  };
+
+  /* Nueva simulación — pide confirmación antes de descartar resultados */
+  const handleNewSimulation = () => {
+    confirm(
+      'Nueva simulación',
+      '¿Deseas comenzar una nueva simulación? Los resultados actuales no se guardarán a menos que los hayas guardado primero.',
+      onNewSimulation,
+      'Sí, nueva simulación',
+      '#C0D901',
+    );
   };
 
   return (
@@ -45,7 +118,7 @@ export function SimulationResultsPreview({ onNewSimulation }: SimulationResultsP
           Resumen de la Simulación
         </h2>
         <p className="text-white/70 text-xs mt-1">
-          Vista previa — valores de ejemplo (pendiente integración backend)
+          Periodo {summary.academicPeriod} · {summary.numberOfPayments} cuota(s) · ID: {summary.id.slice(0, 8)}
         </p>
       </div>
 
@@ -53,20 +126,20 @@ export function SimulationResultsPreview({ onNewSimulation }: SimulationResultsP
         className="bg-white rounded-b-2xl border border-gray-200 p-5 sm:p-7"
         style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}
       >
-        {/* Fila 1 de cards de resumen */}
+        {/* Fila 1 de cards de resumen — datos reales */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
-          <SummaryCard label="Valor matrícula"  value="$ 6.700.000" />
-          <SummaryCard label="Cuota inicial"    value="$ 1.340.000" />
-          <SummaryCard label="Total financiado" value="$ 5.360.000" color="purple" />
-          <SummaryCard label="Modalidad"        value="Con intereses (0.9% mensual)" />
+          <SummaryCard label="Valor matrícula"  value={cop(summary.tuitionGross)} />
+          <SummaryCard label="Cuota inicial"    value={`${cop(summary.initialPayment)} (${summary.initialPaymentPct}%)`} />
+          <SummaryCard label="Total financiado" value={cop(summary.financedValue)} color="purple" />
+          <SummaryCard label="Modalidad"        value={summary.interestMode === 'con_interes' ? 'Con intereses (0.9% M.V.)' : 'Sin intereses (0%)'} />
         </div>
 
-        {/* Fila 2 de cards de resumen */}
+        {/* Fila 2 de cards de resumen — datos reales */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
-          <SummaryCard label="Número de cuotas"    value="4" />
-          <SummaryCard label="Valor cuota estimada" value="$ 1.342.447" />
-          <SummaryCard label="Total a pagar"        value="$ 5.369.787" />
-          <SummaryCard label="Total intereses"      value="$ 122.475" color="red" />
+          <SummaryCard label="Número de cuotas"     value={String(summary.numberOfPayments)} />
+          <SummaryCard label="Valor cuota estimada" value={cop(summary.periodicPayment)} />
+          <SummaryCard label="Total a pagar"        value={cop(summary.totalPaid)} />
+          <SummaryCard label="Total intereses"      value={cop(summary.totalInterest)} color="red" />
         </div>
 
         {/* Gráfico de distribución Capital vs Intereses */}
@@ -75,7 +148,11 @@ export function SimulationResultsPreview({ onNewSimulation }: SimulationResultsP
             Distribución Capital vs Intereses
           </h3>
           <div className="flex items-center justify-center">
-            <DonutChartPlaceholder />
+            <DonutChartPlaceholder
+              capitalPct={summary.totalPaid > 0
+                ? Math.round((summary.financedValue / summary.totalPaid) * 100)
+                : 100}
+            />
           </div>
         </div>
 
@@ -101,19 +178,19 @@ export function SimulationResultsPreview({ onNewSimulation }: SimulationResultsP
                 </tr>
               </thead>
               <tbody>
-                {PLACEHOLDER_ROWS.map((row, idx) => (
+                {summary.schedule.map((row, idx) => (
                   <tr
                     key={row.period}
                     className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
                     style={{ borderBottom: '1px solid #f0f0f0' }}
                   >
                     <td className="px-4 py-2.5 text-gray-700">{row.period}</td>
-                    <td className="px-4 py-2.5 text-gray-700">{row.date}</td>
-                    <td className="text-right px-4 py-2.5 text-gray-700">{row.initialBalance}</td>
-                    <td className="text-right px-4 py-2.5 font-medium" style={{ color: '#A85BFF' }}>{row.principal}</td>
-                    <td className="text-right px-4 py-2.5 font-medium" style={{ color: '#E7000B' }}>{row.interest}</td>
-                    <td className="text-right px-4 py-2.5 text-gray-700">{row.payment}</td>
-                    <td className="text-right px-4 py-2.5 text-gray-700">{row.finalBalance}</td>
+                    <td className="px-4 py-2.5 text-gray-700">{fmtDate(row.date)}</td>
+                    <td className="text-right px-4 py-2.5 text-gray-700">{cop(row.initialBalance)}</td>
+                    <td className="text-right px-4 py-2.5 font-medium" style={{ color: '#A85BFF' }}>{cop(row.principal)}</td>
+                    <td className="text-right px-4 py-2.5 font-medium" style={{ color: '#E7000B' }}>{cop(row.interest)}</td>
+                    <td className="text-right px-4 py-2.5 text-gray-700">{cop(row.payment)}</td>
+                    <td className="text-right px-4 py-2.5 text-gray-700">{cop(row.finalBalance)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -140,29 +217,40 @@ export function SimulationResultsPreview({ onNewSimulation }: SimulationResultsP
           />
         </div>
 
+        {/* Nota informativa de matrícula neta */}
+        {summary.scholarshipPct > 0 && (
+          <div
+            className="rounded-xl px-4 py-2 mb-4 text-xs"
+            style={{ backgroundColor: '#F0FFF4', border: '1px solid #BBF7D0', color: '#166534' }}
+          >
+            Matrícula neta aplicada: {cop(summary.tuitionNet)} (beca/descuento {summary.scholarshipPct}% aplicada)
+          </div>
+        )}
+
         {/* Botones de acción */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
 
-          {/* Guardar simulación — muestra toast al hacer clic */}
+          {/* Guardar simulación — pide confirmación vía diálogo modal */}
           <div className="relative">
             <button
               type="button"
               onClick={handleSave}
-              className="px-7 py-2.5 rounded-full text-white font-bold text-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 hover:brightness-110 active:scale-95"
+              disabled={saving}
+              className="px-7 py-2.5 rounded-full text-white font-bold text-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 hover:brightness-110 active:scale-95 disabled:opacity-60"
               style={{ backgroundColor: '#A85BFF', boxShadow: '0 4px 14px rgba(168,91,255,0.25)' }}
             >
-              Guardar simulación
+              {saving ? 'Guardando...' : 'Guardar simulación'}
             </button>
 
-            {/* Toast de pendiente backend */}
-            {toastVisible && (
+            {/* Toast de feedback flotante */}
+            {toastMsg && (
               <div
                 className="absolute left-1/2 mt-2 whitespace-nowrap rounded-lg bg-gray-900 px-3 py-1.5 text-xs text-white"
                 style={{ transform: 'translateX(-50%)', top: '100%', zIndex: 10 }}
                 role="status"
                 aria-live="polite"
               >
-                Pendiente integración con backend
+                {toastMsg}
               </div>
             )}
           </div>
@@ -181,10 +269,10 @@ export function SimulationResultsPreview({ onNewSimulation }: SimulationResultsP
             ★
           </button>
 
-          {/* Nueva simulación */}
+          {/* Nueva simulación — pide confirmación antes de descartar resultados */}
           <button
             type="button"
-            onClick={onNewSimulation}
+            onClick={handleNewSimulation}
             className="px-7 py-2.5 rounded-full font-bold text-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 active:scale-95 hover:brightness-105"
             style={{ backgroundColor: '#C0D901', color: '#1a1a1a' }}
           >
@@ -198,9 +286,58 @@ export function SimulationResultsPreview({ onNewSimulation }: SimulationResultsP
           style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1E40AF' }}
           role="note"
         >
-          <strong>Nota:</strong> Esta es una simulación referencial con datos de ejemplo. Los valores finales pueden variar según políticas institucionales vigentes. El botón de la estrella permite destacar esta simulación antes de guardarla.
+          <strong>Nota:</strong> Los valores calculados son referenciales y pueden variar según políticas institucionales vigentes. Destaca la simulación con ★ antes de guardarla.
         </div>
       </div>
+
+      {/* ─────────────────────────────────────────────────────────────────
+           Diálogo de confirmación modal — para Guardar y Nueva simulación.
+           Renderizado fuera del contenido desplazable para no afectar layout.
+           El backdrop oscuro cierra el diálogo al hacer clic fuera.
+      ───────────────────────────────────────────────────────────────── */}
+      {dialog.open && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="results-confirm-dialog-title"
+          onClick={closeDialog}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl p-7 mx-4 w-full max-w-sm"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3
+              id="results-confirm-dialog-title"
+              className="text-base font-bold text-gray-900 mb-2"
+            >
+              {dialog.title}
+            </h3>
+            <p className="text-sm text-gray-600 mb-6 leading-relaxed">{dialog.message}</p>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={closeDialog}
+                className="px-5 py-2 rounded-full text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-all focus:outline-none focus:ring-2 focus:ring-gray-400"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => { dialog.onConfirm(); closeDialog(); }}
+                className="px-5 py-2 rounded-full text-sm font-bold text-white transition-all focus:outline-none focus:ring-2 focus:ring-offset-2"
+                style={{
+                  backgroundColor: dialog.confirmColor,
+                  color: dialog.confirmColor === '#C0D901' ? '#1a1a1a' : 'white',
+                }}
+              >
+                {dialog.confirmLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
