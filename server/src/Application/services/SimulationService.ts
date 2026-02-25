@@ -29,8 +29,8 @@ export class SimulationService {
       throw new Error('Los estudiantes nuevos no pueden tener beca o descuento.');
     }
 
-    // Regla: cuota inicial mínima 20%
-    InitialPaymentRule.validatePct(input.initialPaymentPct);
+    // Regla: cuota inicial mínima dinámica (15% upbTech, 20% pregrado/posgrado)
+    InitialPaymentRule.validatePct(input.initialPaymentPct, input.educationLevel);
 
     // Regla: tuición bruta debe ser positiva
     if (input.tuitionGross <= 0) {
@@ -53,14 +53,18 @@ export class SimulationService {
     }
 
     // Regla: número de cuotas no puede superar el máximo del periodo
-    const maxInstallments = this.paramService.getMaxInstallments(
+    const maxByPeriod = this.paramService.getMaxInstallments(
       input.academicPeriod,
       input.firstPaymentMonth,
     );
+    // Tope adicional por modalidad: sin_interes → máx 3, con_interes → máx 6
+    const capByMode     = input.interestMode === 'sin_interes' ? 3 : 6;
+    const maxInstallments = Math.min(maxByPeriod, capByMode);
     if (input.numberOfPayments < 1 || input.numberOfPayments > maxInstallments) {
       throw new Error(
         `El número de cuotas debe estar entre 1 y ${maxInstallments} ` +
-        `para el periodo ${input.academicPeriod} comenzando en mes ${input.firstPaymentMonth}.`,
+        `para el periodo ${input.academicPeriod} comenzando en mes ${input.firstPaymentMonth} ` +
+        `con modalidad ${input.interestMode}.`,
       );
     }
 
