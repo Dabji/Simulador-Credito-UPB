@@ -1,7 +1,8 @@
 // ============================================================
-// Express Routes: Simulator
+// Express Routes: Simulator (protected — behind authGuard)
 // ============================================================
 
+import { randomUUID } from 'node:crypto';
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { SimulateCreditUseCase } from '../../../Application/use-cases/SimulateCreditUseCase';
@@ -106,7 +107,7 @@ router.post('/save', (req: Request, res: Response): void => {
       return;
     }
 
-    const id = crypto.randomUUID();
+    const id = randomUUID();
     savedSimulations.set(id, { ...input, id });
 
     res.json({ id, message: 'Simulación guardada exitosamente.' });
