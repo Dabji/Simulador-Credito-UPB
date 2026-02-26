@@ -8,6 +8,7 @@ import express from 'express';
 import cors from 'cors';
 import swaggerUi from 'swagger-ui-express';
 import { authRoutes, simulatorRoutes, adminRoutes } from './routes';
+import simulatorPublicRoutes from './routes/simulatorPublicRoutes';
 import { errorHandler } from './middlewares/errorHandler';
 import { authGuard } from './middlewares/authGuard';
 import { swaggerDocument } from './swagger';
@@ -35,6 +36,10 @@ export function createApp(): express.Application {
 
   // ── Rutas Públicas ────────────────────────────────────────
   app.use('/api/auth', authRoutes);
+
+  // API: endpoints públicos temporales HU-13 (sin auth, sin DB)
+  // Se montan ANTES del authGuard para que /preview y /save sean accesibles.
+  app.use('/api/simulator', simulatorPublicRoutes);
 
   // ── Rutas Protegidas ──────────────────────────────────────
   app.use('/api/simulator', authGuard, simulatorRoutes);
