@@ -2,51 +2,98 @@
 // Middleware: Manejo Global de Errores
 // Captura todos los errores no controlados y devuelve
 // respuestas JSON estructuradas con tipado estricto.
+//
+// - AppError (isOperational): devuelve statusCode y message.
+// - Error no operacional: registra con logger y devuelve 500
+//   genérico para no filtrar detalles de implementación.
 // ============================================================
 
 import type { Request, Response, NextFunction } from 'express';
+import { AppError } from '../../../Core/errors';
+import { logger } from '../../logger';
 import { env } from '../../config/env';
 
 /**
- * Interfaz para errores de aplicación con código HTTP.
- * Permite distinguir errores de negocio de errores inesperados.
+ * Estructura estándar de respuesta de error para toda la API.
  */
-export interface AppError {
-  status: number;
-  message: string;
+export interface ErrorResponse {
+  success: false;
+  error: {
+    message: string;
+    statusCode: number;
+    /** Solo presente en desarrollo para depuración */
+    stack?: string;
+  };
 }
 
 /**
- * Estructura estándar de respuesta de error.
+ * Construye la respuesta de error estándar.
  */
-export interface ErrorResponse {
-  error: string;
-  stack?: string;
+function buildErrorResponse(
+  message: string,
+  statusCode: number,
+  stack?: string,
+): ErrorResponse {
+  const response: ErrorResponse = {
+    success: false,
+    error: {
+      message,
+      statusCode,
+    },
+  };
+
+  if (env.NODE_ENV === 'development' && stack) {
+    response.error.stack = stack;
+  }
+
+  return response;
 }
 
 /**
  * Middleware de Express para capturar errores globales.
- * - Errores con propiedad `status` se tratan como errores de negocio.
- * - Otros errores se devuelven con HTTP 500.
- * - En desarrollo se incluye el stack trace.
+ *
+ * - Si el error es una instancia de `AppError` (operacional),
+ *   devuelve el `statusCode` y `message` correspondientes.
+ * - Si es un error inesperado (no operacional), lo registra
+ *   con el logger como error grave y devuelve un mensaje
+ *   genérico HTTP 500 al cliente.
  */
 export function errorHandler(
   err: Error | AppError,
-  _req: Request,
+  req: Request,
   res: Response,
   _next: NextFunction,
 ): void {
-  const status = 'status' in err ? err.status : 500;
-  const message = err.message || 'Error interno del servidor';
+  // ── Error operacional (controlado / de negocio) ─────────
+  if (err instanceof AppError && err.isOperational) {
+    logger.warn(err.message, {
+      statusCode: err.statusCode,
+      method: req.method,
+      path: req.originalUrl,
+    });
 
-  console.error(`[ERROR] ${status} - ${message}`);
+    const response = buildErrorResponse(
+      err.message,
+      err.statusCode,
+    );
 
-  const response: ErrorResponse = {
-    error: message,
-    ...(env.NODE_ENV === 'development' && {
-      stack: err instanceof Error ? err.stack : undefined,
-    }),
-  };
+    res.status(err.statusCode).json(response);
+    return;
+  }
 
-  res.status(status).json(response);
+  // ── Error no operacional (bug / inesperado) ─────────────
+  logger.error('Error inesperado no controlado', {
+    message: err.message,
+    ...(process.env.NODE_ENV !== 'production' && { stack: err.stack }),
+    method: req.method,
+    path: req.originalUrl,
+  });
+
+  const response = buildErrorResponse(
+    'Error interno del servidor',
+    500,
+    err instanceof Error ? err.stack : undefined,
+  );
+
+  res.status(500).json(response);
 }

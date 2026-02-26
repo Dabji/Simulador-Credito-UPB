@@ -5,6 +5,7 @@
 
 import { FinancialParameter } from '../../Core/entities/FinancialParameter';
 import type { IFinancialParameterRepository } from '../../Core/repositories/IFinancialParameterRepository';
+import { NotFoundError } from '../../Core/errors';
 
 export interface UpdateParameterInput {
   id: string;
@@ -28,7 +29,7 @@ export class ManageFinancialParametersUseCase {
   async update(input: UpdateParameterInput): Promise<FinancialParameter> {
     const existing = await this.paramRepository.findById(input.id);
     if (!existing) {
-      throw new Error(`Parámetro financiero no encontrado: ${input.id}`);
+      throw new NotFoundError(`Parámetro financiero ${input.id}`);
     }
 
     const updated = FinancialParameter.create({
