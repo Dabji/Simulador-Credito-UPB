@@ -11,6 +11,7 @@ import type {
   IAmortizationStrategy,
   AmortizationResult,
 } from '../../Core/strategies/IAmortizationStrategy';
+import { BadRequestError } from '../../Core/errors';
 
 export interface SimulateCreditInput {
   userId: string;
@@ -35,7 +36,7 @@ export class SimulateCreditUseCase {
     // 1. Seleccionar la estrategia de amortización
     const strategy = this.strategies.get(input.amortizationType);
     if (!strategy) {
-      throw new Error(
+      throw new BadRequestError(
         `Tipo de amortización no soportado: ${input.amortizationType}`,
       );
     }

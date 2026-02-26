@@ -7,6 +7,7 @@
 import { createApp } from './Infrastructure/http/app';
 import { Database } from './Infrastructure/config/database';
 import { env } from './Infrastructure/config/env';
+import { logger } from './Infrastructure/logger';
 
 async function bootstrap(): Promise<void> {
   try {
@@ -14,14 +15,17 @@ async function bootstrap(): Promise<void> {
     try {
       const db = Database.getInstance();
       await db.connect();
+      logger.info('Conexión a MySQL establecida correctamente');
 
       // 2. Sincronizar modelos (en producción usar migraciones)
       if (env.NODE_ENV === 'development') {
         await db.sync(false);
+        logger.info('Modelos sincronizados (modo desarrollo)');
       }
     } catch (dbError) {
-      console.warn('⚠️  No se pudo conectar a MySQL. El servidor arrancará sin BD.');
-      console.warn('   Detalle:', dbError instanceof Error ? dbError.message : dbError);
+      logger.warn('No se pudo conectar a MySQL. El servidor arrancará sin BD.', {
+        detail: dbError instanceof Error ? dbError.message : JSON.stringify(dbError),
+      });
     }
 
     // 3. Iniciar servidor Express
@@ -29,13 +33,18 @@ async function bootstrap(): Promise<void> {
     const port = Number(env.PORT);
 
     app.listen(port, () => {
-      console.log(`🚀 Servidor corriendo en http://localhost:${port}`);
-      console.log(`📋 Health check: http://localhost:${port}/api/health`);
-      console.log(`📚 Swagger docs: http://localhost:${port}/api/docs`);
-      console.log(`🌍 Entorno: ${env.NODE_ENV}`);
+      logger.info(`Servidor corriendo en http://localhost:${port}`, {
+        port,
+        environment: env.NODE_ENV,
+        healthCheck: `http://localhost:${port}/api/health`,
+        swagger: `http://localhost:${port}/api/docs`,
+      });
     });
   } catch (error) {
-    console.error('❌ Error al iniciar el servidor:', error);
+    logger.error('Error fatal al iniciar el servidor', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     process.exit(1);
   }
 }

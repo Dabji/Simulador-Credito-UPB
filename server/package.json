@@ -18,6 +18,7 @@
     "passport-ldapauth": "^3.0.1",
     "sequelize": "^6.37.7",
     "swagger-ui-express": "^5.0.1",
+    "winston": "^3.19.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
