@@ -10,7 +10,8 @@ import swaggerUi from 'swagger-ui-express';
 import { authRoutes, simulatorRoutes, adminRoutes } from './routes';
 import simulatorPublicRoutes from './routes/simulatorPublicRoutes';
 import { errorHandler } from './middlewares/errorHandler';
-import { authGuard } from './middlewares/authGuard';
+import { authGuard }   from './middlewares/authGuard';
+import { adminGuard }  from './middlewares/adminGuard';
 import { swaggerDocument } from './swagger';
 
 /**
@@ -43,7 +44,8 @@ export function createApp(): express.Application {
 
   // ── Rutas Protegidas ──────────────────────────────────────
   app.use('/api/simulator', authGuard, simulatorRoutes);
-  app.use('/api/admin', authGuard, adminRoutes);
+  // /api/admin: requiere JWT válido (authGuard) + role === "admin" (adminGuard → 403 si no)
+  app.use('/api/admin', authGuard, adminGuard, adminRoutes);
 
   // ── Manejador de Errores (siempre al final) ───────────────
   app.use(errorHandler);

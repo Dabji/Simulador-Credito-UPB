@@ -30,8 +30,8 @@ const ACADEMIC_PROGRAMS = [
 
 export function UpbFooter() {
   return (
-    <footer style={{ backgroundColor: 'rgba(20,20,20,0.97)' }} className="text-gray-400 mt-12">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-8">
+    <footer style={{ backgroundColor: 'rgba(20,20,20,0.97)' }} className="text-gray-400 w-full">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-8">
 
         {/* Grid de dos columnas: contacto + oferta académica */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
