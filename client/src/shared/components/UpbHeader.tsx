@@ -34,7 +34,7 @@ export function UpbHeader({ profileOpen, onToggleProfile }: UpbHeaderProps) {
 
   return (
     <header className="w-full bg-white" style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.10)' }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-10 2xl:px-16">
         <div className="flex items-center justify-between h-[68px]">
 
           {/* Logo institucional */}

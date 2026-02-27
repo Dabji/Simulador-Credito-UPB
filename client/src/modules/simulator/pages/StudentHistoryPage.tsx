@@ -24,7 +24,7 @@ export function StudentHistoryPage() {
         onToggleProfile={() => setProfileOpen((p) => !p)}
       />
 
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 flex flex-col items-center justify-center gap-6">
+      <main className="flex-1 w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-10 2xl:px-16 py-16 flex flex-col items-center justify-center gap-6">
         <h1 className="text-3xl font-black text-gray-900">
           Historial de Simulaciones
         </h1>

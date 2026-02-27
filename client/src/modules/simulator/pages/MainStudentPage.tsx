@@ -88,7 +88,7 @@ export function MainStudentPage() {
           style={{ backgroundColor: '#161616' }}
           className="w-full"
         >
-          <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-10">
+          <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-10 2xl:px-16 pt-8 pb-10">
 
             {/* Título */}
             <h1 className="text-2xl sm:text-4xl font-black text-white mb-6 leading-tight">
@@ -143,7 +143,7 @@ export function MainStudentPage() {
           aria-label="Nuestras Sedes"
           className="w-full bg-white py-7 sm:py-10"
         >
-          <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-10 2xl:px-16">
             <h2 className="text-xl sm:text-2xl font-black text-gray-900 mb-4">
               Nuestras Sedes
             </h2>
@@ -202,33 +202,49 @@ export function MainStudentPage() {
           aria-label="Alternativas Financieras"
           className="w-full bg-white pt-6 pb-8 sm:pt-8 sm:pb-10"
         >
-          <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-10 2xl:px-16">
 
-            {/* Banner verde con imagen circular — fiel al mockup */}
+            {/* Banner verde — imagen full-height con arco curvo fiel al mockup */}
             <div
               className="relative w-full rounded-2xl overflow-hidden"
-              style={{ backgroundColor: '#C0D901', height: '180px' }}
+              style={{ backgroundColor: '#C0D901', height: 'clamp(160px, 22vw, 220px)' }}
             >
               {/* Círculo decorativo derecho */}
               <div
-                className="absolute -right-12 top-1/2 -translate-y-1/2 w-56 h-56 rounded-full pointer-events-none"
-                style={{ backgroundColor: '#a8bf00' }}
+                className="absolute rounded-full pointer-events-none"
+                style={{
+                  backgroundColor: '#a8bf00',
+                  width: 'clamp(120px, 16vw, 200px)',
+                  height: 'clamp(120px, 16vw, 200px)',
+                  right: '-3%',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                }}
                 aria-hidden="true"
               />
-              {/* Imagen de la estudiante, centrada verticalmente dentro del banner */}
+              {/*
+                Imagen a full-height del banner.
+                clip-path: ellipse crea el arco curvo que "muerde" desde la derecha,
+                dando el efecto de recorte circular/curvo del mockup.
+                object-fit: cover + object-position: left center → muestra el rostro sin deformar.
+              */}
               <div
-                className="absolute top-0 bottom-0 left-4 sm:left-6 flex items-center z-10"
+                className="absolute inset-y-0 left-0 z-10"
+                style={{ width: 'clamp(180px, 38%, 420px)' }}
               >
-                <div
-                  style={{ width: '160px', height: '160px', borderRadius: '50%', overflow: 'hidden', border: '4px solid #C0D901' }}
-                >
-                  <img
-                    src={AltFinImg}
-                    alt="Estudiante UPB — Alternativas Financieras"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '50% 0%' }}
-                    loading="lazy"
-                  />
-                </div>
+                <img
+                  src={AltFinImg}
+                  alt="Estudiante UPB — Alternativas Financieras"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    objectPosition: 'left center',
+                    clipPath: 'ellipse(78% 100% at 60% 50%)',
+                    display: 'block',
+                  }}
+                  loading="lazy"
+                />
               </div>
             </div>
 
@@ -261,7 +277,7 @@ export function MainStudentPage() {
           className="w-full py-7 sm:py-10 bg-white"
           style={{ borderTop: '1px solid #ebebeb' }}
         >
-          <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-10 2xl:px-16">
             <h2 className="text-xl sm:text-2xl font-black text-gray-900 mb-4">
               Creer, imaginar y crear
             </h2>
