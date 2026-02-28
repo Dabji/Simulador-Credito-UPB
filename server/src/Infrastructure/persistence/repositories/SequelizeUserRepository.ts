@@ -4,6 +4,7 @@
 // ============================================================
 
 import { User, UserRole } from '../../../Core/entities/User';
+import type { DocumentType } from '../../../Core/entities/User';
 import type { IUserRepository } from '../../../Core/repositories/IUserRepository';
 import { UserModel } from '../models/UserModel';
 
@@ -20,7 +21,14 @@ export class SequelizeUserRepository implements IUserRepository {
 
   async findByIdentification(identificationNumber: string): Promise<User | null> {
     const row = await UserModel.findOne({
-      where: { identification_number: identificationNumber },
+      where: { document_number: identificationNumber },
+    });
+    return row ? this.toDomain(row) : null;
+  }
+
+  async findByDocument(documentNumber: string): Promise<User | null> {
+    const row = await UserModel.findOne({
+      where: { document_number: documentNumber },
     });
     return row ? this.toDomain(row) : null;
   }
@@ -36,9 +44,13 @@ export class SequelizeUserRepository implements IUserRepository {
       email: user.email,
       first_name: user.firstName,
       last_name: user.lastName,
-      identification_number: user.identificationNumber,
+      document_type: user.documentType ?? null,
+      document_number: user.identificationNumber,
+      password: user.password ?? null,
+      phone: user.phone ?? null,
       role: user.role,
       is_active: user.isActive,
+      terms_accepted_at: user.termsAcceptedAt ?? null,
     });
     return this.toDomain(row);
   }
@@ -49,9 +61,13 @@ export class SequelizeUserRepository implements IUserRepository {
         email: user.email,
         first_name: user.firstName,
         last_name: user.lastName,
-        identification_number: user.identificationNumber,
+        document_type: user.documentType ?? null,
+        document_number: user.identificationNumber,
+        password: user.password ?? null,
+        phone: user.phone ?? null,
         role: user.role,
         is_active: user.isActive,
+        terms_accepted_at: user.termsAcceptedAt ?? null,
       },
       { where: { id: user.id } },
     );
@@ -71,9 +87,13 @@ export class SequelizeUserRepository implements IUserRepository {
       email: row.email,
       firstName: row.first_name,
       lastName: row.last_name,
-      identificationNumber: row.identification_number,
+      documentType: (row.document_type ?? undefined) as DocumentType | undefined,
+      identificationNumber: row.document_number,
+      password: row.password ?? undefined,
+      phone: row.phone ?? undefined,
       role: row.role as UserRole,
       isActive: row.is_active,
+      termsAcceptedAt: row.terms_accepted_at,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     });
