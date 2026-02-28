@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import LogoUpb from '@/assets/Images/LogoUpb.png';
+import { UpbFooter } from '@/shared/components/UpbFooter';
 
 // ── Component ───────────────────────────────────────────────────────────────
 
@@ -51,6 +52,9 @@ export function PasswordUpdatedPage() {
           Regresar a inicio
         </Link>
       </div>
+
+      {/* ── Footer institucional ── */}
+      <UpbFooter className="mt-0" />
     </div>
   );
 }

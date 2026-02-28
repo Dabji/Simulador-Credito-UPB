@@ -21,7 +21,7 @@ export function App() {
         <Route path="/password-updated" element={<PasswordUpdatedPage />} />
 
         {/* Página principal: formulario de simulación */}
-        <Route path="/" element={<Navigate to="/simulator/create" replace />} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/simulator/create" element={<CreateSimulationPage />} />
 
         {/* Rutas con Layout */}
@@ -31,7 +31,7 @@ export function App() {
         </Route>
 
         {/* Catch-all */}
-        <Route path="*" element={<Navigate to="/simulator/create" replace />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
   );

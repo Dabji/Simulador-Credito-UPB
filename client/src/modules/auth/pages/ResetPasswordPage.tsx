@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { resetPassword } from '@/shared/services/api';
 import LogoUpb from '@/assets/Images/LogoUpb.png';
+import { UpbFooter } from '@/shared/components/UpbFooter';
 
 // ── Zod Schema ──────────────────────────────────────────────────────────────
 
@@ -36,8 +38,11 @@ const LABEL_CLASS = 'block text-sm font-semibold text-gray-700 mb-1.5';
 
 export function ResetPasswordPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('token') ?? '';
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [apiError, setApiError] = useState('');
 
   const {
     register,
@@ -48,9 +53,11 @@ export function ResetPasswordPage() {
     defaultValues: { password: '', confirmPassword: '' },
   });
 
-  const onSubmit = async (_data: ResetPasswordFormData) => {
-    // Simula carga de 1 segundo
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+  const onSubmit = async (data: ResetPasswordFormData) => {
+    setApiError('');
+    if (!token) { setApiError('Token de recuperación no encontrado en la URL.'); return; }
+    const result = await resetPassword({ token, password: data.password, confirmPassword: data.confirmPassword });
+    if (result.error) { setApiError(result.error); return; }
     navigate('/password-updated');
   };
 
@@ -91,6 +98,17 @@ export function ResetPasswordPage() {
         <h1 className="text-4xl sm:text-5xl font-black italic text-gray-900 mb-10 text-center">
           Crear Nueva Contraseña
         </h1>
+
+        {/* Error de API */}
+        {apiError && (
+          <div
+            className="rounded-xl px-4 py-3 mb-5 text-sm font-medium w-full max-w-3xl"
+            style={{ backgroundColor: '#FEF2F2', border: '1px solid #FECACA', color: '#B91C1C' }}
+            role="alert"
+          >
+            {apiError}
+          </div>
+        )}
 
         {/* Formulario + Recuadro de reglas */}
         <div className="w-full max-w-3xl flex flex-col lg:flex-row gap-8 items-start">
@@ -187,6 +205,9 @@ export function ResetPasswordPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Footer institucional ── */}
+      <UpbFooter className="mt-0" />
     </div>
   );
 }

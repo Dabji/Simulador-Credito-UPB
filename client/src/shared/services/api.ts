@@ -152,6 +152,32 @@ export async function loginUser(
   });
 }
 
+// ── Funciones de recuperación de contraseña ──────────────────────────────
+
+export async function forgotPassword(
+  email: string,
+): Promise<ApiResponse<{ message: string }>> {
+  return request<{ message: string }>('/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export interface ResetPasswordPayload {
+  readonly token: string;
+  readonly password: string;
+  readonly confirmPassword: string;
+}
+
+export async function resetPassword(
+  data: ResetPasswordPayload,
+): Promise<ApiResponse<{ message: string }>> {
+  return request<{ message: string }>('/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
 // ── Funciones de simulación (HU-13) ──────────────────────────────────────
 
 // Envía los datos del formulario al backend y retorna el resumen calculado

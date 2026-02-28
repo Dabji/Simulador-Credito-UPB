@@ -8,6 +8,10 @@ import { AuthenticateUserUseCase } from '../../../Application/use-cases/Authenti
 import { RegisterUserUseCase } from '../../../Application/use-cases/RegisterUserUseCase';
 import { RegisterUserSchema } from '../../../Application/dtos/RegisterUserInput';
 import { LoginUserSchema } from '../../../Application/dtos/LoginUserInput';
+import { ForgotPasswordSchema } from '../../../Application/dtos/ForgotPasswordInput';
+import { ResetPasswordSchema } from '../../../Application/dtos/ResetPasswordInput';
+import { RequestPasswordResetUseCase } from '../../../Application/use-cases/RequestPasswordResetUseCase';
+import { ResetPasswordUseCase } from '../../../Application/use-cases/ResetPasswordUseCase';
 import { AppError, BadRequestError, UnauthorizedError } from '../../../Core/errors';
 import { SequelizeUserRepository } from '../../persistence/repositories/SequelizeUserRepository';
 import { LdapAuthService } from '../../auth/LdapAuthService';
@@ -25,6 +29,8 @@ const authenticateUseCase = new AuthenticateUserUseCase(
   tokenService,
 );
 const registerUseCase = new RegisterUserUseCase(userRepository);
+const requestPasswordResetUseCase = new RequestPasswordResetUseCase(userRepository);
+const resetPasswordUseCase = new ResetPasswordUseCase(userRepository);
 
 /**
  * POST /api/auth/login
@@ -77,6 +83,59 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
     logger.info('Usuario registrado exitosamente', { email: parsed.data.email });
 
     res.status(201).json({ message: 'Usuario registrado exitosamente' });
+  } catch (error) {
+    if (error instanceof AppError) {
+      next(error);
+    } else {
+      next(error);
+    }
+  }
+});
+
+/**
+ * POST /api/auth/forgot-password
+ * Solicita un token de recuperación de contraseña
+ */
+router.post('/forgot-password', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const parsed = ForgotPasswordSchema.safeParse(req.body);
+
+    if (!parsed.success) {
+      const messages = parsed.error.issues.map((i) => i.message).join(', ');
+      throw new BadRequestError(messages);
+    }
+
+    await requestPasswordResetUseCase.execute(parsed.data);
+
+    // Siempre retornar éxito (no revelar si el email existe)
+    res.json({ message: 'Si el correo está registrado, recibirás un enlace de recuperación.' });
+  } catch (error) {
+    if (error instanceof AppError) {
+      next(error);
+    } else {
+      next(error);
+    }
+  }
+});
+
+/**
+ * POST /api/auth/reset-password
+ * Restablece la contraseña usando el token
+ */
+router.post('/reset-password', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const parsed = ResetPasswordSchema.safeParse(req.body);
+
+    if (!parsed.success) {
+      const messages = parsed.error.issues.map((i) => i.message).join(', ');
+      throw new BadRequestError(messages);
+    }
+
+    await resetPasswordUseCase.execute(parsed.data);
+
+    logger.info('Contraseña restablecida exitosamente');
+
+    res.json({ message: 'Contraseña actualizada exitosamente' });
   } catch (error) {
     if (error instanceof AppError) {
       next(error);

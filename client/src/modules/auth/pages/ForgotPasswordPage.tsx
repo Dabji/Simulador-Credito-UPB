@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { forgotPassword } from '@/shared/services/api';
 import LogoUpb from '@/assets/Images/LogoUpb.png';
+import { UpbFooter } from '@/shared/components/UpbFooter';
 
 // ── Zod Schema ──────────────────────────────────────────────────────────────
 
@@ -21,7 +24,8 @@ const LABEL_CLASS = 'block text-sm font-semibold text-gray-700 mb-1.5';
 // ── Component ───────────────────────────────────────────────────────────────
 
 export function ForgotPasswordPage() {
-  const navigate = useNavigate();
+  const [apiError, setApiError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
   const {
     register,
@@ -32,10 +36,12 @@ export function ForgotPasswordPage() {
     defaultValues: { email: '' },
   });
 
-  const onSubmit = async (_data: ForgotPasswordFormData) => {
-    // Simula carga de 1 segundo
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    navigate('/reset-password');
+  const onSubmit = async (data: ForgotPasswordFormData) => {
+    setApiError('');
+    setSuccessMsg('');
+    const result = await forgotPassword(data.email);
+    if (result.error) { setApiError(result.error); return; }
+    setSuccessMsg('Si el correo está registrado, revisa la consola del backend para copiar el enlace de recuperación.');
   };
 
   return (
@@ -56,6 +62,26 @@ export function ForgotPasswordPage() {
         <p className="text-sm text-gray-500 mb-10 text-center max-w-lg">
           Digite el correo electrónico al cual quiere recibir el código para restablecer contraseña
         </p>
+
+        {/* Mensajes de error / éxito */}
+        {apiError && (
+          <div
+            className="rounded-xl px-4 py-3 mb-5 text-sm font-medium w-full max-w-md"
+            style={{ backgroundColor: '#FEF2F2', border: '1px solid #FECACA', color: '#B91C1C' }}
+            role="alert"
+          >
+            {apiError}
+          </div>
+        )}
+        {successMsg && (
+          <div
+            className="rounded-xl px-4 py-3 mb-5 text-sm font-medium w-full max-w-md"
+            style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', color: '#166534' }}
+            role="status"
+          >
+            {successMsg}
+          </div>
+        )}
 
         {/* Formulario */}
         <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-md space-y-8" noValidate>
@@ -108,6 +134,9 @@ export function ForgotPasswordPage() {
           </p>
         </div>
       </div>
+
+      {/* ── Footer institucional ── */}
+      <UpbFooter className="mt-0" />
     </div>
   );
 }

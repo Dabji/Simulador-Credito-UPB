@@ -4,8 +4,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate, Link } from 'react-router-dom';
 import { registerUser } from '@/shared/services/api';
-import { UpbHeader } from '@/shared/components/UpbHeader';
 import { UpbFooter } from '@/shared/components/UpbFooter';
+import LogoUpb from '@/assets/Images/LogoUpb.png';
+import fondoRegister from '@/assets/Images/fondoRegister.png';
 
 // ── Zod Schema ──────────────────────────────────────────────────────────────
 
@@ -45,9 +46,10 @@ const LABEL_CLASS = 'block text-sm font-semibold text-gray-700 mb-1.5';
 
 export function RegisterPage() {
   const navigate = useNavigate();
-  const [profileOpen, setProfileOpen] = useState(false);
   const [apiError, setApiError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const {
     register,
@@ -79,21 +81,14 @@ export function RegisterPage() {
   };
 
   return (
-    <div
-      className="min-h-screen flex flex-col font-sans"
-      style={{ backgroundColor: '#F4F1F1' }}
-      onClick={() => { if (profileOpen) setProfileOpen(false); }}
-    >
-      {/* ── Header institucional (igual que el simulador) ── */}
-      <UpbHeader
-        profileOpen={profileOpen}
-        onToggleProfile={() => setProfileOpen((p) => !p)}
-      />
-
+    <div className="min-h-screen flex flex-col font-sans bg-white">
       {/* ── Main: formulario + imagen ── */}
-      <main className="flex-1 flex flex-col lg:flex-row">
+      <main className="flex-grow flex flex-col lg:flex-row">
         {/* Columna izquierda — Formulario */}
-        <div className="w-full lg:w-1/2 bg-white px-6 py-8 sm:px-12 lg:px-16 xl:px-24 overflow-y-auto">
+        <div className="w-full lg:w-1/2 bg-white px-6 pt-8 pb-4 lg:pt-10 lg:pb-0 sm:px-12 lg:px-16 xl:px-24">
+          {/* Logo UPB */}
+          <img src={LogoUpb} alt="Logo UPB" className="h-12 mb-6" />
+
           <h1 className="text-3xl sm:text-4xl font-black text-gray-900 mb-2 tracking-tight">
             Registrarse
           </h1>
@@ -171,14 +166,32 @@ export function RegisterPage() {
             {/* Contraseña */}
             <div>
               <label htmlFor="password" className={LABEL_CLASS}>Contraseña</label>
-              <input id="password" type="password" {...register('password')} className={INPUT_BASE} placeholder="••••••••" autoComplete="new-password" />
+              <div className="relative">
+                <input id="password" type={showPassword ? 'text' : 'password'} {...register('password')} className={INPUT_BASE} placeholder="••••••••" autoComplete="new-password" />
+                <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none" tabIndex={-1} aria-label={showPassword ? 'Ocultar' : 'Mostrar'}>
+                  {showPassword ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L6.59 6.59m7.532 7.532l3.29 3.29M3 3l18 18" /></svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                  )}
+                </button>
+              </div>
               {errors.password && <p className="mt-1 text-xs font-medium" style={{ color: '#B91C1C' }}>{errors.password.message}</p>}
             </div>
 
             {/* Confirmar contraseña */}
             <div>
               <label htmlFor="confirmPassword" className={LABEL_CLASS}>Confirmar contraseña</label>
-              <input id="confirmPassword" type="password" {...register('confirmPassword')} className={INPUT_BASE} placeholder="••••••••" autoComplete="new-password" />
+              <div className="relative">
+                <input id="confirmPassword" type={showConfirm ? 'text' : 'password'} {...register('confirmPassword')} className={INPUT_BASE} placeholder="••••••••" autoComplete="new-password" />
+                <button type="button" onClick={() => setShowConfirm((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none" tabIndex={-1} aria-label={showConfirm ? 'Ocultar' : 'Mostrar'}>
+                  {showConfirm ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L6.59 6.59m7.532 7.532l3.29 3.29M3 3l18 18" /></svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                  )}
+                </button>
+              </div>
               {errors.confirmPassword && <p className="mt-1 text-xs font-medium" style={{ color: '#B91C1C' }}>{errors.confirmPassword.message}</p>}
             </div>
 
@@ -236,7 +249,7 @@ export function RegisterPage() {
           </form>
 
           {/* Link a login */}
-          <p className="text-sm text-gray-600 mt-6 mb-4">
+          <p className="text-sm text-gray-600 mt-6 mb-0">
             ¿Ya tienes cuenta?{' '}
             <Link to="/login" className="text-blue-600 hover:underline font-semibold">
               Iniciar Sesión
@@ -245,17 +258,17 @@ export function RegisterPage() {
         </div>
 
         {/* Columna derecha — Imagen del campus (solo desktop) */}
-        <div className="hidden lg:block lg:w-1/2 relative">
+        <div className="hidden lg:block lg:w-1/2 relative min-h-[400px]">
           <img
-            src="https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=1200&q=80"
+            src={fondoRegister}
             alt="Campus UPB"
             className="absolute inset-0 h-full w-full object-cover"
           />
         </div>
       </main>
 
-      {/* ── Footer institucional (igual que el simulador) ── */}
-      <UpbFooter />
+      {/* ── Footer institucional (pegado al fondo) ── */}
+      <UpbFooter className="mt-0" />
     </div>
   );
 }
