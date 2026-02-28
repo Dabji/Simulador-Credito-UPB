@@ -2,6 +2,8 @@
 // Use Case: RequestPasswordReset
 // Genera un token de recuperación y lo guarda en BD.
 // Como no hay servicio de correos, se imprime en consola.
+// TODO: Abstraer acceso a persistencia de tokens e implementar
+//       hashing del token (SHA-256) antes de guardar en BD por seguridad.
 // ============================================================
 
 import crypto from 'crypto';
@@ -43,14 +45,16 @@ export class RequestPasswordResetUseCase {
       expires_at: expiresAt,
     });
 
-    // Imprimir en consola para desarrollo (copiar y pegar para probar)
-    console.log('\n══════════════════════════════════════════════════════════');
-    console.log('  🔑 TOKEN DE RECUPERACIÓN DE CONTRASEÑA');
-    console.log(`  Email:   ${input.email}`);
-    console.log(`  Token:   ${token}`);
-    console.log(`  Expira:  ${expiresAt.toISOString()}`);
-    console.log(`  URL:     http://localhost:5173/reset-password?token=${token}`);
-    console.log('══════════════════════════════════════════════════════════\n');
+    // Imprimir en consola solo en desarrollo (copiar y pegar para probar)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('\n══════════════════════════════════════════════════════════');
+      console.log('  🔑 TOKEN DE RECUPERACIÓN DE CONTRASEÑA');
+      console.log(`  Email:   ${input.email}`);
+      console.log(`  Token:   ${token}`);
+      console.log(`  Expira:  ${expiresAt.toISOString()}`);
+      console.log(`  URL:     http://localhost:5173/reset-password?token=${token}`);
+      console.log('══════════════════════════════════════════════════════════\n');
+    }
 
     logger.info('Token de recuperación generado', { email: input.email });
   }

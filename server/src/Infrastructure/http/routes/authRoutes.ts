@@ -84,11 +84,7 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
 
     res.status(201).json({ message: 'Usuario registrado exitosamente' });
   } catch (error) {
-    if (error instanceof AppError) {
-      next(error);
-    } else {
-      next(error);
-    }
+    next(error);
   }
 });
 
@@ -110,11 +106,7 @@ router.post('/forgot-password', async (req: Request, res: Response, next: NextFu
     // Siempre retornar éxito (no revelar si el email existe)
     res.json({ message: 'Si el correo está registrado, recibirás un enlace de recuperación.' });
   } catch (error) {
-    if (error instanceof AppError) {
-      next(error);
-    } else {
-      next(error);
-    }
+    next(error);
   }
 });
 
@@ -137,11 +129,7 @@ router.post('/reset-password', async (req: Request, res: Response, next: NextFun
 
     res.json({ message: 'Contraseña actualizada exitosamente' });
   } catch (error) {
-    if (error instanceof AppError) {
-      next(error);
-    } else {
-      next(error);
-    }
+    next(error);
   }
 });
 

@@ -1,6 +1,8 @@
 // ============================================================
 // Use Case: ResetPassword
 // Valida el token, hashea la nueva contraseña y actualiza el user.
+// TODO: Inyectar IPasswordResetTokenRepository para evitar el
+//       acoplamiento con Sequelize y cumplir con Clean Architecture.
 // ============================================================
 
 import bcrypt from 'bcrypt';
@@ -39,19 +41,34 @@ export class ResetPasswordUseCase {
     // 3. Hashear la nueva contraseña
     const hashedPassword = await bcrypt.hash(input.password, SALT_ROUNDS);
 
-    // 4. Actualizar la contraseña del usuario via Sequelize directo
-    //    (el repositorio no tiene updatePassword, usamos el model)
-    const { UserModel } = await import('../../Infrastructure/persistence/models/UserModel');
-    await UserModel.update(
-      { password: hashedPassword },
-      { where: { id: user.id } },
-    );
+    // 4. Consumir el token y actualizar la contraseña de forma atómica
+    const sequelize = PasswordResetTokenModel.sequelize;
+    if (!sequelize) {
+      throw new Error('Sequelize instance is not initialized for PasswordResetTokenModel');
+    }
 
-    // 5. Marcar el token como usado
-    await PasswordResetTokenModel.update(
-      { used: true },
-      { where: { id: tokenRecord.id } },
-    );
+    await sequelize.transaction(async (transaction) => {
+      // 4.1 Marcar el token como usado de forma condicional
+      const [affectedRows] = await PasswordResetTokenModel.update(
+        { used: true },
+        {
+          where: { id: tokenRecord.id, used: false },
+          transaction,
+        },
+      );
+
+      // Si no se afectó exactamente 1 fila, el token ya fue usado o es inválido
+      if (affectedRows !== 1) {
+        throw new BadRequestError('El enlace de recuperación es inválido o ha expirado');
+      }
+
+      // 4.2 Actualizar la contraseña del usuario
+      const { UserModel } = await import('../../Infrastructure/persistence/models/UserModel');
+      await UserModel.update(
+        { password: hashedPassword },
+        { where: { id: user.id }, transaction },
+      );
+    });
 
     logger.info('Contraseña actualizada exitosamente', { userId: user.id });
   }

@@ -87,7 +87,7 @@ export class SequelizeUserRepository implements IUserRepository {
       email: row.email,
       firstName: row.first_name,
       lastName: row.last_name,
-      documentType: row.document_type as DocumentType | undefined,
+      documentType: (row.document_type ?? undefined) as DocumentType | undefined,
       identificationNumber: row.document_number,
       password: row.password ?? undefined,
       phone: row.phone ?? undefined,

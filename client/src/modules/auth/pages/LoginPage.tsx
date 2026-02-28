@@ -74,7 +74,7 @@ export function LoginPage() {
           {/* Texto de bienvenida */}
           <div className="text-center mb-8">
             <p className="text-sm text-gray-500 leading-relaxed">
-              Bienvenido al Simulador Credito Educativo
+              Bienvenido al Simulador Crédito Educativo
               <br />
               Universidad Pontificia Bolivariana
               <br />
@@ -162,8 +162,8 @@ export function LoginPage() {
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
-                  tabIndex={-1}
                   aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  aria-pressed={showPassword}
                 >
                   {showPassword ? (
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
