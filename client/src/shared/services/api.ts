@@ -24,11 +24,16 @@ async function request<T>(
       headers: { ...headers, ...options.headers },
     });
 
-    const body = (await response.json()) as T | { error: string };
+    const body = (await response.json()) as T | { error: string | { message: string } };
 
     if (!response.ok) {
-      const errorBody = body as { error: string };
-      return { error: errorBody.error || 'Error desconocido' };
+      const errorBody = body as { error: string | { message: string }; message?: string };
+      // El backend puede retornar { error: "msg" } o { error: { message: "msg" } }
+      const msg =
+        typeof errorBody.error === 'string'
+          ? errorBody.error
+          : errorBody.error?.message ?? errorBody.message ?? 'Error desconocido';
+      return { error: msg };
     }
 
     return { data: body as T };
@@ -101,6 +106,50 @@ export interface SimulationSummaryDTO {
   readonly totalPaid: number;
   readonly totalInterest: number;
   readonly schedule: AmortizationRowDTO[];
+}
+
+// ── DTO / función de registro (HU-01) ────────────────────────────────────
+
+export interface RegisterUserPayload {
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly documentType: 'CC' | 'TI';
+  readonly documentNumber: string;
+  readonly email: string;
+  readonly phone: string;
+  readonly password: string;
+  readonly termsAccepted: true;
+}
+
+export async function registerUser(
+  data: RegisterUserPayload,
+): Promise<ApiResponse<{ message: string }>> {
+  return request<{ message: string }>('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+// ── DTO / función de login (HU-02) ──────────────────────────────────────
+
+export interface LoginUserPayload {
+  readonly email: string;
+  readonly password: string;
+  readonly role: 'STUDENT' | 'ADMIN';
+}
+
+export interface LoginUserResponse {
+  readonly user: Record<string, unknown>;
+  readonly token: string;
+}
+
+export async function loginUser(
+  data: LoginUserPayload,
+): Promise<ApiResponse<LoginUserResponse>> {
+  return request<LoginUserResponse>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
 }
 
 // ── Funciones de simulación (HU-13) ──────────────────────────────────────
