@@ -8,9 +8,11 @@ import { ForgotPasswordPage } from './modules/auth/pages/ForgotPasswordPage';
 import { ResetPasswordPage } from './modules/auth/pages/ResetPasswordPage';
 import { PasswordUpdatedPage } from './modules/auth/pages/PasswordUpdatedPage';
 import { Layout } from './shared/components/Layout';
+import { AuthProvider } from './modules/auth/context/AuthContext';
 
 export function App() {
   return (
+    <AuthProvider>
     <BrowserRouter>
       <Routes>
         {/* Auth pages */}
@@ -34,5 +36,6 @@ export function App() {
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
+    </AuthProvider>
   );
 }

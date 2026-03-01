@@ -12,7 +12,9 @@ import { ForgotPasswordSchema } from '../../../Application/dtos/ForgotPasswordIn
 import { ResetPasswordSchema } from '../../../Application/dtos/ResetPasswordInput';
 import { RequestPasswordResetUseCase } from '../../../Application/use-cases/RequestPasswordResetUseCase';
 import { ResetPasswordUseCase } from '../../../Application/use-cases/ResetPasswordUseCase';
-import { AppError, BadRequestError, UnauthorizedError } from '../../../Core/errors';
+import { AppError, BadRequestError, NotFoundError, UnauthorizedError } from '../../../Core/errors';
+import { authGuard } from '../middlewares/authGuard';
+import type { AuthenticatedRequest } from '../middlewares/authGuard';
 import { SequelizeUserRepository } from '../../persistence/repositories/SequelizeUserRepository';
 import { LdapAuthService } from '../../auth/LdapAuthService';
 import { JwtTokenService } from '../../auth/JwtTokenService';
@@ -128,6 +130,31 @@ router.post('/reset-password', async (req: Request, res: Response, next: NextFun
     logger.info('Contraseña restablecida exitosamente');
 
     res.json({ message: 'Contraseña actualizada exitosamente' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/auth/me
+ * Retorna el usuario autenticado (sin contraseña)
+ */
+router.get('/me', authGuard, async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.user?.userId as string | undefined;
+
+    if (!userId) {
+      throw new UnauthorizedError('No se pudo identificar al usuario');
+    }
+
+    const user = await userRepository.findById(userId);
+
+    if (!user) {
+      throw new NotFoundError('Usuario no encontrado');
+    }
+
+    const { password, ...safeUser } = user.toJSON();
+    res.json({ user: safeUser });
   } catch (error) {
     next(error);
   }

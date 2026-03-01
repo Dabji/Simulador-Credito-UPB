@@ -7,6 +7,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LogoUpb from '@/assets/Images/LogoUpb.png';
+import { useAuth } from '@/modules/auth/context/AuthContext';
 
 /* Links del menú — abren en nueva pestaña */
 const NAV_LINKS = [
@@ -31,7 +32,7 @@ interface UpbHeaderProps {
 export function UpbHeader({ profileOpen, onToggleProfile }: UpbHeaderProps) {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const isAuthenticated = !!localStorage.getItem('token');
+  const { user, isAuthenticated, logout } = useAuth();
 
   return (
     <header className="w-full bg-white" style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.10)' }}>
@@ -109,6 +110,9 @@ export function UpbHeader({ profileOpen, onToggleProfile }: UpbHeaderProps) {
                 >
                   {isAuthenticated ? (
                     <>
+                      <div className="px-4 py-2.5 text-sm text-gray-700 font-medium border-b border-gray-100">
+                        Hola, {user?.firstName}
+                      </div>
                       <button
                         type="button"
                         role="menuitem"
@@ -122,8 +126,7 @@ export function UpbHeader({ profileOpen, onToggleProfile }: UpbHeaderProps) {
                         role="menuitem"
                         className="block w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 focus:bg-red-50 focus:outline-none"
                         onClick={() => {
-                          localStorage.removeItem('token');
-                          localStorage.removeItem('user');
+                          logout();
                           navigate('/login');
                         }}
                       >

@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate, Link } from 'react-router-dom';
 import { loginUser } from '@/shared/services/api';
+import { useAuth } from '../context/AuthContext';
 import LogoUpb from '@/assets/Images/LogoUpb.png';
 import fondoLogin from '@/assets/Images/fondoLogin.png';
 
@@ -27,6 +28,7 @@ const LABEL_CLASS = 'block text-sm font-semibold text-gray-700 mb-1.5';
 
 export function LoginPage() {
   const [mode, setMode] = useState<LoginMode>('student');
+  const { login } = useAuth();
   const [apiError, setApiError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
@@ -54,8 +56,7 @@ export function LoginPage() {
     }
 
     if (result.data) {
-      localStorage.setItem('token', result.data.token);
-      localStorage.setItem('user', JSON.stringify(result.data.user));
+      login(result.data.token, result.data.user);
 
       // Redirigir según el rol
       if (role === 'ADMIN') {
