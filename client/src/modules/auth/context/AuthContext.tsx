@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
-import { getCurrentUser } from '@/shared/services/api';
+import { getCurrentUser, NETWORK_ERROR_MESSAGE } from '@/shared/services/api';
 import type { UserData } from '@/shared/services/api';
 
 // ── Tipos del contexto ─────────────────────────────────────────────────────
@@ -50,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         // Si hay un error de conexión, mantenemos el token y no cerramos sesión
-        if (result.error === 'Error de conexión con el servidor') {
+        if (result.error === NETWORK_ERROR_MESSAGE) {
           return;
         }
 

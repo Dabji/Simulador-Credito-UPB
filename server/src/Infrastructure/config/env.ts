@@ -38,7 +38,7 @@ const envSchema = z.object({
 
   // ── JWT ─────────────────────────────────────────────────
   JWT_SECRET: z.string().default('dev-secret-change-in-production'),
-  JWT_EXPIRES_IN: z.string().default('8h'),
+  JWT_EXPIRES_IN: z.string().default('24h'),
 });
 
 /** Tipo inferido del esquema de entorno — utilizado en toda la app */
