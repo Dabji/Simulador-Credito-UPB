@@ -56,6 +56,24 @@ export const api = {
     }),
 };
 
+// ── DTO / función de sesión actual (HU-03) ───────────────────────────────
+
+export interface UserData {
+  readonly id: string;
+  readonly email: string;
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly documentType?: 'CC' | 'TI';
+  readonly identificationNumber: string;
+  readonly phone?: string;
+  readonly role: 'STUDENT' | 'ADMIN';
+  readonly isActive: boolean;
+}
+
+export async function getCurrentUser(): Promise<ApiResponse<{ user: UserData }>> {
+  return request<{ user: UserData }>('/auth/me');
+}
+
 // ── DTOs espejo del backend (HU-13) ──────────────────────────────────────
 
 export type InterestModeDTO    = 'sin_interes' | 'con_interes';
@@ -139,7 +157,7 @@ export interface LoginUserPayload {
 }
 
 export interface LoginUserResponse {
-  readonly user: Record<string, unknown>;
+  readonly user: UserData;
   readonly token: string;
 }
 
