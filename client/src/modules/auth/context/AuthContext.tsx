@@ -66,6 +66,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
   }, [logout]);
 
+  // Escuchar evento global de 401 para sincronizar estado de sesión inmediatamente
+  useEffect(() => {
+    const handleUnauthorized = () => logout();
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
+  }, [logout]);
+
   return (
     <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, logout }}>
       {children}

@@ -7,18 +7,25 @@ interface PublicRouteProps {
 }
 
 export function PublicRoute({ children }: PublicRouteProps) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div
+        className="flex min-h-screen items-center justify-center"
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+      >
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-300 border-t-green-700" />
+        <span className="sr-only">Cargando…</span>
       </div>
     );
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/simulator/create" replace />;
+    const redirectTo = user?.role === 'ADMIN' ? '/admin' : '/simulator/create';
+    return <Navigate to={redirectTo} replace />;
   }
 
   return <>{children}</>;
