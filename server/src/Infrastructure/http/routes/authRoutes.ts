@@ -150,7 +150,7 @@ router.get('/me', authGuard, async (req: AuthenticatedRequest, res: Response, ne
     const user = await userRepository.findById(userId);
 
     if (!user) {
-      throw new NotFoundError('Usuario no encontrado');
+      throw new NotFoundError('Usuario');
     }
 
     const { password, ...safeUser } = user.toJSON();

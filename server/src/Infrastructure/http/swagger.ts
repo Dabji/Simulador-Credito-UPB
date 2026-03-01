@@ -157,6 +157,74 @@ export const swaggerDocument: JsonObject = {
         },
       },
     },
+    '/auth/me': {
+      get: {
+        tags: ['Auth'],
+        summary: 'Obtener usuario autenticado',
+        description:
+          'Retorna los datos del usuario autenticado (sin contraseña). Requiere un token JWT válido en el header Authorization.',
+        operationId: 'getCurrentUser',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Usuario autenticado',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    user: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'string', format: 'uuid' },
+                        email: { type: 'string', format: 'email' },
+                        firstName: { type: 'string' },
+                        lastName: { type: 'string' },
+                        documentType: { type: 'string', enum: ['CC', 'TI'], nullable: true },
+                        identificationNumber: { type: 'string' },
+                        phone: { type: 'string', nullable: true },
+                        role: { type: 'string', enum: ['STUDENT', 'ADMIN'] },
+                        isActive: { type: 'boolean' },
+                        createdAt: { type: 'string', format: 'date-time' },
+                        updatedAt: { type: 'string', format: 'date-time' },
+                      },
+                      required: [
+                        'id',
+                        'email',
+                        'firstName',
+                        'lastName',
+                        'identificationNumber',
+                        'role',
+                        'isActive',
+                        'createdAt',
+                        'updatedAt',
+                      ],
+                    },
+                  },
+                  required: ['user'],
+                },
+              },
+            },
+          },
+          '401': {
+            description: 'Token inválido, expirado o no proporcionado',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+          '404': {
+            description: 'Usuario no encontrado en la base de datos',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/Error' },
+              },
+            },
+          },
+        },
+      },
+    },
     '/simulator/simulate': {
       post: {
         tags: ['Simulator'],

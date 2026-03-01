@@ -25,13 +25,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback((token: string, userData: UserData) => {
     localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
   }, []);
 
   const logout = useCallback(() => {
     localStorage.removeItem('token');
-    localStorage.removeItem('user');
     setUser(null);
   }, []);
 
@@ -48,13 +46,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then((result) => {
         if (result.data?.user) {
           setUser(result.data.user);
-        } else {
-          // Token inválido o expirado
-          logout();
+          return;
         }
-      })
-      .catch(() => {
+
+        // Si hay un error de conexión, mantenemos el token y no cerramos sesión
+        if (result.error === 'Error de conexión con el servidor') {
+          return;
+        }
+
+        // Token inválido o expirado u otro error de autenticación
         logout();
+      })
+      .catch((error) => {
+        // getCurrentUser normalmente no rechaza, pero por seguridad no cerramos sesión aquí
+        console.error('Error obteniendo el usuario actual', error);
       })
       .finally(() => {
         setIsLoading(false);
