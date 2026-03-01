@@ -153,7 +153,12 @@ router.get('/me', authGuard, async (req: AuthenticatedRequest, res: Response, ne
       throw new NotFoundError('Usuario');
     }
 
-    const { password, ...safeUser } = user.toJSON();
+    if (!user.isActive) {
+      throw new UnauthorizedError('La cuenta está desactivada');
+    }
+
+    const { password: _, ...safeUser } = user.toJSON();
+    void _;
     res.json({ user: safeUser });
   } catch (error) {
     next(error);

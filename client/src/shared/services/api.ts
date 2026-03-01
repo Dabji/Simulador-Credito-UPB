@@ -1,5 +1,7 @@
 const API_BASE = '/api';
 
+export const NETWORK_ERROR_MESSAGE = 'Error de conexión con el servidor';
+
 // ── Tipos genéricos ───────────────────────────────────────────────────────
 
 interface ApiResponse<T> {
@@ -33,12 +35,19 @@ async function request<T>(
         typeof errorBody.error === 'string'
           ? errorBody.error
           : errorBody.error?.message ?? errorBody.message ?? 'Error desconocido';
+
+      // Si es 401 y no es la ruta de login, limpiar sesión (token expirado/inválido)
+      if (response.status === 401 && !endpoint.endsWith('/auth/login')) {
+        localStorage.removeItem('token');
+        window.dispatchEvent(new Event('auth:unauthorized'));
+      }
+
       return { error: msg };
     }
 
     return { data: body as T };
   } catch {
-    return { error: 'Error de conexión con el servidor' };
+    return { error: NETWORK_ERROR_MESSAGE };
   }
 }
 
@@ -68,6 +77,8 @@ export interface UserData {
   readonly phone?: string;
   readonly role: 'STUDENT' | 'ADMIN';
   readonly isActive: boolean;
+  readonly createdAt: string;
+  readonly updatedAt: string;
 }
 
 export async function getCurrentUser(): Promise<ApiResponse<{ user: UserData }>> {
