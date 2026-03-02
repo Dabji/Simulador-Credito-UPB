@@ -103,7 +103,10 @@ router.post('/forgot-password', async (req: Request, res: Response, next: NextFu
       throw new BadRequestError(messages);
     }
 
-    await requestPasswordResetUseCase.execute(parsed.data);
+    await requestPasswordResetUseCase.execute(parsed.data, {
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
 
     // Siempre retornar éxito (no revelar si el email existe)
     res.json({ message: 'Si el correo está registrado, recibirás un enlace de recuperación.' });

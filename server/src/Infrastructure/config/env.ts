@@ -9,8 +9,18 @@ import { z } from 'zod';
 import path from 'path';
 import dotenv from 'dotenv';
 
-// Cargar .env desde la raíz del monorepo
-dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
+// Cargar .env desde la raíz del monorepo.
+// process.cwd() apunta a server/ cuando se ejecuta npm run dev,
+// por eso subimos un nivel (../) para llegar a Simulador-Credito-UPB/.env
+const envPath = path.resolve(process.cwd(), '..', '.env');
+const dotenvResult = dotenv.config({ path: envPath });
+
+if (dotenvResult.error) {
+  console.warn(`⚠️  No se pudo cargar .env desde ${envPath}:`, dotenvResult.error.message);
+} else {
+  const count = Object.keys(dotenvResult.parsed ?? {}).length;
+  console.log(`✅ .env cargado desde ${envPath} (${count} variables)`);
+}
 
 /**
  * Esquema de validación para las variables de entorno.

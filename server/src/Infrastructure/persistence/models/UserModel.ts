@@ -19,11 +19,12 @@ interface UserAttributes {
   role: 'STUDENT' | 'ADMIN';
   is_active: boolean;
   terms_accepted_at: Date | null;
+  last_login_at: Date | null;
   created_at: Date;
   updated_at: Date;
 }
 
-type UserCreationAttributes = Optional<UserAttributes, 'document_type' | 'password' | 'phone' | 'terms_accepted_at' | 'created_at' | 'updated_at'>;
+type UserCreationAttributes = Optional<UserAttributes, 'document_type' | 'password' | 'phone' | 'terms_accepted_at' | 'last_login_at' | 'created_at' | 'updated_at'>;
 
 export class UserModel extends Model<UserAttributes, UserCreationAttributes>
   implements UserAttributes {
@@ -38,6 +39,7 @@ export class UserModel extends Model<UserAttributes, UserCreationAttributes>
   declare role: 'STUDENT' | 'ADMIN';
   declare is_active: boolean;
   declare terms_accepted_at: Date | null;
+  declare last_login_at: Date | null;
   declare created_at: Date;
   declare updated_at: Date;
 }
@@ -92,6 +94,10 @@ UserModel.init(
       defaultValue: true,
     },
     terms_accepted_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    last_login_at: {
       type: DataTypes.DATE,
       allowNull: true,
     },

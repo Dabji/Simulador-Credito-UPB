@@ -76,6 +76,13 @@ export class SequelizeUserRepository implements IUserRepository {
     return this.toDomain(updated);
   }
 
+  async updateLastLogin(userId: string): Promise<void> {
+    await UserModel.update(
+      { last_login_at: new Date() },
+      { where: { id: userId } },
+    );
+  }
+
   async delete(id: string): Promise<void> {
     await UserModel.destroy({ where: { id } });
   }
@@ -94,6 +101,7 @@ export class SequelizeUserRepository implements IUserRepository {
       role: row.role as UserRole,
       isActive: row.is_active,
       termsAcceptedAt: row.terms_accepted_at,
+      lastLoginAt: row.last_login_at,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     });
