@@ -1,38 +1,28 @@
 import { Navigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { useAuth } from '@/modules/auth/context/AuthContext';
+import { FullPageSpinner } from './FullPageSpinner';
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  /** Si se especifica, sólo usuarios con ese rol pueden acceder. */
-  requiredRole?: 'STUDENT' | 'ADMIN';
+  /** Si se especifica, sólo usuarios con alguno de estos roles pueden acceder. */
+  allowedRoles?: ('STUDENT' | 'ADMIN')[];
 }
 
-export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
-    return (
-      <div
-        className="flex min-h-screen items-center justify-center"
-        role="status"
-        aria-live="polite"
-        aria-busy="true"
-      >
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-300 border-t-green-700" />
-        <span className="sr-only">Cargando…</span>
-      </div>
-    );
+    return <FullPageSpinner />;
   }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  // Si se exige un rol específico y el usuario no lo tiene, redirigir a su ruta correcta
-  if (requiredRole && user?.role !== requiredRole) {
-    const fallback = user?.role === 'ADMIN' ? '/admin' : '/simulator/create';
-    return <Navigate to={fallback} replace />;
+  // RBAC: si se definen roles permitidos y el usuario no tiene uno de ellos, redirigir
+  if (allowedRoles && user?.role && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/simulator/create" replace />;
   }
 
   return <>{children}</>;

@@ -9,6 +9,7 @@ import { ParameterService } from './ParameterService';
 import { SimulationEngine } from './SimulationEngine';
 import type { SimulationInput } from '../dtos/SimulationInput';
 import type { SimulationSummary } from '../dtos/SimulationSummary';
+import type { ActiveParameterVersion } from '../../Core/repositories/IParameterVersionRepository';
 
 export class SimulationService {
   private readonly paramService: ParameterService;
@@ -20,7 +21,7 @@ export class SimulationService {
   }
 
   // Valida reglas de negocio y delega el cálculo al engine
-  calculate(input: SimulationInput): SimulationSummary {
+  calculate(input: SimulationInput, activeVersion?: ActiveParameterVersion): SimulationSummary {
     const params = this.paramService.getActiveVersion();
 
     // Regla: estudiante nuevo no puede tener beca
@@ -75,6 +76,6 @@ export class SimulationService {
       throw new Error('El valor financiado debe ser mayor a 0.');
     }
 
-    return this.engine.computeSummary(input, params);
+    return this.engine.computeSummary(input, params, activeVersion);
   }
 }

@@ -7,12 +7,13 @@ import { InterestRate } from '../../Core/entities/InterestRate';
 import { ParameterVersion } from '../../Core/entities/ParameterVersion';
 import type { SimulationInput } from '../dtos/SimulationInput';
 import type { SimulationSummary, AmortizationRowDTO } from '../dtos/SimulationSummary';
+import type { ActiveParameterVersion } from '../../Core/repositories/IParameterVersionRepository';
 
 export class SimulationEngine {
 
   // Calcula el resumen completo + tabla a partir del input y los parámetros activos
-  computeSummary(input: SimulationInput, _params: ParameterVersion): SimulationSummary {
-    const schedule = this.buildAmortizationSchedule(input, _params);
+  computeSummary(input: SimulationInput, _params: ParameterVersion, activeVersion?: ActiveParameterVersion): SimulationSummary {
+    const schedule = this.buildAmortizationSchedule(input, _params, activeVersion);
 
     const tuitionNet      = Money.of(input.tuitionGross * (1 - input.scholarshipPct / 100));
     const initialPayment  = Money.of(input.initialPaymentValue);
@@ -44,13 +45,15 @@ export class SimulationEngine {
   buildAmortizationSchedule(
     input: SimulationInput,
     _params: ParameterVersion,
+    activeVersion?: ActiveParameterVersion,
   ): AmortizationRowDTO[] {
     const tuitionNet     = Money.of(input.tuitionGross * (1 - input.scholarshipPct / 100));
     const initialPayment = Money.of(input.initialPaymentValue);
     const financed       = tuitionNet.subtract(initialPayment);
-    const rate           = InterestRate.fromMode(input.interestMode);
     const n              = input.numberOfPayments;
-    const r              = rate.monthlyRate;
+
+    // Usar tasa de BD (activeVersion) si está disponible; de lo contrario, fallback hardcode
+    const r              = this.resolveMonthlyRate(input, activeVersion);
 
     // Cuota fija (Sistema Francés) o cuota igual sin interés
     const periodicPayment = this.computePeriodicPayment(financed.amount, r, n);
@@ -111,6 +114,31 @@ export class SimulationEngine {
 
     // Día 1 del mes elegido
     return new Date(payYear, firstPaymentMonth - 1, 1);
+  }
+
+  // Mapa de niveles del input a los ENUMs de BD
+  private static readonly LEVEL_MAP: Record<string, 'PREGRADO' | 'POSGRADO' | 'UPB_TEC'> = {
+    pregrado: 'PREGRADO',
+    posgrado: 'POSGRADO',
+    upbTech:  'UPB_TEC',
+  };
+
+  // Resuelve la tasa mensual: prioriza activeVersion de BD; si no existe, usa fallback hardcode
+  private resolveMonthlyRate(input: SimulationInput, activeVersion?: ActiveParameterVersion): number {
+    if (input.interestMode === 'sin_interes') return 0;
+
+    if (activeVersion) {
+      const dbLevel = SimulationEngine.LEVEL_MAP[input.educationLevel];
+      const rateEntry = dbLevel
+        ? activeVersion.interestRates.find(r => r.levelScope === dbLevel)
+        : undefined;
+      if (rateEntry?.rateMonthly != null) {
+        return rateEntry.rateMonthly;
+      }
+    }
+
+    // Fallback: valor hardcode del Value Object InterestRate
+    return InterestRate.fromMode(input.interestMode).monthlyRate;
   }
 
   // Expuesto para SimulationService cuando solo necesita la tabla separada
