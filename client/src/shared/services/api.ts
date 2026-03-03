@@ -7,6 +7,7 @@ export const NETWORK_ERROR_MESSAGE = 'Error de conexión con el servidor';
 interface ApiResponse<T> {
   data?: T;
   error?: string;
+  fieldErrors?: Record<string, string[]>;
 }
 
 async function request<T>(
@@ -29,12 +30,21 @@ async function request<T>(
     const body = (await response.json()) as T | { error: string | { message: string } };
 
     if (!response.ok) {
-      const errorBody = body as { error: string | { message: string }; message?: string };
-      // El backend puede retornar { error: "msg" } o { error: { message: "msg" } }
+      const errorBody = body as {
+        error: string | { message: string; fieldErrors?: Record<string, string[]> };
+        message?: string;
+      };
+      // El backend puede retornar { error: "msg" } o { error: { message: "msg", fieldErrors: {...} } }
       const msg =
         typeof errorBody.error === 'string'
           ? errorBody.error
           : errorBody.error?.message ?? errorBody.message ?? 'Error desconocido';
+
+      // Extraer fieldErrors si existen (HU-02)
+      const fieldErrors =
+        typeof errorBody.error === 'object' && errorBody.error?.fieldErrors
+          ? errorBody.error.fieldErrors
+          : undefined;
 
       // Si es 401 y no es la ruta de login, limpiar sesión (token expirado/inválido)
       if (response.status === 401 && !endpoint.endsWith('/auth/login')) {
@@ -42,7 +52,7 @@ async function request<T>(
         window.dispatchEvent(new Event('auth:unauthorized'));
       }
 
-      return { error: msg };
+      return { error: msg, fieldErrors };
     }
 
     return { data: body as T };
