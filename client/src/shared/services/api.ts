@@ -54,8 +54,13 @@ async function request<T>(
           ? errorBody.error.fieldErrors
           : undefined;
 
-      // Si es 401 y no es la ruta de login, limpiar sesión (token expirado/inválido)
-      if (response.status === 401 && !endpoint.endsWith('/auth/login')) {
+      // Si es 401 y no es ruta de auth propia, limpiar sesión (token expirado/inválido).
+      // Se excluye /auth/logout para evitar un bucle: logout → 401 → auth:unauthorized → logout…
+      if (
+        response.status === 401 &&
+        !endpoint.endsWith('/auth/login') &&
+        !endpoint.endsWith('/auth/logout')
+      ) {
         localStorage.removeItem('token');
         window.dispatchEvent(new Event('auth:unauthorized'));
       }

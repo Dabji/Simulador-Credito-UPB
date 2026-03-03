@@ -29,8 +29,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    // Notificar al backend (fire-and-forget, no bloquea el logout local)
-    logoutUser().catch(() => {});
+    // Solo notificar al backend si hay token (evita bucle cuando
+    // logout() es llamado por el evento auth:unauthorized).
+    const token = localStorage.getItem('token');
+    if (token) {
+      logoutUser().catch(() => {});
+    }
 
     // Limpiar estado local — token y cualquier dato de sesión (HU-05)
     localStorage.removeItem('token');
