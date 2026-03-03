@@ -178,4 +178,24 @@ router.get('/me', authGuard, async (req: AuthenticatedRequest, res: Response, ne
   }
 });
 
+/**
+ * POST /api/auth/logout
+ * Cierra la sesión del usuario autenticado (HU-05).
+ * Con JWT stateless no hay token que invalidar del lado del servidor,
+ * pero el endpoint permite registrar el evento y podría usarse en el
+ * futuro para una lista de revocación (blacklist).
+ */
+router.post('/logout', authGuard, async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.user?.userId as string | undefined;
+    const email  = req.user?.email  as string | undefined;
+
+    logger.info('Sesión cerrada', { userId, email });
+
+    res.json({ message: 'Sesión cerrada exitosamente.' });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

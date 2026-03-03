@@ -54,8 +54,13 @@ async function request<T>(
           ? errorBody.error.fieldErrors
           : undefined;
 
-      // Si es 401 y no es la ruta de login, limpiar sesión (token expirado/inválido)
-      if (response.status === 401 && !endpoint.endsWith('/auth/login')) {
+      // Si es 401 y no es ruta de auth propia, limpiar sesión (token expirado/inválido).
+      // Se excluye /auth/logout para evitar un bucle: logout → 401 → auth:unauthorized → logout…
+      if (
+        response.status === 401 &&
+        !endpoint.endsWith('/auth/login') &&
+        !endpoint.endsWith('/auth/logout')
+      ) {
         localStorage.removeItem('token');
         window.dispatchEvent(new Event('auth:unauthorized'));
       }
@@ -196,6 +201,17 @@ export async function loginUser(
   return request<LoginUserResponse>('/auth/login', {
     method: 'POST',
     body: JSON.stringify(data),
+  });
+}
+
+/**
+ * POST /api/auth/logout
+ * Notifica al servidor que el usuario cierra sesión (HU-05).
+ * Fire-and-forget: el frontend no espera la respuesta para continuar.
+ */
+export async function logoutUser(): Promise<ApiResponse<{ message: string }>> {
+  return request<{ message: string }>('/auth/logout', {
+    method: 'POST',
   });
 }
 

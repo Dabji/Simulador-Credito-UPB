@@ -28,6 +28,16 @@ export function createApp(): express.Application {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
+  // Evitar que el navegador cachee respuestas autenticadas (HU-05).
+  // Esto impide que al presionar "atrás" después de cerrar sesión
+  // se muestre contenido cacheado de la API.
+  app.use('/api', (_req, res, next) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    next();
+  });
+
   // ── Documentación Swagger ─────────────────────────────────
   app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
