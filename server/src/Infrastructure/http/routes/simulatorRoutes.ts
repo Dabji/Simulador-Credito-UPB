@@ -18,16 +18,16 @@ import type { AuthenticatedRequest } from '../middlewares/authGuard';
 const router = Router();
 
 // ── Instancias ───────────────────────────────────────────────
-const previewUseCase = new PreviewSimulationUseCase();
 const simulationRepo = new SequelizeSimulationRepository();
 const paramRepo      = new SequelizeParameterVersionRepository();
+const previewUseCase = new PreviewSimulationUseCase(paramRepo);
 const saveUseCase    = new SaveSimulationUseCase(simulationRepo, paramRepo);
 
 /**
  * POST /api/simulator/preview
  * HU-13: Calcula una simulación sin persistencia en BD.
  */
-router.post('/preview', (req: Request, res: Response): void => {
+router.post('/preview', async (req: Request, res: Response): Promise<void> => {
   try {
     const input = req.body as SimulationInput;
 
@@ -44,7 +44,7 @@ router.post('/preview', (req: Request, res: Response): void => {
       return;
     }
 
-    const summary = previewUseCase.execute(input);
+    const summary = await previewUseCase.execute(input);
     res.json(summary);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Error interno del servidor';

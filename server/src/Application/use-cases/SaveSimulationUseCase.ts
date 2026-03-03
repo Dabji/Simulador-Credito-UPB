@@ -10,13 +10,7 @@ import type { SimulationInput } from '../dtos/SimulationInput';
 import type { SimulationSummary } from '../dtos/SimulationSummary';
 import { SimulationService } from '../services/SimulationService';
 import { BadRequestError, NotFoundError } from '../../Core/errors';
-
-/** Mapea los valores del frontend a los ENUMs de la BD */
-const LEVEL_MAP: Record<string, 'PREGRADO' | 'POSGRADO' | 'UPB_TEC'> = {
-  pregrado: 'PREGRADO',
-  posgrado: 'POSGRADO',
-  upbTech:  'UPB_TEC',
-};
+import { LEVEL_MAP } from '../dtos/constants';
 
 const STUDENT_TYPE_MAP: Record<string, 'NUEVO' | 'CONTINUO'> = {
   nuevo:    'NUEVO',
@@ -46,18 +40,23 @@ export class SaveSimulationUseCase {
       );
     }
 
-    // 2. Calcular la simulación (valida reglas de negocio)
-    const simulationService = new SimulationService();
-    const summary = simulationService.calculate(input);
-
-    // 3. Obtener tasa aplicada según nivel
+    // 2. Validar tasa aplicada según nivel (antes del cálculo)
     const dbLevel = LEVEL_MAP[input.educationLevel];
     if (!dbLevel) throw new BadRequestError(`Nivel educativo inválido: ${input.educationLevel}`);
 
     const rateEntry = activeVersion.interestRates.find(r => r.levelScope === dbLevel);
+    if (input.interestMode === 'con_interes' && (!rateEntry || rateEntry.rateMonthly == null)) {
+      throw new NotFoundError(
+        'La versión de parámetros activa no define una tasa de interés para este nivel',
+      );
+    }
     const appliedRate = input.interestMode === 'con_interes'
-      ? (rateEntry?.rateMonthly ?? 0.009)
+      ? rateEntry!.rateMonthly
       : 0;
+
+    // 3. Calcular la simulación (valida reglas de negocio)
+    const simulationService = new SimulationService();
+    const summary = simulationService.calculate(input, activeVersion);
 
     // 4. Construir fecha de primer pago
     const firstPaymentDate = summary.schedule.length > 0

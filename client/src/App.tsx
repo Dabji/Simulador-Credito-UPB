@@ -28,12 +28,12 @@ export function App() {
           <Route path="/" element={<Navigate to="/login" replace />} />
 
           {/* Rutas protegidas — requieren sesión activa */}
-          <Route path="/simulator/create" element={<ProtectedRoute requiredRole="STUDENT"><CreateSimulationPage /></ProtectedRoute>} />
+          <Route path="/simulator/create" element={<ProtectedRoute allowedRoles={['STUDENT']}><CreateSimulationPage /></ProtectedRoute>} />
 
           {/* Rutas con Layout (protegidas) */}
           <Route element={<Layout />}>
-            <Route path="/simulator" element={<ProtectedRoute requiredRole="STUDENT"><SimulatorPage /></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute requiredRole="ADMIN"><AdminDashboard /></ProtectedRoute>} />
+            <Route path="/simulator" element={<ProtectedRoute allowedRoles={['STUDENT']}><SimulatorPage /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminDashboard /></ProtectedRoute>} />
           </Route>
 
           {/* Catch-all */}

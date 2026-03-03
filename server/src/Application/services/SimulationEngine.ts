@@ -3,16 +3,17 @@
 
 import { Money } from '../../Core/entities/Money';
 import { SimulationRow } from '../../Core/entities/SimulationRow';
-import { InterestRate } from '../../Core/entities/InterestRate';
 import { ParameterVersion } from '../../Core/entities/ParameterVersion';
 import type { SimulationInput } from '../dtos/SimulationInput';
+import { LEVEL_MAP } from '../dtos/constants';
 import type { SimulationSummary, AmortizationRowDTO } from '../dtos/SimulationSummary';
+import type { ActiveParameterVersion } from '../../Core/repositories/IParameterVersionRepository';
 
 export class SimulationEngine {
 
   // Calcula el resumen completo + tabla a partir del input y los parámetros activos
-  computeSummary(input: SimulationInput, _params: ParameterVersion): SimulationSummary {
-    const schedule = this.buildAmortizationSchedule(input, _params);
+  computeSummary(input: SimulationInput, _params: ParameterVersion, activeVersion?: ActiveParameterVersion): SimulationSummary {
+    const schedule = this.buildAmortizationSchedule(input, _params, activeVersion);
 
     const tuitionNet      = Money.of(input.tuitionGross * (1 - input.scholarshipPct / 100));
     const initialPayment  = Money.of(input.initialPaymentValue);
@@ -44,13 +45,15 @@ export class SimulationEngine {
   buildAmortizationSchedule(
     input: SimulationInput,
     _params: ParameterVersion,
+    activeVersion?: ActiveParameterVersion,
   ): AmortizationRowDTO[] {
     const tuitionNet     = Money.of(input.tuitionGross * (1 - input.scholarshipPct / 100));
     const initialPayment = Money.of(input.initialPaymentValue);
     const financed       = tuitionNet.subtract(initialPayment);
-    const rate           = InterestRate.fromMode(input.interestMode);
     const n              = input.numberOfPayments;
-    const r              = rate.monthlyRate;
+
+    // Usar tasa desde BD mediante activeVersion (comportamiento estricto: si no hay activeVersion, se lanza error en resolveMonthlyRate)
+    const r              = this.resolveMonthlyRate(input, activeVersion);
 
     // Cuota fija (Sistema Francés) o cuota igual sin interés
     const periodicPayment = this.computePeriodicPayment(financed.amount, r, n);
@@ -113,9 +116,36 @@ export class SimulationEngine {
     return new Date(payYear, firstPaymentMonth - 1, 1);
   }
 
+  // Mapa de niveles del input a los ENUMs de BD (importado de constante compartida)
+  private static readonly LEVEL_MAP = LEVEL_MAP;
+
+  // Resuelve la tasa mensual usando la versión activa de parámetros de BD
+  private resolveMonthlyRate(input: SimulationInput, activeVersion?: ActiveParameterVersion): number {
+    if (input.interestMode === 'sin_interes') return 0;
+
+    if (!activeVersion) {
+      throw new Error(
+        'No se puede calcular: se requiere la versión de parámetros activa para resolver la tasa de interés.',
+      );
+    }
+
+    const dbLevel = SimulationEngine.LEVEL_MAP[input.educationLevel];
+    const rateEntry = dbLevel
+      ? activeVersion.interestRates.find(r => r.levelScope === dbLevel)
+      : undefined;
+
+    if (rateEntry?.rateMonthly == null) {
+      throw new Error(
+        'No se puede calcular: la versión de parámetros activa no define una tasa de interés para este nivel.',
+      );
+    }
+
+    return rateEntry.rateMonthly;
+  }
+
   // Expuesto para SimulationService cuando solo necesita la tabla separada
-  getScheduleRows(input: SimulationInput, params: ParameterVersion): SimulationRow[] {
-    const dtos = this.buildAmortizationSchedule(input, params);
+  getScheduleRows(input: SimulationInput, params: ParameterVersion, activeVersion?: ActiveParameterVersion): SimulationRow[] {
+    const dtos = this.buildAmortizationSchedule(input, params, activeVersion);
     return dtos.map((d) =>
       new SimulationRow(
         d.period,
