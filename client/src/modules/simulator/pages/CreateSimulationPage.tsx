@@ -51,7 +51,7 @@ export function CreateSimulationPage() {
         onToggleProfile={() => setProfileOpen((p) => !p)}
       />
 
-      <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-1 w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-10 2xl:px-16 py-8">
         <h1 className="text-3xl sm:text-4xl font-black text-gray-900 mb-8 tracking-tight">
           Formulario de Simulación
         </h1>

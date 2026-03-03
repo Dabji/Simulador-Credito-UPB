@@ -34,8 +34,8 @@ interface UpbFooterProps {
 
 export function UpbFooter({ className }: UpbFooterProps) {
   return (
-    <footer style={{ backgroundColor: 'rgba(20,20,20,0.97)' }} className={`text-gray-400 ${className ?? 'mt-12'}`}>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-8">
+    <footer style={{ backgroundColor: 'rgba(20,20,20,0.97)' }} className={`text-gray-400 w-full ${className ?? 'mt-12'}`}>
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-10 2xl:px-16 pt-10 pb-8">
 
         {/* Grid de dos columnas: contacto + oferta académica */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">

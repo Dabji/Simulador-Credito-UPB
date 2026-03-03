@@ -74,7 +74,7 @@ export function LoginPage() {
       if (actualRole === 'ADMIN') {
         navigate('/admin');
       } else {
-        navigate('/simulator/create');
+        navigate('/student/main');
       }
     }
   };

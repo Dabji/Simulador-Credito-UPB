@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { SimulatorPage } from './modules/simulator/pages/SimulatorPage';
 import { CreateSimulationPage } from './modules/simulator/pages/CreateSimulationPage';
+import { MainStudentPage } from './modules/simulator/pages/MainStudentPage';
+import { StudentHistoryPage } from './modules/simulator/pages/StudentHistoryPage';
 import { AdminDashboard } from './modules/admin/pages/AdminDashboard';
 import { LoginPage } from './modules/auth/pages/LoginPage';
 import { RegisterPage } from './modules/auth/pages/RegisterPage';
@@ -17,7 +19,7 @@ export function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Auth pages (públicas — redirigen a /simulator/create si ya hay sesión) */}
+          {/* Auth pages (públicas — redirigen si ya hay sesión) */}
           <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
           <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
           <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
@@ -26,6 +28,10 @@ export function App() {
 
           {/* Página principal: redirige a login */}
           <Route path="/" element={<Navigate to="/login" replace />} />
+
+          {/* ── Rutas del estudiante (HU-08) ── */}
+          <Route path="/student/main" element={<ProtectedRoute requiredRole="STUDENT"><MainStudentPage /></ProtectedRoute>} />
+          <Route path="/student/history" element={<ProtectedRoute requiredRole="STUDENT"><StudentHistoryPage /></ProtectedRoute>} />
 
           {/* Rutas protegidas — requieren sesión activa */}
           <Route path="/simulator/create" element={<ProtectedRoute allowedRoles={['STUDENT']}><CreateSimulationPage /></ProtectedRoute>} />
