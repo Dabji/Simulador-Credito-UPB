@@ -61,18 +61,18 @@ export class AuthenticateUserUseCase {
       );
     }
 
-    if (user.role !== UserRole.STUDENT) {
-      throw new UnauthorizedError(
-        'Esta cuenta es de administrador. Usa la pestaña Administrador para iniciar sesión.',
-        'ROLE_MISMATCH',
-      );
-    }
-
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
       throw new UnauthorizedError(
         'El correo electrónico o la contraseña son incorrectos.',
         'INVALID_CREDENTIALS',
+      );
+    }
+
+    if (user.role !== UserRole.STUDENT) {
+      throw new UnauthorizedError(
+        'Esta cuenta es de administrador. Usa la pestaña Administrador para iniciar sesión.',
+        'ROLE_MISMATCH',
       );
     }
 
@@ -124,18 +124,18 @@ export class AuthenticateUserUseCase {
       );
     }
 
-    if (user.role !== UserRole.ADMIN) {
-      throw new UnauthorizedError(
-        'Esta cuenta no tiene permisos de administrador. Usa la pestaña Estudiante para iniciar sesión.',
-        'ROLE_MISMATCH',
-      );
-    }
-
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
       throw new UnauthorizedError(
         'El correo electrónico o la contraseña son incorrectos.',
         'INVALID_CREDENTIALS',
+      );
+    }
+
+    if (user.role !== UserRole.ADMIN) {
+      throw new UnauthorizedError(
+        'Esta cuenta no tiene permisos de administrador. Usa la pestaña Estudiante para iniciar sesión.',
+        'ROLE_MISMATCH',
       );
     }
 

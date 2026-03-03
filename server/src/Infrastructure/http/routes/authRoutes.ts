@@ -66,10 +66,7 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction): P
         message: error instanceof Error ? error.message : 'Unknown',
         email: req.body?.email,
       });
-      next(new UnauthorizedError(
-        'Ocurrió un error inesperado al iniciar sesión. Intenta de nuevo más tarde.',
-        'SERVER_ERROR',
-      ));
+      next(error);
     }
   }
 });
