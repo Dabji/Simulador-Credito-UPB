@@ -40,7 +40,7 @@ export function createApp(): express.Application {
   app.use('/api/auth', authRoutes);
 
   // API: endpoints públicos temporales HU-13 (sin auth, sin DB)
-  // Se montan ANTES del authGuard para que /preview y /save sean accesibles.
+  // Solo `/preview` es público. Se monta ANTES del authGuard.
   app.use('/api/simulator', simulatorPublicRoutes);
 
   // ── Rutas Protegidas ──────────────────────────────────────

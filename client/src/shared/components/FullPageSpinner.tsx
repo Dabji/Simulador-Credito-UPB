@@ -7,7 +7,7 @@ export function FullPageSpinner() {
       aria-busy="true"
     >
       <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-300 border-t-green-700" />
-      <span className="sr-only">Cargando…</span>
+      <span className="sr-only">Cargando...</span>
     </div>
   );
 }

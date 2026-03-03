@@ -17,7 +17,7 @@ const dotenvResult = dotenv.config({ path: envPath });
 
 if (dotenvResult.error) {
   console.warn(`⚠️  No se pudo cargar .env desde ${envPath}:`, dotenvResult.error.message);
-} else {
+} else if (process.env.NODE_ENV === 'development') {
   const count = Object.keys(dotenvResult.parsed ?? {}).length;
   console.log(`✅ .env cargado desde ${envPath} (${count} variables)`);
 }

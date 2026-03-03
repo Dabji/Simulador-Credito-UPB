@@ -8,6 +8,19 @@ import type { Request, Response, NextFunction } from 'express';
 const router = Router();
 
 /**
+ * GET /api/admin/stats
+ * Retorna estadísticas generales de administración.
+ */
+router.get('/stats', (_req: Request, res: Response): void => {
+  // TODO: Implementar conteos reales desde los repositorios en la HU del Dashboard Admin.
+  res.json({
+    success: true,
+    message: 'Estadísticas de administración',
+    data: { usersCount: 10, simulationsCount: 45 },
+  });
+});
+
+/**
  * GET /api/admin/parameters
  * Lista todos los parámetros financieros activos
  */

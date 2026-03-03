@@ -3,18 +3,20 @@
 // Sin autenticación requerida (endpoint público temporal para HU-13).
 
 import { SimulationService } from '../services/SimulationService';
+import type { IParameterVersionRepository } from '../../Core/repositories/IParameterVersionRepository';
 import type { SimulationInput } from '../dtos/SimulationInput';
 import type { SimulationSummary } from '../dtos/SimulationSummary';
 
 export class PreviewSimulationUseCase {
   private readonly simulationService: SimulationService;
 
-  constructor() {
+  constructor(private readonly paramRepo: IParameterVersionRepository) {
     this.simulationService = new SimulationService();
   }
 
   // Ejecuta la validación y cálculo; retorna el summary con tabla de amortización
-  execute(input: SimulationInput): SimulationSummary {
-    return this.simulationService.calculate(input);
+  async execute(input: SimulationInput): Promise<SimulationSummary> {
+    const activeVersion = await this.paramRepo.findActive();
+    return this.simulationService.calculate(input, activeVersion ?? undefined);
   }
 }

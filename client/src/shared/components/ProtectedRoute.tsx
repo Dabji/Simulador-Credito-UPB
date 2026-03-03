@@ -7,9 +7,9 @@ type Role = 'STUDENT' | 'ADMIN';
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  /** Si se especifica, sólo usuarios con ese rol pueden acceder. */
+  /** Si se especifica, sólo usuarios con ese rol pueden acceder. (HU-08) */
   requiredRole?: Role;
-  /** Alternativa: lista de roles permitidos (compatible con develop/HU-07). */
+  /** Alternativa: lista de roles permitidos. (HU-07 / Develop) */
   allowedRoles?: Role[];
 }
 
@@ -24,17 +24,20 @@ export function ProtectedRoute({ children, requiredRole, allowedRoles }: Protect
     return <Navigate to="/login" replace />;
   }
 
-  const role = user?.role;
-  const fallback = role === 'ADMIN' ? '/admin' : '/student/main';
+  const role = user?.role as Role | undefined;
+  
+  // OJO AQUÍ: Si en la HU-08 la pantalla principal del estudiante ahora es '/student/main', 
+  // dejamos esa. Si no, cámbiala de vuelta a '/simulator/create'.
+  const fallbackRoute = role === 'ADMIN' ? '/admin' : '/student/main';
 
-  // requiredRole: prop usada en HU-08 (App.tsx)
+  // 1. Validación original de HU-08 (requiredRole)
   if (requiredRole && role !== requiredRole) {
-    return <Navigate to={fallback} replace />;
+    return <Navigate to={fallbackRoute} replace />;
   }
 
-  // allowedRoles: prop usada en HU-07 (develop)
+  // 2. Validación refactorizada de develop (allowedRoles)
   if (allowedRoles && role && !allowedRoles.includes(role)) {
-    return <Navigate to={fallback} replace />;
+    return <Navigate to={fallbackRoute} replace />;
   }
 
   return <>{children}</>;
