@@ -20,7 +20,7 @@ import { UserModel } from '../../persistence/models/UserModel';
  *   router.use(authGuard, roleGuard(UserRole.STUDENT, UserRole.ADMIN));
  */
 export function roleGuard(...allowedRoles: UserRole[]) {
-  return async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  return async (req: AuthenticatedRequest, _res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.user?.userId as string | undefined;
 

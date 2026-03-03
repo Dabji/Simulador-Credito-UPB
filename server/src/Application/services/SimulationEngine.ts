@@ -5,6 +5,7 @@ import { Money } from '../../Core/entities/Money';
 import { SimulationRow } from '../../Core/entities/SimulationRow';
 import { ParameterVersion } from '../../Core/entities/ParameterVersion';
 import type { SimulationInput } from '../dtos/SimulationInput';
+import { LEVEL_MAP } from '../dtos/constants';
 import type { SimulationSummary, AmortizationRowDTO } from '../dtos/SimulationSummary';
 import type { ActiveParameterVersion } from '../../Core/repositories/IParameterVersionRepository';
 
@@ -51,7 +52,7 @@ export class SimulationEngine {
     const financed       = tuitionNet.subtract(initialPayment);
     const n              = input.numberOfPayments;
 
-    // Usar tasa de BD (activeVersion) si está disponible; de lo contrario, fallback hardcode
+    // Usar tasa desde BD mediante activeVersion (comportamiento estricto: si no hay activeVersion, se lanza error en resolveMonthlyRate)
     const r              = this.resolveMonthlyRate(input, activeVersion);
 
     // Cuota fija (Sistema Francés) o cuota igual sin interés
@@ -115,12 +116,8 @@ export class SimulationEngine {
     return new Date(payYear, firstPaymentMonth - 1, 1);
   }
 
-  // Mapa de niveles del input a los ENUMs de BD
-  private static readonly LEVEL_MAP: Record<string, 'PREGRADO' | 'POSGRADO' | 'UPB_TEC'> = {
-    pregrado: 'PREGRADO',
-    posgrado: 'POSGRADO',
-    upbTech:  'UPB_TEC',
-  };
+  // Mapa de niveles del input a los ENUMs de BD (importado de constante compartida)
+  private static readonly LEVEL_MAP = LEVEL_MAP;
 
   // Resuelve la tasa mensual usando la versión activa de parámetros de BD
   private resolveMonthlyRate(input: SimulationInput, activeVersion?: ActiveParameterVersion): number {

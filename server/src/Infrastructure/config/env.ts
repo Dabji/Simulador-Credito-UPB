@@ -15,13 +15,11 @@ import dotenv from 'dotenv';
 const envPath = path.resolve(process.cwd(), '..', '.env');
 const dotenvResult = dotenv.config({ path: envPath });
 
-if (process.env.NODE_ENV === 'development') {
-  if (dotenvResult.error) {
-    console.warn(`⚠️  No se pudo cargar .env desde ${envPath}:`, dotenvResult.error.message);
-  } else {
-    const count = Object.keys(dotenvResult.parsed ?? {}).length;
-    console.log(`✅ .env cargado desde ${envPath} (${count} variables)`);
-  }
+if (dotenvResult.error) {
+  console.warn(`⚠️  No se pudo cargar .env desde ${envPath}:`, dotenvResult.error.message);
+} else if (process.env.NODE_ENV === 'development') {
+  const count = Object.keys(dotenvResult.parsed ?? {}).length;
+  console.log(`✅ .env cargado desde ${envPath} (${count} variables)`);
 }
 
 /**

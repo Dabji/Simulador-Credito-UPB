@@ -12,6 +12,7 @@ const router = Router();
  * Retorna estadísticas generales de administración.
  */
 router.get('/stats', (_req: Request, res: Response): void => {
+  // TODO: Implementar conteos reales desde los repositorios en la HU del Dashboard Admin.
   res.json({
     success: true,
     message: 'Estadísticas de administración',

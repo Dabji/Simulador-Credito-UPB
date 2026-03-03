@@ -10,13 +10,7 @@ import type { SimulationInput } from '../dtos/SimulationInput';
 import type { SimulationSummary } from '../dtos/SimulationSummary';
 import { SimulationService } from '../services/SimulationService';
 import { BadRequestError, NotFoundError } from '../../Core/errors';
-
-/** Mapea los valores del frontend a los ENUMs de la BD */
-const LEVEL_MAP: Record<string, 'PREGRADO' | 'POSGRADO' | 'UPB_TEC'> = {
-  pregrado: 'PREGRADO',
-  posgrado: 'POSGRADO',
-  upbTech:  'UPB_TEC',
-};
+import { LEVEL_MAP } from '../dtos/constants';
 
 const STUDENT_TYPE_MAP: Record<string, 'NUEVO' | 'CONTINUO'> = {
   nuevo:    'NUEVO',
