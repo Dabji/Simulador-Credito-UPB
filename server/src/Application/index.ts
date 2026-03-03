@@ -1,8 +1,7 @@
 // ============================================================
 // Application Layer — Barrel Exports
-// Solo se exportan los use cases y DTOs activamente utilizados.
-// SimulateCreditUseCase y ManageFinancialParametersUseCase se
-// mantienen como referencia pero no se usan en runtime todavía.
+// Solo se exportan los use cases y DTOs actualmente soportados
+// y utilizados en runtime desde la capa de aplicación.
 // ============================================================
 
 export { AuthenticateUserUseCase } from './use-cases/AuthenticateUserUseCase';

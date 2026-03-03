@@ -7,6 +7,7 @@
 import type { Response, NextFunction } from 'express';
 import type { AuthenticatedRequest } from './authGuard';
 import { ForbiddenError } from '../../../Core/errors';
+import { UserRole } from '../../../Core/entities/User';
 
 /**
  * Factory que retorna un middleware de Express.
@@ -14,12 +15,12 @@ import { ForbiddenError } from '../../../Core/errors';
  * esté incluido en la lista de roles permitidos.
  *
  * @example
- *   router.use(authGuard, roleGuard('ADMIN'));
- *   router.use(authGuard, roleGuard('STUDENT', 'ADMIN'));
+ *   router.use(authGuard, roleGuard(UserRole.ADMIN));
+ *   router.use(authGuard, roleGuard(UserRole.STUDENT, UserRole.ADMIN));
  */
-export function roleGuard(...allowedRoles: string[]) {
+export function roleGuard(...allowedRoles: UserRole[]) {
   return (req: AuthenticatedRequest, _res: Response, next: NextFunction): void => {
-    const userRole = req.user?.role as string | undefined;
+    const userRole = req.user?.role as UserRole | undefined;
 
     if (!userRole || !allowedRoles.includes(userRole)) {
       return next(

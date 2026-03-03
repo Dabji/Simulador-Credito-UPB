@@ -28,7 +28,13 @@ async function seed(): Promise<void> {
     // ── 0. Obtener o crear usuario ADMIN (para FK created_by) ──
     let admin = await UserModel.findOne({ where: { role: 'ADMIN' }, transaction: t });
     if (!admin) {
-      const defaultPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'admin/UPB26';
+      const defaultPassword = process.env.ADMIN_DEFAULT_PASSWORD;
+      if (!defaultPassword) {
+        throw new Error(
+          'La variable de entorno ADMIN_DEFAULT_PASSWORD es obligatoria para crear el usuario ADMIN. ' +
+          'Defínela en tu archivo .env antes de ejecutar el seed.',
+        );
+      }
       const passwordHash = await bcrypt.hash(defaultPassword, 10);
 
       admin = await UserModel.create(

@@ -12,6 +12,7 @@ import simulatorPublicRoutes from './routes/simulatorPublicRoutes';
 import { errorHandler } from './middlewares/errorHandler';
 import { authGuard } from './middlewares/authGuard';
 import { roleGuard } from './middlewares/roleGuard';
+import { UserRole } from '../../Core/entities/User';
 import { swaggerDocument } from './swagger';
 
 /**
@@ -45,7 +46,7 @@ export function createApp(): express.Application {
   // ── Rutas Protegidas ──────────────────────────────────────
   // Rutas protegidas por rol (HU-07)
   app.use('/api/simulator', authGuard, simulatorRoutes);
-  app.use('/api/admin', authGuard, roleGuard('ADMIN'), adminRoutes);
+  app.use('/api/admin', authGuard, roleGuard(UserRole.ADMIN), adminRoutes);
 
   // ── Manejador de Errores (siempre al final) ───────────────
   app.use(errorHandler);

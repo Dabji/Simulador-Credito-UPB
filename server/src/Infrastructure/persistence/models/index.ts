@@ -6,4 +6,3 @@ export { ModalityRuleModel } from './ModalityRuleModel';
 export { InitialPaymentRuleModel } from './InitialPaymentRuleModel';
 export { SimulationModel } from './SimulationModel';
 export { AmortizationRowModel } from './AmortizationRowModel';
-// CreditModel: archivo de referencia — no se carga en runtime

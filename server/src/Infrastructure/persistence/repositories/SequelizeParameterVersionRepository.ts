@@ -16,7 +16,9 @@ import type {
 export class SequelizeParameterVersionRepository implements IParameterVersionRepository {
 
   async findActive(): Promise<ActiveParameterVersion | null> {
-    const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+    const now = new Date();
+    const colombiaOffset = new Date(now.getTime() - 5 * 60 * 60 * 1000);
+    const today = colombiaOffset.toISOString().slice(0, 10); // "YYYY-MM-DD" en hora Colombia (UTC-5)
 
     const version = await ParameterVersionModel.findOne({
       where: {

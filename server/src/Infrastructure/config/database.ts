@@ -26,6 +26,13 @@ export class Database {
     const caPath = path.resolve(__dirname, '../../../certs/ca.pem');
     const hasCert = fs.existsSync(caPath);
 
+    if (useSSL && !hasCert && env.NODE_ENV === 'production') {
+      throw new Error(
+        `SSL está habilitado (DB_SSL=true) pero no se encontró el certificado CA en ${caPath}. ` +
+        'En producción es obligatorio proporcionar el certificado para evitar ataques MITM.',
+      );
+    }
+
     const dialectOptions = useSSL
       ? {
           ssl: hasCert

@@ -195,7 +195,7 @@ const devConsoleLogger = winston.createLogger({
  * No hace nada en producción.
  */
 export function logDev(...lines: string[]): void {
-  if (env.NODE_ENV === 'production') return;
+  if (env.NODE_ENV !== 'development') return;
   for (const line of lines) {
     devConsoleLogger.info(line);
   }

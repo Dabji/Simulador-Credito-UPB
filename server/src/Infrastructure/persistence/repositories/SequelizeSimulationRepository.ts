@@ -3,6 +3,7 @@
 // Persiste y consulta simulaciones + filas de amortización.
 // ============================================================
 
+import { Op } from 'sequelize';
 import { Database } from '../../config/database';
 import { SimulationModel } from '../models/SimulationModel';
 import { AmortizationRowModel } from '../models/AmortizationRowModel';
@@ -76,15 +77,25 @@ export class SequelizeSimulationRepository implements ISimulationRepository {
       order: [['saved_at', 'DESC']],
     });
 
-    const results: PersistedSimulation[] = [];
-    for (const sim of simulations) {
-      const rows = await AmortizationRowModel.findAll({
-        where: { simulation_id: sim.id },
-        order: [['payment_no', 'ASC']],
-      });
-      results.push(this.toPersistedSimulation(sim, rows));
+    if (simulations.length === 0) return [];
+
+    const simIds = simulations.map((s) => s.id);
+
+    const allRows = await AmortizationRowModel.findAll({
+      where: { simulation_id: { [Op.in]: simIds } },
+      order: [['payment_no', 'ASC']],
+    });
+
+    const rowsBySimId = new Map<string, AmortizationRowModel[]>();
+    for (const row of allRows) {
+      const existing = rowsBySimId.get(row.simulation_id) ?? [];
+      existing.push(row);
+      rowsBySimId.set(row.simulation_id, existing);
     }
-    return results;
+
+    return simulations.map((sim) =>
+      this.toPersistedSimulation(sim, rowsBySimId.get(sim.id) ?? []),
+    );
   }
 
   async findById(id: string): Promise<PersistedSimulation | null> {

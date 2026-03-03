@@ -105,7 +105,7 @@ router.post('/forgot-password', async (req: Request, res: Response, next: NextFu
 
     await requestPasswordResetUseCase.execute(parsed.data, {
       ip: req.ip,
-      userAgent: req.headers['user-agent'],
+      userAgent: typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : undefined,
     });
 
     // Siempre retornar éxito (no revelar si el email existe)
