@@ -1,84 +1,36 @@
 // ============================================================
 // Express Routes: Simulator (protected — behind authGuard)
+// /preview  → calcula simulación sin persistir (idéntico al público)
+// /save     → calcula + persiste en BD (simulations + amortization_rows)
+// /history  → lista simulaciones guardadas del usuario autenticado
 // ============================================================
 
-import { randomUUID } from 'node:crypto';
 import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
-import { SimulateCreditUseCase } from '../../../Application/use-cases/SimulateCreditUseCase';
 import { PreviewSimulationUseCase } from '../../../Application/use-cases/PreviewSimulationUseCase';
-import { AmortizationType } from '../../../Core/entities/Credit';
-import type { IAmortizationStrategy } from '../../../Core/strategies/IAmortizationStrategy';
-import { AppError, BadRequestError } from '../../../Core/errors';
-import { SequelizeCreditRepository } from '../../persistence/repositories/SequelizeCreditRepository';
-import { FrenchAmortizationStrategy } from '../../strategies/FrenchAmortizationStrategy';
+import { SaveSimulationUseCase } from '../../../Application/use-cases/SaveSimulationUseCase';
+import { SequelizeSimulationRepository } from '../../persistence/repositories/SequelizeSimulationRepository';
+import { SequelizeParameterVersionRepository } from '../../persistence/repositories/SequelizeParameterVersionRepository';
 import type { SimulationInput } from '../../../Application/dtos/SimulationInput';
 import { logger } from '../../logger';
+import type { AuthenticatedRequest } from '../middlewares/authGuard';
 
 const router = Router();
 
-// ── Instancias (ruta existente con DB) ────────────────────────────────────
-const strategies = new Map<AmortizationType, IAmortizationStrategy>();
-strategies.set(AmortizationType.FRENCH, new FrenchAmortizationStrategy());
-const creditRepository = new SequelizeCreditRepository();
-const simulateUseCase  = new SimulateCreditUseCase(creditRepository, strategies);
-
-// ── Instancia del nuevo caso de uso sin DB (HU-13) ────────────────────────
+// ── Instancias ───────────────────────────────────────────────
 const previewUseCase = new PreviewSimulationUseCase();
-
-// API: endpoint temporal sin auth (solo para HU-13)
-// Almacenamiento in-memory de simulaciones guardadas (starred)
-const savedSimulations = new Map<string, SimulationInput & { id: string }>();
-
-/**
- * POST /api/simulator/simulate
- * Ruta existente — simula usando DB (requiere auth por app.ts).
- */
-router.post('/simulate', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const { userId, amount, annualRate, termMonths, amortizationType } =
-      req.body as {
-        userId: string;
-        amount: number;
-        annualRate: number;
-        termMonths: number;
-        amortizationType: AmortizationType;
-      };
-
-    const result = await simulateUseCase.execute({
-      userId,
-      amount,
-      annualRate,
-      termMonths,
-      amortizationType: amortizationType ?? AmortizationType.FRENCH,
-    });
-
-    logger.info('Simulación de crédito ejecutada', { userId, amount, termMonths });
-
-    res.json({
-      credit: result.credit.toJSON(),
-      schedule: result.schedule,
-    });
-  } catch (error) {
-    if (error instanceof AppError) {
-      next(error);
-    } else {
-      next(new BadRequestError('Error al simular crédito'));
-    }
-  }
-});
+const simulationRepo = new SequelizeSimulationRepository();
+const paramRepo      = new SequelizeParameterVersionRepository();
+const saveUseCase    = new SaveSimulationUseCase(simulationRepo, paramRepo);
 
 /**
  * POST /api/simulator/preview
- * HU-13: Calcula una simulación sin persistencia en BD y sin autenticación.
- * Body: SimulationInput
- * Response: SimulationSummary (incluye schedule)
+ * HU-13: Calcula una simulación sin persistencia en BD.
  */
 router.post('/preview', (req: Request, res: Response): void => {
   try {
     const input = req.body as SimulationInput;
 
-    // Validaciones básicas de presencia (el resto las hace SimulationService)
     if (!input.studentType || !input.educationLevel) {
       res.status(400).json({ error: 'studentType y educationLevel son requeridos.' });
       return;
@@ -102,25 +54,50 @@ router.post('/preview', (req: Request, res: Response): void => {
 
 /**
  * POST /api/simulator/save
- * HU-13 (opcional): Guarda simulación en memoria si starred === true.
- * Response: { id: string, message: string }
+ * Calcula la simulación, la persiste en BD (simulations + amortization_rows)
+ * y la asocia al usuario autenticado.
  */
-router.post('/save', (req: Request, res: Response): void => {
+router.post('/save', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const input = req.body as SimulationInput;
+    const input  = req.body as SimulationInput;
+    const userId = req.user?.userId as string | undefined;
 
-    if (!input.starred) {
-      res.status(400).json({ error: 'Solo se pueden guardar simulaciones destacadas (starred: true).' });
+    if (!userId) {
+      res.status(401).json({ error: 'Usuario no autenticado.' });
       return;
     }
 
-    const id = randomUUID();
-    savedSimulations.set(id, { ...input, id });
+    const result = await saveUseCase.execute(input, userId);
 
-    res.json({ id, message: 'Simulación guardada exitosamente.' });
+    logger.info('Simulación guardada en BD', { id: result.id, userId });
+    res.json({
+      id: result.id,
+      savedAt: result.savedAt,
+      message: 'Simulación guardada exitosamente.',
+      summary: result.summary,
+    });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Error interno';
-    res.status(400).json({ error: message });
+    next(error);
+  }
+});
+
+/**
+ * GET /api/simulator/history
+ * Retorna las simulaciones guardadas del usuario autenticado.
+ */
+router.get('/history', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.user?.userId as string | undefined;
+
+    if (!userId) {
+      res.status(401).json({ error: 'Usuario no autenticado.' });
+      return;
+    }
+
+    const simulations = await simulationRepo.findByUserId(userId);
+    res.json({ simulations });
+  } catch (error) {
+    next(error);
   }
 });
 

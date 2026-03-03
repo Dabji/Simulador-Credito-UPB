@@ -1,10 +1,10 @@
 // ============================================================
 // Use Case: ResetPassword
-// Valida el token, hashea la nueva contraseña y actualiza el user.
-// TODO: Inyectar IPasswordResetTokenRepository para evitar el
-//       acoplamiento con Sequelize y cumplir con Clean Architecture.
+// Valida el token (hasheando SHA-256), hashea la nueva contraseña
+// y actualiza el user de forma atómica.
 // ============================================================
 
+import crypto from 'crypto';
 import bcrypt from 'bcrypt';
 import { Op } from 'sequelize';
 import type { IUserRepository } from '../../Core/repositories/IUserRepository';
@@ -19,11 +19,13 @@ export class ResetPasswordUseCase {
   constructor(private readonly userRepository: IUserRepository) {}
 
   async execute(input: ResetPasswordInput): Promise<void> {
-    // 1. Buscar token válido (no usado, no expirado)
+    // 1. Hashear el token recibido para buscar en BD
+    const tokenHash = crypto.createHash('sha256').update(input.token).digest('hex');
+
     const tokenRecord = await PasswordResetTokenModel.findOne({
       where: {
-        token: input.token,
-        used: false,
+        token_hash: tokenHash,
+        used_at: null,
         expires_at: { [Op.gt]: new Date() },
       },
     });
@@ -48,16 +50,15 @@ export class ResetPasswordUseCase {
     }
 
     await sequelize.transaction(async (transaction) => {
-      // 4.1 Marcar el token como usado de forma condicional
+      // 4.1 Marcar el token como usado (used_at = ahora)
       const [affectedRows] = await PasswordResetTokenModel.update(
-        { used: true },
+        { used_at: new Date() },
         {
-          where: { id: tokenRecord.id, used: false },
+          where: { id: tokenRecord.id, used_at: null },
           transaction,
         },
       );
 
-      // Si no se afectó exactamente 1 fila, el token ya fue usado o es inválido
       if (affectedRows !== 1) {
         throw new BadRequestError('El enlace de recuperación es inválido o ha expirado');
       }

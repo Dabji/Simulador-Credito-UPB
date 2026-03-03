@@ -58,6 +58,10 @@ export class AuthenticateUserUseCase {
       throw new UnauthorizedError('Credenciales inválidas');
     }
 
+    if (user.role !== UserRole.STUDENT) {
+      throw new UnauthorizedError('Credenciales inválidas');
+    }
+
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
       throw new UnauthorizedError('Credenciales inválidas');
@@ -67,7 +71,7 @@ export class AuthenticateUserUseCase {
       throw new UnauthorizedError('La cuenta está desactivada');
     }
 
-    return this.buildOutput(user);
+    return await this.buildOutput(user);
   }
 
   // ── Administrador: delegar validación al servicio LDAP ──
@@ -77,31 +81,55 @@ export class AuthenticateUserUseCase {
   ): Promise<AuthenticateUserOutput> {
     const ldapUser = await this.authService.authenticate(email, password);
 
-    if (!ldapUser) {
+    if (ldapUser) {
+      // Flujo LDAP exitoso: buscar o crear el admin en la BD local
+      let user = await this.userRepository.findByEmail(ldapUser.email);
+
+      if (!user) {
+        user = User.create({
+          id: crypto.randomUUID(),
+          email: ldapUser.email,
+          firstName: ldapUser.firstName,
+          lastName: ldapUser.lastName,
+          identificationNumber: ldapUser.identificationNumber,
+          role: UserRole.ADMIN,
+          isActive: true,
+        });
+        user = await this.userRepository.save(user);
+      }
+
+      return await this.buildOutput(user);
+    }
+
+    // Fallback: autenticar con bcrypt contra la BD local (útil en desarrollo
+    // cuando LDAP no está disponible o el admin fue creado via seed).
+    const user = await this.userRepository.findByEmail(email);
+
+    if (!user || !user.password) {
       throw new UnauthorizedError('Credenciales inválidas');
     }
 
-    // Buscar o crear el admin en la BD local
-    let user = await this.userRepository.findByEmail(ldapUser.email);
-
-    if (!user) {
-      user = User.create({
-        id: crypto.randomUUID(),
-        email: ldapUser.email,
-        firstName: ldapUser.firstName,
-        lastName: ldapUser.lastName,
-        identificationNumber: ldapUser.identificationNumber,
-        role: UserRole.ADMIN,
-        isActive: true,
-      });
-      user = await this.userRepository.save(user);
+    if (user.role !== UserRole.ADMIN) {
+      throw new UnauthorizedError('Credenciales inválidas');
     }
 
-    return this.buildOutput(user);
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) {
+      throw new UnauthorizedError('Credenciales inválidas');
+    }
+
+    if (!user.isActive) {
+      throw new UnauthorizedError('La cuenta está desactivada');
+    }
+
+    return await this.buildOutput(user);
   }
 
-  // ── Genera JWT y retorna usuario sin password ──
-  private buildOutput(user: User): AuthenticateUserOutput {
+  // ── Genera JWT, actualiza last_login_at y retorna usuario sin password ──
+  private async buildOutput(user: User): Promise<AuthenticateUserOutput> {
+    // Registrar el momento del login (last_login_at) en BD
+    await this.userRepository.updateLastLogin(user.id);
+
     const token = this.tokenService.generate({
       userId: user.id,
       email: user.email,

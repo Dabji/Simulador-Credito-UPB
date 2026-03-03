@@ -21,16 +21,25 @@ export class Database {
     const useSSL = env.DB_SSL === 'true';
 
     // Leer certificado CA para conexiones SSL (Aiven Cloud)
+    // SSL: usar certificado CA si existe, sino conectar con SSL sin verificación
+    // (suficiente para desarrollo contra Aiven Cloud)
     const caPath = path.resolve(__dirname, '../../../certs/ca.pem');
-    const dialectOptions =
-      useSSL && fs.existsSync(caPath)
-        ? {
-            ssl: {
-              ca: fs.readFileSync(caPath, 'utf8'),
-              rejectUnauthorized: true,
-            },
-          }
-        : undefined;
+    const hasCert = fs.existsSync(caPath);
+
+    if (useSSL && !hasCert && env.NODE_ENV === 'production') {
+      throw new Error(
+        `SSL está habilitado (DB_SSL=true) pero no se encontró el certificado CA en ${caPath}. ` +
+        'En producción es obligatorio proporcionar el certificado para evitar ataques MITM.',
+      );
+    }
+
+    const dialectOptions = useSSL
+      ? {
+          ssl: hasCert
+            ? { ca: fs.readFileSync(caPath, 'utf8'), rejectUnauthorized: true }
+            : { rejectUnauthorized: false },
+        }
+      : undefined;
 
     this.sequelize = new Sequelize({
       dialect: 'mysql',

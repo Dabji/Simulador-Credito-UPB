@@ -1,6 +1,7 @@
 // ============================================================
 // Sequelize Model: PasswordResetTokenModel
 // Tokens de recuperación de contraseña.
+// Alineado con la tabla real en Aiven MySQL.
 // ============================================================
 
 import { DataTypes, Model } from 'sequelize';
@@ -10,13 +11,18 @@ import { Database } from '../../config/database';
 interface PasswordResetTokenAttributes {
   id: string;
   user_id: string;
-  token: string;
+  token_hash: string;
   expires_at: Date;
-  used: boolean;
+  used_at: Date | null;
+  requested_ip: string | null;
+  user_agent: string | null;
   created_at: Date;
 }
 
-type PasswordResetTokenCreationAttributes = Optional<PasswordResetTokenAttributes, 'used' | 'created_at'>;
+type PasswordResetTokenCreationAttributes = Optional<
+  PasswordResetTokenAttributes,
+  'used_at' | 'requested_ip' | 'user_agent' | 'created_at'
+>;
 
 export class PasswordResetTokenModel
   extends Model<PasswordResetTokenAttributes, PasswordResetTokenCreationAttributes>
@@ -24,9 +30,11 @@ export class PasswordResetTokenModel
 {
   declare id: string;
   declare user_id: string;
-  declare token: string;
+  declare token_hash: string;
   declare expires_at: Date;
-  declare used: boolean;
+  declare used_at: Date | null;
+  declare requested_ip: string | null;
+  declare user_agent: string | null;
   declare created_at: Date;
 }
 
@@ -44,8 +52,8 @@ PasswordResetTokenModel.init(
       allowNull: false,
       references: { model: 'users', key: 'id' },
     },
-    token: {
-      type: DataTypes.STRING(64),
+    token_hash: {
+      type: DataTypes.STRING(255),
       allowNull: false,
       unique: true,
     },
@@ -53,10 +61,20 @@ PasswordResetTokenModel.init(
       type: DataTypes.DATE,
       allowNull: false,
     },
-    used: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
+    used_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      defaultValue: null,
+    },
+    requested_ip: {
+      type: DataTypes.STRING(45),
+      allowNull: true,
+      defaultValue: null,
+    },
+    user_agent: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      defaultValue: null,
     },
     created_at: {
       type: DataTypes.DATE,

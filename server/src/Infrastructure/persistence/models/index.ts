@@ -1,3 +1,8 @@
 export { UserModel } from './UserModel';
-export { CreditModel } from './CreditModel';
 export { PasswordResetTokenModel } from './PasswordResetTokenModel';
+export { ParameterVersionModel } from './ParameterVersionModel';
+export { InterestRateModel } from './InterestRateModel';
+export { ModalityRuleModel } from './ModalityRuleModel';
+export { InitialPaymentRuleModel } from './InitialPaymentRuleModel';
+export { SimulationModel } from './SimulationModel';
+export { AmortizationRowModel } from './AmortizationRowModel';

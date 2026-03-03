@@ -1,11 +1,13 @@
 // Servicio: retorna la versión activa de parámetros del simulador.
-// Sin BD por ahora — valores hardcode según reglas de HU-13.
+// Primero intenta leer de BD vía IParameterVersionRepository;
+// si no hay versión activa, usa valores hardcode como fallback.
 
 import { ParameterVersion } from '../../Core/entities/ParameterVersion';
+import type { IParameterVersionRepository, ActiveParameterVersion } from '../../Core/repositories/IParameterVersionRepository';
 
 export class ParameterService {
-  // Versión activa única (hardcode temporal, sin DB)
-  private static readonly ACTIVE: ParameterVersion = new ParameterVersion(
+  // Fallback hardcode (se usa si la BD no tiene parámetros cargados)
+  private static readonly FALLBACK: ParameterVersion = new ParameterVersion(
     'v1-2026',
     0.009,  // tasa mensual máxima (con_interes)
     20,     // mínimo % cuota inicial
@@ -13,8 +15,21 @@ export class ParameterService {
     30,     // días entre cuotas
   );
 
+  private readonly paramRepo: IParameterVersionRepository | null;
+
+  constructor(paramRepo?: IParameterVersionRepository) {
+    this.paramRepo = paramRepo ?? null;
+  }
+
+  /** Retorna la versión activa de la BD o el fallback hardcode */
+  async getActiveVersionFromDB(): Promise<ActiveParameterVersion | null> {
+    if (!this.paramRepo) return null;
+    return this.paramRepo.findActive();
+  }
+
+  /** Versión sincrónica usada por SimulationService (siempre disponible) */
   getActiveVersion(): ParameterVersion {
-    return ParameterService.ACTIVE;
+    return ParameterService.FALLBACK;
   }
 
   // Regla: periodos académicos y meses válidos — delega a ParameterVersion

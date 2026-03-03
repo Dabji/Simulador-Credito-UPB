@@ -23,6 +23,7 @@ export interface UserProps {
   role: UserRole;
   isActive: boolean;
   termsAcceptedAt?: Date | null;
+  lastLoginAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -99,6 +100,10 @@ export class User {
 
   get termsAcceptedAt(): Date | null | undefined {
     return this.props.termsAcceptedAt;
+  }
+
+  get lastLoginAt(): Date | null | undefined {
+    return this.props.lastLoginAt;
   }
 
   get updatedAt(): Date {

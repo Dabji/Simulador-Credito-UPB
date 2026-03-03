@@ -56,10 +56,22 @@ export function LoginPage() {
     }
 
     if (result.data) {
+      const actualRole = result.data.user.role;
+
+      // Validar que el rol real coincida con la pestaña seleccionada
+      if (role === 'ADMIN' && actualRole !== 'ADMIN') {
+        setApiError('Esta cuenta no tiene permisos de administrador.');
+        return;
+      }
+      if (role === 'STUDENT' && actualRole !== 'STUDENT') {
+        setApiError('Esta cuenta es de administrador. Usa la pestaña Administrador.');
+        return;
+      }
+
       login(result.data.token, result.data.user);
 
-      // Redirigir según el rol
-      if (role === 'ADMIN') {
+      // Redirigir según el rol real retornado por el servidor
+      if (actualRole === 'ADMIN') {
         navigate('/admin');
       } else {
         navigate('/simulator/create');

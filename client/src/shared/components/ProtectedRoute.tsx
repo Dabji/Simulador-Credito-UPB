@@ -4,10 +4,12 @@ import { useAuth } from '@/modules/auth/context/AuthContext';
 
 interface ProtectedRouteProps {
   children: ReactNode;
+  /** Si se especifica, sólo usuarios con ese rol pueden acceder. */
+  requiredRole?: 'STUDENT' | 'ADMIN';
 }
 
-export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading } = useAuth();
+export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return (
@@ -25,6 +27,12 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Si se exige un rol específico y el usuario no lo tiene, redirigir a su ruta correcta
+  if (requiredRole && user?.role !== requiredRole) {
+    const fallback = user?.role === 'ADMIN' ? '/admin' : '/simulator/create';
+    return <Navigate to={fallback} replace />;
   }
 
   return <>{children}</>;
