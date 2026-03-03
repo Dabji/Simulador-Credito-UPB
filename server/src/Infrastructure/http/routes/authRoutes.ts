@@ -12,7 +12,7 @@ import { ForgotPasswordSchema } from '../../../Application/dtos/ForgotPasswordIn
 import { ResetPasswordSchema } from '../../../Application/dtos/ResetPasswordInput';
 import { RequestPasswordResetUseCase } from '../../../Application/use-cases/RequestPasswordResetUseCase';
 import { ResetPasswordUseCase } from '../../../Application/use-cases/ResetPasswordUseCase';
-import { AppError, BadRequestError, NotFoundError, UnauthorizedError } from '../../../Core/errors';
+import { AppError, BadRequestError, NotFoundError, UnauthorizedError, ValidationError } from '../../../Core/errors';
 import { authGuard } from '../middlewares/authGuard';
 import type { AuthenticatedRequest } from '../middlewares/authGuard';
 import { SequelizeUserRepository } from '../../persistence/repositories/SequelizeUserRepository';
@@ -76,8 +76,14 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
     const parsed = RegisterUserSchema.safeParse(req.body);
 
     if (!parsed.success) {
-      const messages = parsed.error.issues.map((i) => i.message).join(', ');
-      throw new BadRequestError(messages);
+      // Construir errores agrupados por campo (HU-02)
+      const fieldErrors: Record<string, string[]> = {};
+      for (const issue of parsed.error.issues) {
+        const field = issue.path.join('.') || '_form';
+        if (!fieldErrors[field]) fieldErrors[field] = [];
+        fieldErrors[field].push(issue.message);
+      }
+      throw new ValidationError('Los datos de registro no son válidos', fieldErrors);
     }
 
     await registerUseCase.execute(parsed.data);

@@ -5,4 +5,5 @@ export {
   ForbiddenError,
   BadRequestError,
   ConflictError,
+  ValidationError,
 } from './AppError';

@@ -71,3 +71,11 @@ export class ConflictError extends AppError {
     super(message, 409);
   }
 }
+
+export class ValidationError extends AppError {
+  public readonly fieldErrors: Record<string, string[]>;
+  constructor(message: string, fieldErrors: Record<string, string[]>) {
+    super(message, 400);
+    this.fieldErrors = fieldErrors;
+  }
+}
