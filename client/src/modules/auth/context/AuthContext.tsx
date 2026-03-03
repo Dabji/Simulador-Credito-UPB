@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
-import { getCurrentUser, NETWORK_ERROR_MESSAGE } from '@/shared/services/api';
+import { getCurrentUser, logoutUser, NETWORK_ERROR_MESSAGE } from '@/shared/services/api';
 import type { UserData } from '@/shared/services/api';
 
 // ── Tipos del contexto ─────────────────────────────────────────────────────
@@ -29,7 +29,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    // Notificar al backend (fire-and-forget, no bloquea el logout local)
+    logoutUser().catch(() => {});
+
+    // Limpiar estado local — token y cualquier dato de sesión (HU-05)
     localStorage.removeItem('token');
+    sessionStorage.clear();
     setUser(null);
   }, []);
 

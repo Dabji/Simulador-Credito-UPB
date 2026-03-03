@@ -199,6 +199,17 @@ export async function loginUser(
   });
 }
 
+/**
+ * POST /api/auth/logout
+ * Notifica al servidor que el usuario cierra sesión (HU-05).
+ * Fire-and-forget: el frontend no espera la respuesta para continuar.
+ */
+export async function logoutUser(): Promise<ApiResponse<{ message: string }>> {
+  return request<{ message: string }>('/auth/logout', {
+    method: 'POST',
+  });
+}
+
 // ── Funciones de recuperación de contraseña ──────────────────────────────
 
 export async function forgotPassword(

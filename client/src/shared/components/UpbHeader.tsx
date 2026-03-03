@@ -127,7 +127,7 @@ export function UpbHeader({ profileOpen, onToggleProfile }: UpbHeaderProps) {
                         className="block w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 focus:bg-red-50 focus:outline-none"
                         onClick={() => {
                           logout();
-                          navigate('/login');
+                          navigate('/login', { replace: true });
                         }}
                       >
                         Cerrar sesión
