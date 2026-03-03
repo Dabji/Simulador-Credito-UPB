@@ -24,20 +24,17 @@ export function ProtectedRoute({ children, requiredRole, allowedRoles }: Protect
     return <Navigate to="/login" replace />;
   }
 
-  const role = user?.role as Role | undefined;
-  
-  // OJO AQUÍ: Si en la HU-08 la pantalla principal del estudiante ahora es '/student/main', 
-  // dejamos esa. Si no, cámbiala de vuelta a '/simulator/create'.
-  const fallbackRoute = role === 'ADMIN' ? '/admin' : '/student/main';
+  const role = user?.role;
+  const fallback = role === 'ADMIN' ? '/admin/main' : '/student/main';
 
-  // 1. Validación original de HU-08 (requiredRole)
+  // requiredRole: prop usada en HU-08/HU-09 (App.tsx)
   if (requiredRole && role !== requiredRole) {
-    return <Navigate to={fallbackRoute} replace />;
+    return <Navigate to={fallback} replace />;
   }
 
-  // 2. Validación refactorizada de develop (allowedRoles)
+  // allowedRoles: prop usada en develop (App.tsx rutas /simulator)
   if (allowedRoles && role && !allowedRoles.includes(role)) {
-    return <Navigate to={fallbackRoute} replace />;
+    return <Navigate to={fallback} replace />;
   }
 
   return <>{children}</>;

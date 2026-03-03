@@ -72,7 +72,7 @@ export function LoginPage() {
 
       // Redirigir según el rol real retornado por el servidor
       if (actualRole === 'ADMIN') {
-        navigate('/admin');
+        navigate('/admin/main');
       } else {
         navigate('/student/main');
       }
