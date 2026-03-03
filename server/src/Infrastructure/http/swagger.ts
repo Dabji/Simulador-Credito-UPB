@@ -288,6 +288,44 @@ export const swaggerDocument: JsonObject = {
         },
       },
     },
+    '/admin/stats': {
+      get: {
+        tags: ['Admin'],
+        summary: 'Estadísticas de administración',
+        description:
+          'Retorna estadísticas generales del sistema (cantidad de usuarios, simulaciones, etc.). ' +
+          'Requiere autenticación y rol ADMIN.',
+        operationId: 'getAdminStats',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Estadísticas obtenidas exitosamente',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    success: { type: 'boolean', example: true },
+                    message: { type: 'string', example: 'Estadísticas de administración' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        usersCount: { type: 'integer', example: 10 },
+                        simulationsCount: { type: 'integer', example: 45 },
+                      },
+                      required: ['usersCount', 'simulationsCount'],
+                    },
+                  },
+                  required: ['success', 'message', 'data'],
+                },
+              },
+            },
+          },
+          '401': { $ref: '#/components/responses/401Unauthorized' },
+          '403': { $ref: '#/components/responses/403Forbidden' },
+        },
+      },
+    },
     '/admin/parameters': {
       get: {
         tags: ['Admin'],
@@ -357,6 +395,28 @@ export const swaggerDocument: JsonObject = {
     },
   },
   components: {
+    responses: {
+      '401Unauthorized': {
+        description:
+          'No autenticado — Token JWT ausente, inválido o expirado, o cuenta desactivada.',
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/Error' },
+            example: { error: 'Token de autenticación requerido' },
+          },
+        },
+      },
+      '403Forbidden': {
+        description:
+          'Prohibido — El usuario está autenticado pero su rol no tiene permiso para este recurso.',
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/Error' },
+            example: { error: 'Acceso denegado. Se requiere uno de los roles: ADMIN' },
+          },
+        },
+      },
+    },
     securitySchemes: {
       bearerAuth: {
         type: 'http',
