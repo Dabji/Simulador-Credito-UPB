@@ -31,7 +31,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
 
   // Si se exige un rol específico y el usuario no lo tiene, redirigir a su ruta correcta
   if (requiredRole && user?.role !== requiredRole) {
-    const fallback = user?.role === 'ADMIN' ? '/admin' : '/simulator/create';
+    const fallback = user?.role === 'ADMIN' ? '/admin' : '/student/main';
     return <Navigate to={fallback} replace />;
   }
 

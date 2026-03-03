@@ -24,7 +24,7 @@ export function PublicRoute({ children }: PublicRouteProps) {
   }
 
   if (isAuthenticated) {
-    const redirectTo = user?.role === 'ADMIN' ? '/admin' : '/simulator/create';
+    const redirectTo = user?.role === 'ADMIN' ? '/admin' : '/student/main';
     return <Navigate to={redirectTo} replace />;
   }
 
