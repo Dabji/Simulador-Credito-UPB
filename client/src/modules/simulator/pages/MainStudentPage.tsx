@@ -57,11 +57,6 @@ const ALT_FINANCIERAS_URL =
 const VIDEO_URL =
   'https://donaciones.bucaramanga.upb.edu.co/videos/video_padre.mp4';
 
-/* ── Abre un link externo de forma segura ──────────────────── */
-function openExternal(url: string): void {
-  window.open(url, '_blank', 'noopener,noreferrer');
-}
-
 /* ================================================================
    COMPONENTE PRINCIPAL
 ================================================================ */
@@ -119,16 +114,8 @@ export function MainStudentPage() {
                     type="button"
                     onClick={() => navigate(to)}
                     aria-label={aria}
-                    className="w-full px-6 py-5 rounded-2xl text-center font-bold text-white text-base sm:text-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#C0D901]"
-                    style={{ backgroundColor: '#262626', border: '1.5px solid #383838' }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = 'rgba(110,17,176,0.30)';
-                      e.currentTarget.style.borderColor     = '#7c1fc8';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '#262626';
-                      e.currentTarget.style.borderColor     = '#383838';
-                    }}
+                    className="w-full px-6 py-5 rounded-2xl text-center font-bold text-white text-base sm:text-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#C0D901] bg-[#262626] border border-[#383838] hover:bg-[rgba(110,17,176,0.30)] hover:border-[#7c1fc8]"
+                    style={{ borderWidth: '1.5px' }}
                   >
                     {label}
                   </button>
@@ -179,17 +166,15 @@ export function MainStudentPage() {
                     <p className="text-white font-bold text-sm sm:text-base mb-2 drop-shadow">
                       {sede.nombre}
                     </p>
-                    <button
-                      type="button"
-                      onClick={() => openExternal(sede.url)}
+                    <a
+                      href={sede.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       aria-label={`Ver sede ${sede.nombre} (abre en nueva pestaña)`}
-                      className="self-start px-3 py-1 rounded-full text-xs font-semibold text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#C0D901]"
-                      style={{ backgroundColor: '#6E11B0' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#8b14e0'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#6E11B0'; }}
+                      className="self-start px-3 py-1 rounded-full text-xs font-semibold text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#C0D901] bg-[#6E11B0] hover:bg-[#8b14e0]"
                     >
                       Ver Sede
-                    </button>
+                    </a>
                   </div>
                 </article>
               ))}
