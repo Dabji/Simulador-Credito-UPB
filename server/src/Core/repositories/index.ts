@@ -1,3 +1,3 @@
 export type { IUserRepository } from './IUserRepository';
-export type { ICreditRepository } from './ICreditRepository';
-export type { IFinancialParameterRepository } from './IFinancialParameterRepository';
+export type { ISimulationRepository, SaveSimulationData, PersistedSimulation } from './ISimulationRepository';
+export type { IParameterVersionRepository, ActiveParameterVersion, ActiveInterestRate, ActiveModalityRule, ActiveInitialPaymentRule } from './IParameterVersionRepository';

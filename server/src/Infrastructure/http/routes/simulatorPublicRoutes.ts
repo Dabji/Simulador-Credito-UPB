@@ -1,5 +1,5 @@
-// API: endpoints públicos temporales HU-13 (sin auth, sin DB).
-// Solo expone /preview y /save — el resto de rutas requiere authGuard.
+// API: endpoint público temporal HU-13 (sin auth, sin DB).
+// Solo expone /preview — /save y /history requieren authGuard.
 
 import { Router } from 'express';
 import type { Request, Response } from 'express';
@@ -9,9 +9,6 @@ import type { SimulationInput } from '../../../Application/dtos/SimulationInput'
 const router = Router();
 
 const previewUseCase = new PreviewSimulationUseCase();
-
-// Almacenamiento in-memory de simulaciones guardadas (starred) — sin BD
-const savedSimulations = new Map<string, SimulationInput & { id: string }>();
 
 /**
  * POST /api/simulator/preview
@@ -40,29 +37,6 @@ router.post('/preview', (req: Request, res: Response): void => {
     res.json(summary);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Error interno del servidor';
-    res.status(400).json({ error: message });
-  }
-});
-
-/**
- * POST /api/simulator/save
- * Guarda simulación en memoria si starred === true (HU-13 opcional).
- */
-router.post('/save', (req: Request, res: Response): void => {
-  try {
-    const input = req.body as SimulationInput;
-
-    if (!input.starred) {
-      res.status(400).json({ error: 'Solo se pueden guardar simulaciones destacadas (starred: true).' });
-      return;
-    }
-
-    const id = crypto.randomUUID();
-    savedSimulations.set(id, { ...input, id });
-
-    res.json({ id, message: 'Simulación guardada exitosamente.' });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Error interno';
     res.status(400).json({ error: message });
   }
 });

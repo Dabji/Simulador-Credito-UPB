@@ -1,4 +1,5 @@
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/modules/auth/context/AuthContext';
 
 interface NavLinkItem {
   to: string;
@@ -12,8 +13,15 @@ const navLinks: NavLinkItem[] = [
 
 export function Layout() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const isActive = (path: string): boolean => location.pathname === path;
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -50,12 +58,13 @@ export function Layout() {
 
               <div className="h-6 w-px bg-white/30 mx-1 hidden sm:block" />
 
-              <Link
-                to="/login"
+              <button
+                type="button"
+                onClick={handleLogout}
                 className="px-3 py-2 rounded-md text-sm font-medium text-white/80 hover:text-red-300 hover:bg-white/10 transition-colors duration-200"
               >
                 Cerrar Sesión
-              </Link>
+              </button>
             </div>
           </div>
         </nav>

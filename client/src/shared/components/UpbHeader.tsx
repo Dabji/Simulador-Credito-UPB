@@ -7,6 +7,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LogoUpb from '@/assets/Images/LogoUpb.png';
+import { useAuth } from '@/modules/auth/context/AuthContext';
 
 /* Links del menú — abren en nueva pestaña */
 const NAV_LINKS = [
@@ -31,6 +32,7 @@ interface UpbHeaderProps {
 export function UpbHeader({ profileOpen, onToggleProfile }: UpbHeaderProps) {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, isAuthenticated, logout } = useAuth();
 
   return (
     <header className="w-full bg-white" style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.10)' }}>
@@ -106,22 +108,41 @@ export function UpbHeader({ profileOpen, onToggleProfile }: UpbHeaderProps) {
                   style={{ position: 'absolute', right: 0, top: '100%', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', border: '1px solid #f0f0f0' }}
                   role="menu"
                 >
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="block w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
-                  >
-                    Datos personales
-                  </button>
-                  <div className="border-t border-gray-100 my-1" />
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="block w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 focus:bg-red-50 focus:outline-none"
-                    onClick={() => navigate('/login')}
-                  >
-                    Cerrar sesión
-                  </button>
+                  {isAuthenticated ? (
+                    <>
+                      <div className="px-4 py-2.5 text-sm text-gray-700 font-medium border-b border-gray-100">
+                        Hola, {user?.firstName}
+                      </div>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="block w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
+                      >
+                        Datos personales
+                      </button>
+                      <div className="border-t border-gray-100 my-1" />
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="block w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 focus:bg-red-50 focus:outline-none"
+                        onClick={() => {
+                          logout();
+                          navigate('/login');
+                        }}
+                      >
+                        Cerrar sesión
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="block w-full text-left px-4 py-2.5 text-sm text-purple-700 hover:bg-purple-50 focus:bg-purple-50 focus:outline-none font-medium"
+                      onClick={() => navigate('/login')}
+                    >
+                      Iniciar Sesión
+                    </button>
+                  )}
                 </div>
               )}
             </div>

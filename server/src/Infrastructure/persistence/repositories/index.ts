@@ -1,2 +1,3 @@
 export { SequelizeUserRepository } from './SequelizeUserRepository';
-export { SequelizeCreditRepository } from './SequelizeCreditRepository';
+export { SequelizeSimulationRepository } from './SequelizeSimulationRepository';
+export { SequelizeParameterVersionRepository } from './SequelizeParameterVersionRepository';

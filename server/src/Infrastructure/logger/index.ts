@@ -176,3 +176,27 @@ logger.rejections.handle(
     format: fileFormat,
   }),
 );
+
+// ── Logger de desarrollo SIN redacción ──────────────────
+// Se usa exclusivamente para imprimir tokens de recuperación
+// en la consola de desarrollo. Usa Winston Console (que
+// ts-node-dev sí muestra) pero sin el filtro redactFormat.
+const devConsoleLogger = winston.createLogger({
+  level: 'info',
+  transports: [
+    new winston.transports.Console({
+      format: winston.format.printf(({ message }) => message as string),
+    }),
+  ],
+});
+
+/**
+ * Imprime líneas en la consola de desarrollo SIN redacción.
+ * No hace nada en producción.
+ */
+export function logDev(...lines: string[]): void {
+  if (env.NODE_ENV !== 'development') return;
+  for (const line of lines) {
+    devConsoleLogger.info(line);
+  }
+}

@@ -1,75 +1,51 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { SimulatorPage }       from './modules/simulator/pages/SimulatorPage';
+import { SimulatorPage } from './modules/simulator/pages/SimulatorPage';
 import { CreateSimulationPage } from './modules/simulator/pages/CreateSimulationPage';
-import { MainStudentPage }      from './modules/simulator/pages/MainStudentPage';
-import { StudentHistoryPage }   from './modules/simulator/pages/StudentHistoryPage';
-import { AdminDashboard }       from './modules/admin/pages/AdminDashboard';
-import { Layout }               from './shared/components/Layout';
-
-/* ── Helper: extrae el role del JWT almacenado en localStorage ──────────
-   Decodifica el payload base64url sin librerías externas.
-   Roles esperados: "student" | "admin"
-   Si no hay token o está malformado → retorna "guest". */
-type UserRole = 'student' | 'admin' | 'guest';
-
-function getRoleFromToken(): UserRole {
-  try {
-    const token = localStorage.getItem('token');
-    if (!token) return 'guest';
-    const payloadB64 = token.split('.')[1];
-    if (!payloadB64) return 'guest';
-    // base64url → base64 estándar
-    const padded  = payloadB64.replace(/-/g, '+').replace(/_/g, '/');
-    const decoded = JSON.parse(atob(padded)) as Record<string, unknown>;
-    const role    = decoded['role'];
-    if (role === 'admin' || role === 'student') return role;
-    return 'guest';
-  } catch {
-    return 'guest';
-  }
-}
-
-/* ── Guard de ruta admin ────────────────────────────────────────────────
-   Si el role no es "admin", redirige a /student/main (student) o
-   a /simulator/create (guest). */
-function AdminGuard({ children }: { children: React.ReactNode }): React.ReactElement {
-  const role = getRoleFromToken();
-  if (role === 'admin') return <>{children}</>;
-  if (role === 'student') return <Navigate to="/student/main" replace />;
-  return <Navigate to="/simulator/create" replace />;
-}
+import { MainStudentPage } from './modules/simulator/pages/MainStudentPage';
+import { StudentHistoryPage } from './modules/simulator/pages/StudentHistoryPage';
+import { AdminDashboard } from './modules/admin/pages/AdminDashboard';
+import { LoginPage } from './modules/auth/pages/LoginPage';
+import { RegisterPage } from './modules/auth/pages/RegisterPage';
+import { ForgotPasswordPage } from './modules/auth/pages/ForgotPasswordPage';
+import { ResetPasswordPage } from './modules/auth/pages/ResetPasswordPage';
+import { PasswordUpdatedPage } from './modules/auth/pages/PasswordUpdatedPage';
+import { Layout } from './shared/components/Layout';
+import { AuthProvider } from './modules/auth/context/AuthContext';
+import { ProtectedRoute } from './shared/components/ProtectedRoute';
+import { PublicRoute } from './shared/components/PublicRoute';
 
 export function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Redirección raíz */}
-        <Route path="/" element={<Navigate to="/student/main" replace />} />
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Auth pages (públicas — redirigen si ya hay sesión) */}
+          <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+          <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
+          <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/password-updated" element={<PasswordUpdatedPage />} />
 
-        {/* ── Rutas del estudiante (HU-08) ── */}
-        <Route path="/student/main"    element={<MainStudentPage />} />
-        <Route path="/student/history" element={<StudentHistoryPage />} />
+          {/* Página principal: redirige a login */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
 
-        {/* ── Simulación pública HU-13 ── */}
-        <Route path="/simulator/create" element={<CreateSimulationPage />} />
+          {/* ── Rutas del estudiante (HU-08) ── */}
+          <Route path="/student/main" element={<ProtectedRoute requiredRole="STUDENT"><MainStudentPage /></ProtectedRoute>} />
+          <Route path="/student/history" element={<ProtectedRoute requiredRole="STUDENT"><StudentHistoryPage /></ProtectedRoute>} />
 
-        {/* ── Rutas con Layout legacy ── */}
-        <Route element={<Layout />}>
-          <Route path="/simulator" element={<SimulatorPage />} />
-          {/* Admin: bloqueado para roles no-admin */}
-          <Route
-            path="/admin"
-            element={
-              <AdminGuard>
-                <AdminDashboard />
-              </AdminGuard>
-            }
-          />
-        </Route>
+          {/* Rutas protegidas — requieren sesión activa */}
+          <Route path="/simulator/create" element={<ProtectedRoute requiredRole="STUDENT"><CreateSimulationPage /></ProtectedRoute>} />
 
-        {/* Catch-all */}
-        <Route path="*" element={<Navigate to="/student/main" replace />} />
-      </Routes>
-    </BrowserRouter>
+          {/* Rutas con Layout (protegidas) */}
+          <Route element={<Layout />}>
+            <Route path="/simulator" element={<ProtectedRoute requiredRole="STUDENT"><SimulatorPage /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute requiredRole="ADMIN"><AdminDashboard /></ProtectedRoute>} />
+          </Route>
+
+          {/* Catch-all */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
