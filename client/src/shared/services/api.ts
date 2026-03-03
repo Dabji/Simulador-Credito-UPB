@@ -7,6 +7,8 @@ export const NETWORK_ERROR_MESSAGE = 'Error de conexión con el servidor';
 interface ApiResponse<T> {
   data?: T;
   error?: string;
+  /** Código semántico del error retornado por el backend (HU-04) */
+  errorCode?: string;
   fieldErrors?: Record<string, string[]>;
 }
 
@@ -31,14 +33,20 @@ async function request<T>(
 
     if (!response.ok) {
       const errorBody = body as {
-        error: string | { message: string; fieldErrors?: Record<string, string[]> };
+        error: string | { message: string; errorCode?: string; fieldErrors?: Record<string, string[]> };
         message?: string;
       };
-      // El backend puede retornar { error: "msg" } o { error: { message: "msg", fieldErrors: {...} } }
+      // El backend puede retornar { error: "msg" } o { error: { message: "msg", ... } }
       const msg =
         typeof errorBody.error === 'string'
           ? errorBody.error
           : errorBody.error?.message ?? errorBody.message ?? 'Error desconocido';
+
+      // Extraer errorCode si existe (HU-04)
+      const errorCode =
+        typeof errorBody.error === 'object' && errorBody.error?.errorCode
+          ? errorBody.error.errorCode
+          : undefined;
 
       // Extraer fieldErrors si existen (HU-02)
       const fieldErrors =
@@ -52,12 +60,12 @@ async function request<T>(
         window.dispatchEvent(new Event('auth:unauthorized'));
       }
 
-      return { error: msg, fieldErrors };
+      return { error: msg, errorCode, fieldErrors };
     }
 
     return { data: body as T };
   } catch {
-    return { error: NETWORK_ERROR_MESSAGE };
+    return { error: NETWORK_ERROR_MESSAGE, errorCode: 'NETWORK_ERROR' };
   }
 }
 

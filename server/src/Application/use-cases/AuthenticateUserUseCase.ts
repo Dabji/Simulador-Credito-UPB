@@ -55,20 +55,32 @@ export class AuthenticateUserUseCase {
     const user = await this.userRepository.findByEmail(email);
 
     if (!user || !user.password) {
-      throw new UnauthorizedError('Credenciales inválidas');
-    }
-
-    if (user.role !== UserRole.STUDENT) {
-      throw new UnauthorizedError('Credenciales inválidas');
+      throw new UnauthorizedError(
+        'El correo electrónico o la contraseña son incorrectos.',
+        'INVALID_CREDENTIALS',
+      );
     }
 
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
-      throw new UnauthorizedError('Credenciales inválidas');
+      throw new UnauthorizedError(
+        'El correo electrónico o la contraseña son incorrectos.',
+        'INVALID_CREDENTIALS',
+      );
+    }
+
+    if (user.role !== UserRole.STUDENT) {
+      throw new UnauthorizedError(
+        'Esta cuenta es de administrador. Usa la pestaña Administrador para iniciar sesión.',
+        'ROLE_MISMATCH',
+      );
     }
 
     if (!user.isActive) {
-      throw new UnauthorizedError('La cuenta está desactivada');
+      throw new UnauthorizedError(
+        'Tu cuenta ha sido desactivada. Contacta al administrador.',
+        'ACCOUNT_DISABLED',
+      );
     }
 
     return await this.buildOutput(user);
@@ -106,20 +118,32 @@ export class AuthenticateUserUseCase {
     const user = await this.userRepository.findByEmail(email);
 
     if (!user || !user.password) {
-      throw new UnauthorizedError('Credenciales inválidas');
-    }
-
-    if (user.role !== UserRole.ADMIN) {
-      throw new UnauthorizedError('Credenciales inválidas');
+      throw new UnauthorizedError(
+        'El correo electrónico o la contraseña son incorrectos.',
+        'INVALID_CREDENTIALS',
+      );
     }
 
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
-      throw new UnauthorizedError('Credenciales inválidas');
+      throw new UnauthorizedError(
+        'El correo electrónico o la contraseña son incorrectos.',
+        'INVALID_CREDENTIALS',
+      );
+    }
+
+    if (user.role !== UserRole.ADMIN) {
+      throw new UnauthorizedError(
+        'Esta cuenta no tiene permisos de administrador. Usa la pestaña Estudiante para iniciar sesión.',
+        'ROLE_MISMATCH',
+      );
     }
 
     if (!user.isActive) {
-      throw new UnauthorizedError('La cuenta está desactivada');
+      throw new UnauthorizedError(
+        'Tu cuenta ha sido desactivada. Contacta al administrador.',
+        'ACCOUNT_DISABLED',
+      );
     }
 
     return await this.buildOutput(user);

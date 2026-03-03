@@ -62,7 +62,11 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction): P
     if (error instanceof AppError) {
       next(error);
     } else {
-      next(new UnauthorizedError('Error de autenticación'));
+      logger.error('Error inesperado durante autenticación', {
+        message: error instanceof Error ? error.message : 'Unknown',
+        email: req.body?.email,
+      });
+      next(error);
     }
   }
 });

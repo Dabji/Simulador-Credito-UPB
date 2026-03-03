@@ -21,6 +21,8 @@ export interface ErrorResponse {
   error: {
     message: string;
     statusCode: number;
+    /** Código semántico del error (HU-04) */
+    errorCode?: string;
     /** Solo presente en desarrollo para depuración */
     stack?: string;
     /** Errores por campo (solo para ValidationError, HU-02) */
@@ -79,6 +81,11 @@ export function errorHandler(
       err.statusCode,
     );
 
+    // Incluir errorCode semántico si existe (HU-04)
+    if (err.errorCode) {
+      response.error.errorCode = err.errorCode;
+    }
+
     // Si es un ValidationError, incluir errores por campo (HU-02)
     if (err instanceof ValidationError) {
       response.error.fieldErrors = err.fieldErrors;
@@ -97,10 +104,11 @@ export function errorHandler(
   });
 
   const response = buildErrorResponse(
-    'Error interno del servidor',
+    'Ocurrió un error inesperado. Intenta de nuevo más tarde.',
     500,
     err instanceof Error ? err.stack : undefined,
   );
+  response.error.errorCode = 'SERVER_ERROR';
 
   res.status(500).json(response);
 }

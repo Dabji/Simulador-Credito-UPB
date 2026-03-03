@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate, Link } from 'react-router-dom';
-import { loginUser } from '@/shared/services/api';
+import { loginUser, NETWORK_ERROR_MESSAGE } from '@/shared/services/api';
 import { useAuth } from '../context/AuthContext';
 import LogoUpb from '@/assets/Images/LogoUpb.png';
 import fondoLogin from '@/assets/Images/fondoLogin.png';
@@ -18,6 +18,114 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 type LoginMode = 'student' | 'admin';
 
+// ── Tipos de error de login (HU-04) ────────────────────────────────────────
+
+type LoginErrorType = 'credentials' | 'disabled' | 'server' | 'network' | 'role';
+
+interface LoginError {
+  type: LoginErrorType;
+  message: string;
+}
+
+/** Mapea el errorCode del backend (o condiciones locales) a un tipo visual */
+function classifyLoginError(
+  errorMsg: string,
+  errorCode?: string,
+): LoginError {
+  // Error de red (fetch falló)
+  if (errorMsg === NETWORK_ERROR_MESSAGE || errorCode === 'NETWORK_ERROR') {
+    return {
+      type: 'network',
+      message: 'No se pudo conectar con el servidor. Verifica tu conexión a internet e intenta de nuevo.',
+    };
+  }
+
+  // Error del servidor (500 o catch inesperado)
+  if (errorCode === 'SERVER_ERROR') {
+    return {
+      type: 'server',
+      message: 'Ocurrió un error inesperado en el servidor. Intenta de nuevo más tarde.',
+    };
+  }
+
+  // Cuenta desactivada
+  if (errorCode === 'ACCOUNT_DISABLED') {
+    return {
+      type: 'disabled',
+      message: errorMsg,
+    };
+  }
+
+  // Rol incorrecto (estudiante en pestaña admin o viceversa)
+  if (errorCode === 'ROLE_MISMATCH') {
+    return {
+      type: 'role',
+      message: errorMsg,
+    };
+  }
+
+  // Credenciales inválidas (default para 401)
+  if (errorCode === 'INVALID_CREDENTIALS') {
+    return {
+      type: 'credentials',
+      message: errorMsg,
+    };
+  }
+
+  // Fallback — usar el mensaje del servidor
+  return {
+    type: 'credentials',
+    message: errorMsg,
+  };
+}
+
+// ── Estilos del banner de error según tipo (HU-04) ─────────────────────────
+
+const ERROR_STYLES: Record<LoginErrorType, { bg: string; border: string; color: string; iconColor: string }> = {
+  credentials: { bg: '#FEF2F2', border: '#FECACA', color: '#991B1B', iconColor: '#DC2626' },
+  disabled:    { bg: '#FFFBEB', border: '#FDE68A', color: '#92400E', iconColor: '#D97706' },
+  server:      { bg: '#FEF2F2', border: '#FECACA', color: '#991B1B', iconColor: '#DC2626' },
+  network:     { bg: '#FFF7ED', border: '#FED7AA', color: '#9A3412', iconColor: '#EA580C' },
+  role:        { bg: '#EFF6FF', border: '#BFDBFE', color: '#1E40AF', iconColor: '#2563EB' },
+};
+
+/** Iconos SVG para cada tipo de error */
+function ErrorIcon({ type }: { type: LoginErrorType }) {
+  const cls = 'h-5 w-5 flex-shrink-0';
+  switch (type) {
+    case 'credentials':
+      return (
+        <svg xmlns="http://www.w3.org/2000/svg" className={cls} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true" focusable="false">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        </svg>
+      );
+    case 'disabled':
+      return (
+        <svg xmlns="http://www.w3.org/2000/svg" className={cls} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true" focusable="false">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+        </svg>
+      );
+    case 'server':
+      return (
+        <svg xmlns="http://www.w3.org/2000/svg" className={cls} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true" focusable="false">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+        </svg>
+      );
+    case 'network':
+      return (
+        <svg xmlns="http://www.w3.org/2000/svg" className={cls} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true" focusable="false">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636a9 9 0 11-12.728 0M12 9v4m0 4h.01" />
+        </svg>
+      );
+    case 'role':
+      return (
+        <svg xmlns="http://www.w3.org/2000/svg" className={cls} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true" focusable="false">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
+        </svg>
+      );
+  }
+}
+
 // ── Clases CSS alineadas con SimulationForm ─────────────────────────────────
 
 const INPUT_BASE =
@@ -29,7 +137,7 @@ const LABEL_CLASS = 'block text-sm font-semibold text-gray-700 mb-1.5';
 export function LoginPage() {
   const [mode, setMode] = useState<LoginMode>('student');
   const { login } = useAuth();
-  const [apiError, setApiError] = useState('');
+  const [loginError, setLoginError] = useState<LoginError | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
@@ -41,17 +149,23 @@ export function LoginPage() {
     formState: { errors, isSubmitting },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
+    mode: 'onTouched',
     defaultValues: { email: '', password: '' },
   });
 
+  /** Limpia el banner de error del servidor cuando el usuario escribe */
+  const clearError = useCallback(() => {
+    setLoginError(null);
+  }, []);
+
   const onSubmit = async (data: LoginFormData) => {
-    setApiError('');
+    setLoginError(null);
 
     const role = isStudent ? 'STUDENT' : 'ADMIN';
     const result = await loginUser({ email: data.email, password: data.password, role });
 
     if (result.error) {
-      setApiError(result.error);
+      setLoginError(classifyLoginError(result.error, result.errorCode));
       return;
     }
 
@@ -60,11 +174,11 @@ export function LoginPage() {
 
       // Validar que el rol real coincida con la pestaña seleccionada
       if (role === 'ADMIN' && actualRole !== 'ADMIN') {
-        setApiError('Esta cuenta no tiene permisos de administrador.');
+        setLoginError({ type: 'role', message: 'Esta cuenta no tiene permisos de administrador.' });
         return;
       }
       if (role === 'STUDENT' && actualRole !== 'STUDENT') {
-        setApiError('Esta cuenta es de administrador. Usa la pestaña Administrador.');
+        setLoginError({ type: 'role', message: 'Esta cuenta es de administrador. Usa la pestaña Administrador.' });
         return;
       }
 
@@ -100,7 +214,7 @@ export function LoginPage() {
             <div className="flex bg-gray-200 rounded-full p-1">
               <button
                 type="button"
-                onClick={() => setMode('student')}
+                onClick={() => { setMode('student'); setLoginError(null); }}
                 className={`px-5 py-1.5 rounded-full text-sm font-semibold transition-all duration-200 ${
                   isStudent
                     ? 'bg-white shadow text-purple-700'
@@ -111,7 +225,7 @@ export function LoginPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setMode('admin')}
+                onClick={() => { setMode('admin'); setLoginError(null); }}
                 className={`px-5 py-1.5 rounded-full text-sm font-semibold transition-all duration-200 ${
                   !isStudent
                     ? 'bg-white shadow text-blue-700'
@@ -128,14 +242,21 @@ export function LoginPage() {
             Iniciar Sesión
           </h1>
 
-          {/* Error de API */}
-          {apiError && (
+          {/* Banner de error contextual (HU-04) */}
+          {loginError && (
             <div
-              className="rounded-xl px-4 py-3 mb-5 text-sm font-medium"
-              style={{ backgroundColor: '#FEF2F2', border: '1px solid #FECACA', color: '#B91C1C' }}
+              className="rounded-xl px-4 py-3 mb-5 text-sm font-medium flex items-start gap-3 animate-[shake_0.4s_ease-in-out]"
+              style={{
+                backgroundColor: ERROR_STYLES[loginError.type].bg,
+                border: `1px solid ${ERROR_STYLES[loginError.type].border}`,
+                color: ERROR_STYLES[loginError.type].color,
+              }}
               role="alert"
             >
-              {apiError}
+              <span style={{ color: ERROR_STYLES[loginError.type].iconColor }}>
+                <ErrorIcon type={loginError.type} />
+              </span>
+              <span>{loginError.message}</span>
             </div>
           )}
 
@@ -149,7 +270,8 @@ export function LoginPage() {
                 id="email"
                 type="email"
                 {...register('email')}
-                className={INPUT_BASE}
+                onInput={clearError}
+                className={`${INPUT_BASE} ${errors.email ? 'border-red-400 focus:ring-red-400 focus:border-red-400' : ''}`}
                 placeholder={isStudent ? 'correo@ejemplo.com' : 'usuario@upb.edu.co'}
                 autoComplete="username"
               />
@@ -167,7 +289,8 @@ export function LoginPage() {
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   {...register('password')}
-                  className={INPUT_BASE}
+                  onInput={clearError}
+                  className={`${INPUT_BASE} ${errors.password ? 'border-red-400 focus:ring-red-400 focus:border-red-400' : ''}`}
                   placeholder="••••••••"
                   autoComplete="current-password"
                 />
