@@ -9,7 +9,7 @@
 // ============================================================
 
 import type { Request, Response, NextFunction } from 'express';
-import { AppError } from '../../../Core/errors';
+import { AppError, ValidationError } from '../../../Core/errors';
 import { logger } from '../../logger';
 import { env } from '../../config/env';
 
@@ -23,6 +23,8 @@ export interface ErrorResponse {
     statusCode: number;
     /** Solo presente en desarrollo para depuración */
     stack?: string;
+    /** Errores por campo (solo para ValidationError, HU-02) */
+    fieldErrors?: Record<string, string[]>;
   };
 }
 
@@ -76,6 +78,11 @@ export function errorHandler(
       err.message,
       err.statusCode,
     );
+
+    // Si es un ValidationError, incluir errores por campo (HU-02)
+    if (err instanceof ValidationError) {
+      response.error.fieldErrors = err.fieldErrors;
+    }
 
     res.status(err.statusCode).json(response);
     return;
