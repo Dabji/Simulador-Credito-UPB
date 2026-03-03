@@ -26,10 +26,14 @@ export class AppError extends Error {
    */
   public readonly isOperational: boolean;
 
-  constructor(message: string, statusCode: number, isOperational = true) {
+  /** Código de error semántico para que el frontend distinga tipos de error (HU-04) */
+  public readonly errorCode?: string;
+
+  constructor(message: string, statusCode: number, isOperational = true, errorCode?: string) {
     super(message);
     this.statusCode = statusCode;
     this.isOperational = isOperational;
+    this.errorCode = errorCode;
 
     // Mantener el prototype chain correcto para instanceof
     Object.setPrototypeOf(this, new.target.prototype);
@@ -49,8 +53,8 @@ export class NotFoundError extends AppError {
 }
 
 export class UnauthorizedError extends AppError {
-  constructor(message = 'No autorizado') {
-    super(message, 401);
+  constructor(message = 'No autorizado', errorCode?: string) {
+    super(message, 401, true, errorCode);
   }
 }
 
