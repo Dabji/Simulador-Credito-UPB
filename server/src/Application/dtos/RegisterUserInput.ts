@@ -15,13 +15,13 @@ export const RegisterUserSchema = z.object({
     .trim()
     .min(2, 'El nombre debe tener al menos 2 caracteres')
     .max(50, 'El nombre no puede exceder 50 caracteres')
-    .regex(NAME_REGEX, 'El nombre solo puede contener letras, espacios y guiones'),
+    .regex(NAME_REGEX, 'El nombre solo puede contener letras, espacios, guiones y apóstrofes'),
   lastName: z
     .string()
     .trim()
     .min(2, 'El apellido debe tener al menos 2 caracteres')
     .max(50, 'El apellido no puede exceder 50 caracteres')
-    .regex(NAME_REGEX, 'El apellido solo puede contener letras, espacios y guiones'),
+    .regex(NAME_REGEX, 'El apellido solo puede contener letras, espacios, guiones y apóstrofes'),
   documentType: z.enum(['CC', 'TI'], {
     message: 'El tipo de documento debe ser CC o TI',
   }),

@@ -22,13 +22,13 @@ const registerSchema = z
       .trim()
       .min(2, 'El nombre debe tener al menos 2 caracteres')
       .max(50, 'El nombre no puede exceder 50 caracteres')
-      .regex(NAME_REGEX, 'El nombre solo puede contener letras, espacios y guiones'),
+      .regex(NAME_REGEX, 'El nombre solo puede contener letras, espacios, guiones y apóstrofes'),
     lastName: z
       .string()
       .trim()
       .min(2, 'El apellido debe tener al menos 2 caracteres')
       .max(50, 'El apellido no puede exceder 50 caracteres')
-      .regex(NAME_REGEX, 'El apellido solo puede contener letras, espacios y guiones'),
+      .regex(NAME_REGEX, 'El apellido solo puede contener letras, espacios, guiones y apóstrofes'),
     documentType: z.enum(['CC', 'TI'], { message: 'Seleccione el tipo de documento' }),
     documentNumber: z
       .string()
@@ -186,6 +186,29 @@ export function RegisterPage() {
 
   const passwordValue = watch('password', '');
 
+  // Limpia el error de backend de un campo cuando el usuario lo modifica (Copilot review #6)
+  const clearBackendError = (field: keyof RegisterFormData) => {
+    if (backendFieldErrors[field]) {
+      setBackendFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
+  };
+
+  // Wrapper de register() que inyecta clearBackendError en onChange
+  const reg = (field: keyof RegisterFormData) => {
+    const { onChange, ...rest } = register(field);
+    return {
+      ...rest,
+      onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        clearBackendError(field);
+        return onChange(e);
+      },
+    };
+  };
+
   // Helper: obtener clase CSS del input según si tiene error
   const inputClass = (field: keyof RegisterFormData) =>
     errors[field] || backendFieldErrors[field] ? INPUT_ERROR : INPUT_DEFAULT;
@@ -252,21 +275,21 @@ export function RegisterPage() {
             {/* Nombre */}
             <div>
               <label htmlFor="firstName" className={LABEL_CLASS}>Nombre</label>
-              <input id="firstName" type="text" {...register('firstName')} className={inputClass('firstName')} placeholder="Ingrese su nombre" maxLength={50} />
+              <input id="firstName" type="text" {...reg('firstName')} className={inputClass('firstName')} placeholder="Ingrese su nombre" maxLength={50} />
               {fieldError('firstName') && <p className={FIELD_ERROR_CLASS} style={{ color: '#B91C1C' }}>{fieldError('firstName')}</p>}
             </div>
 
             {/* Apellido */}
             <div>
               <label htmlFor="lastName" className={LABEL_CLASS}>Apellido</label>
-              <input id="lastName" type="text" {...register('lastName')} className={inputClass('lastName')} placeholder="Ingrese su apellido" maxLength={50} />
+              <input id="lastName" type="text" {...reg('lastName')} className={inputClass('lastName')} placeholder="Ingrese su apellido" maxLength={50} />
               {fieldError('lastName') && <p className={FIELD_ERROR_CLASS} style={{ color: '#B91C1C' }}>{fieldError('lastName')}</p>}
             </div>
 
             {/* Tipo de Identificación */}
             <div>
               <label htmlFor="documentType" className={LABEL_CLASS}>Tipo de Identificación</label>
-              <select id="documentType" {...register('documentType')} className={inputClass('documentType')} defaultValue="">
+              <select id="documentType" {...reg('documentType')} className={inputClass('documentType')} defaultValue="">
                 <option value="" disabled>Seleccione tipo de documento</option>
                 <option value="CC">Cédula de Ciudadanía</option>
                 <option value="TI">Tarjeta de Identidad</option>
@@ -277,21 +300,21 @@ export function RegisterPage() {
             {/* Número de Identificación */}
             <div>
               <label htmlFor="documentNumber" className={LABEL_CLASS}>Número de Identificación</label>
-              <input id="documentNumber" type="text" {...register('documentNumber')} className={inputClass('documentNumber')} placeholder="Ingrese su número de documento" maxLength={20} inputMode="numeric" />
+              <input id="documentNumber" type="text" {...reg('documentNumber')} className={inputClass('documentNumber')} placeholder="Ingrese su número de documento" maxLength={20} inputMode="numeric" />
               {fieldError('documentNumber') && <p className={FIELD_ERROR_CLASS} style={{ color: '#B91C1C' }}>{fieldError('documentNumber')}</p>}
             </div>
 
             {/* Correo electrónico */}
             <div>
               <label htmlFor="email" className={LABEL_CLASS}>Correo electrónico</label>
-              <input id="email" type="email" {...register('email')} className={inputClass('email')} placeholder="correo@ejemplo.com" maxLength={255} />
+              <input id="email" type="email" {...reg('email')} className={inputClass('email')} placeholder="correo@ejemplo.com" maxLength={255} />
               {fieldError('email') && <p className={FIELD_ERROR_CLASS} style={{ color: '#B91C1C' }}>{fieldError('email')}</p>}
             </div>
 
             {/* Número de celular */}
             <div>
               <label htmlFor="phone" className={LABEL_CLASS}>Número de celular</label>
-              <input id="phone" type="tel" {...register('phone')} className={inputClass('phone')} placeholder="Ingrese su número de celular" maxLength={15} inputMode="numeric" />
+              <input id="phone" type="tel" {...reg('phone')} className={inputClass('phone')} placeholder="Ingrese su número de celular" maxLength={15} inputMode="numeric" />
               {fieldError('phone') && <p className={FIELD_ERROR_CLASS} style={{ color: '#B91C1C' }}>{fieldError('phone')}</p>}
             </div>
 
@@ -299,7 +322,7 @@ export function RegisterPage() {
             <div>
               <label htmlFor="password" className={LABEL_CLASS}>Contraseña</label>
               <div className="relative">
-                <input id="password" type={showPassword ? 'text' : 'password'} {...register('password')} className={inputClass('password')} placeholder="••••••••" autoComplete="new-password" maxLength={11} />
+                <input id="password" type={showPassword ? 'text' : 'password'} {...reg('password')} className={inputClass('password')} placeholder="••••••••" autoComplete="new-password" maxLength={11} />
                 <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none" aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'} aria-pressed={showPassword}>
                   {showPassword ? (
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L6.59 6.59m7.532 7.532l3.29 3.29M3 3l18 18" /></svg>
@@ -315,7 +338,7 @@ export function RegisterPage() {
             <div>
               <label htmlFor="confirmPassword" className={LABEL_CLASS}>Confirmar contraseña</label>
               <div className="relative">
-                <input id="confirmPassword" type={showConfirm ? 'text' : 'password'} {...register('confirmPassword')} className={inputClass('confirmPassword')} placeholder="••••••••" autoComplete="new-password" maxLength={11} />
+                <input id="confirmPassword" type={showConfirm ? 'text' : 'password'} {...reg('confirmPassword')} className={inputClass('confirmPassword')} placeholder="••••••••" autoComplete="new-password" maxLength={11} />
                 <button type="button" onClick={() => setShowConfirm((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none" aria-label={showConfirm ? 'Ocultar contraseña' : 'Mostrar contraseña'} aria-pressed={showConfirm}>
                   {showConfirm ? (
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L6.59 6.59m7.532 7.532l3.29 3.29M3 3l18 18" /></svg>
@@ -335,7 +358,7 @@ export function RegisterPage() {
               <input
                 id="termsAccepted"
                 type="checkbox"
-                {...register('termsAccepted')}
+                {...reg('termsAccepted')}
                 className="mt-1 h-4 w-4 rounded border-gray-300 accent-purple-600 focus:ring-purple-500"
               />
               <label htmlFor="termsAccepted" className="text-sm text-gray-700">
