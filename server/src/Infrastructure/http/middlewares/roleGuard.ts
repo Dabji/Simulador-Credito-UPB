@@ -6,7 +6,7 @@
 
 import type { Response, NextFunction } from 'express';
 import type { AuthenticatedRequest } from './authGuard';
-import { ForbiddenError } from '../../../Core/errors';
+import { ForbiddenError, UnauthorizedError } from '../../../Core/errors';
 import { UserRole } from '../../../Core/entities/User';
 import { UserModel } from '../../persistence/models/UserModel';
 
@@ -25,15 +25,13 @@ export function roleGuard(...allowedRoles: UserRole[]) {
       const userId = req.user?.userId as string | undefined;
 
       if (!userId) {
-        res.status(401).json({ message: 'No se pudo identificar al usuario autenticado.' });
-        return;
+        return next(new UnauthorizedError('No se pudo identificar al usuario autenticado.'));
       }
 
       const user = await UserModel.findByPk(userId);
 
       if (!user || !user.is_active) {
-        res.status(401).json({ message: 'Cuenta desactivada o usuario inexistente.' });
-        return;
+        return next(new UnauthorizedError('Cuenta desactivada o usuario inexistente.'));
       }
 
       const userRole = user.role as UserRole | undefined;

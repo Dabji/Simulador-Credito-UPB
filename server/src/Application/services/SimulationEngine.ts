@@ -3,7 +3,6 @@
 
 import { Money } from '../../Core/entities/Money';
 import { SimulationRow } from '../../Core/entities/SimulationRow';
-import { InterestRate } from '../../Core/entities/InterestRate';
 import { ParameterVersion } from '../../Core/entities/ParameterVersion';
 import type { SimulationInput } from '../dtos/SimulationInput';
 import type { SimulationSummary, AmortizationRowDTO } from '../dtos/SimulationSummary';
@@ -123,27 +122,33 @@ export class SimulationEngine {
     upbTech:  'UPB_TEC',
   };
 
-  // Resuelve la tasa mensual: prioriza activeVersion de BD; si no existe, usa fallback hardcode
+  // Resuelve la tasa mensual usando la versión activa de parámetros de BD
   private resolveMonthlyRate(input: SimulationInput, activeVersion?: ActiveParameterVersion): number {
     if (input.interestMode === 'sin_interes') return 0;
 
-    if (activeVersion) {
-      const dbLevel = SimulationEngine.LEVEL_MAP[input.educationLevel];
-      const rateEntry = dbLevel
-        ? activeVersion.interestRates.find(r => r.levelScope === dbLevel)
-        : undefined;
-      if (rateEntry?.rateMonthly != null) {
-        return rateEntry.rateMonthly;
-      }
+    if (!activeVersion) {
+      throw new Error(
+        'No se puede calcular: se requiere la versión de parámetros activa para resolver la tasa de interés.',
+      );
     }
 
-    // Fallback: valor hardcode del Value Object InterestRate
-    return InterestRate.fromMode(input.interestMode).monthlyRate;
+    const dbLevel = SimulationEngine.LEVEL_MAP[input.educationLevel];
+    const rateEntry = dbLevel
+      ? activeVersion.interestRates.find(r => r.levelScope === dbLevel)
+      : undefined;
+
+    if (rateEntry?.rateMonthly == null) {
+      throw new Error(
+        'No se puede calcular: la versión de parámetros activa no define una tasa de interés para este nivel.',
+      );
+    }
+
+    return rateEntry.rateMonthly;
   }
 
   // Expuesto para SimulationService cuando solo necesita la tabla separada
-  getScheduleRows(input: SimulationInput, params: ParameterVersion): SimulationRow[] {
-    const dtos = this.buildAmortizationSchedule(input, params);
+  getScheduleRows(input: SimulationInput, params: ParameterVersion, activeVersion?: ActiveParameterVersion): SimulationRow[] {
+    const dtos = this.buildAmortizationSchedule(input, params, activeVersion);
     return dtos.map((d) =>
       new SimulationRow(
         d.period,

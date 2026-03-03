@@ -22,7 +22,8 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
 
   // RBAC: si se definen roles permitidos y el usuario no tiene uno de ellos, redirigir
   if (allowedRoles && user?.role && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/simulator/create" replace />;
+    const fallbackRoute = user.role === 'ADMIN' ? '/admin' : '/simulator/create';
+    return <Navigate to={fallbackRoute} replace />;
   }
 
   return <>{children}</>;

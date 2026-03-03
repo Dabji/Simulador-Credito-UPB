@@ -402,7 +402,7 @@ export const swaggerDocument: JsonObject = {
         content: {
           'application/json': {
             schema: { $ref: '#/components/schemas/Error' },
-            example: { error: 'Token de autenticación requerido' },
+            example: { success: false, error: { statusCode: 401, message: 'Token de autenticación requerido' } },
           },
         },
       },
@@ -412,7 +412,7 @@ export const swaggerDocument: JsonObject = {
         content: {
           'application/json': {
             schema: { $ref: '#/components/schemas/Error' },
-            example: { error: 'Acceso denegado. Se requiere uno de los roles: ADMIN' },
+            example: { success: false, error: { statusCode: 403, message: 'Acceso denegado. Se requiere uno de los roles: ADMIN' } },
           },
         },
       },
@@ -429,16 +429,30 @@ export const swaggerDocument: JsonObject = {
       Error: {
         type: 'object',
         properties: {
-          error: {
-            type: 'string',
-            description: 'Mensaje descriptivo del error',
+          success: {
+            type: 'boolean',
+            example: false,
           },
-          stack: {
-            type: 'string',
-            description: 'Stack trace (solo en desarrollo)',
+          error: {
+            type: 'object',
+            properties: {
+              message: {
+                type: 'string',
+                description: 'Mensaje descriptivo del error',
+              },
+              statusCode: {
+                type: 'integer',
+                description: 'Código de estado HTTP',
+              },
+              stack: {
+                type: 'string',
+                description: 'Stack trace (solo en desarrollo)',
+              },
+            },
+            required: ['message', 'statusCode'],
           },
         },
-        required: ['error'],
+        required: ['success', 'error'],
       },
       Credit: {
         type: 'object',

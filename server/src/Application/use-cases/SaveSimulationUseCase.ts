@@ -46,11 +46,7 @@ export class SaveSimulationUseCase {
       );
     }
 
-    // 2. Calcular la simulación (valida reglas de negocio)
-    const simulationService = new SimulationService();
-    const summary = simulationService.calculate(input, activeVersion);
-
-    // 3. Obtener tasa aplicada según nivel
+    // 2. Validar tasa aplicada según nivel (antes del cálculo)
     const dbLevel = LEVEL_MAP[input.educationLevel];
     if (!dbLevel) throw new BadRequestError(`Nivel educativo inválido: ${input.educationLevel}`);
 
@@ -63,6 +59,10 @@ export class SaveSimulationUseCase {
     const appliedRate = input.interestMode === 'con_interes'
       ? rateEntry!.rateMonthly
       : 0;
+
+    // 3. Calcular la simulación (valida reglas de negocio)
+    const simulationService = new SimulationService();
+    const summary = simulationService.calculate(input, activeVersion);
 
     // 4. Construir fecha de primer pago
     const firstPaymentDate = summary.schedule.length > 0
