@@ -8,21 +8,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LogoUpb from '@/assets/Images/LogoUpb.png';
 import { useAuth } from '@/modules/auth/context/AuthContext';
-
-/* Links del menú — abren en nueva pestaña */
-const NAV_LINKS = [
-  { label: 'Biblioteca Virtual', href: 'https://bibliotecavirtual.upb.edu.co/pages/index.php' },
-  { label: 'Transparencia', href: 'https://www.upb.edu.co/es/transparencia-acceso-informacion' },
-  { label: 'Quiero Donar', href: 'https://www.upb.edu.co/es/fundacion-universitaria' },
-  {
-    label: 'SIGAA',
-    href: 'https://sso.upb.edu.co/authenticationendpoint/login.do?Name=PreLoginRequestProcessor&commonAuthCallerPath=%252Fcas%252Flogin&forceAuth=true&passiveAuth=false&service=https%3A%2F%2Fsigaa.upb.edu.co%3A443%2Fssomanager%2Fc%2FSSB&tenantDomain=carbon.super&sessionDataKey=bf28c761-4f0e-4e79-8b20-6962fc8e4578&relyingParty=ssb-banpdn&type=cas&sp=ssb-banpdn&isSaaSApp=false&authenticators=BasicAuthenticator%3ALOCAL',
-  },
-  {
-    label: 'Soy UPB',
-    href: 'https://sso.upb.edu.co/authenticationendpoint/login.do?commonAuthCallerPath=%2Fsamlsso&forceAuth=false&passiveAuth=false&tenantDomain=carbon.super&sessionDataKey=06c9aaf1-52eb-4670-bf54-9fd17bbb57ca&relyingParty=WebcenterSt&type=samlsso&sp=Webcenterstg&isSaaSApp=false&authenticators=BasicAuthenticator%3ALOCAL',
-  },
-];
+import { UPB_NAV_LINKS } from '@/shared/components/upbLinks';
 
 interface UpbHeaderProps {
   profileOpen: boolean;
@@ -48,7 +34,7 @@ export function UpbHeader({ profileOpen, onToggleProfile }: UpbHeaderProps) {
 
           {/* Menú desktop — centrado con separadores */}
           <nav className="hidden md:flex flex-1 items-center justify-center" aria-label="Menú principal">
-            {NAV_LINKS.map((item, idx) => (
+            {UPB_NAV_LINKS.map((item, idx) => (
               <span key={item.label} className="flex items-center">
                 {idx > 0 && (
                   <span className="mx-4 text-gray-300 select-none" aria-hidden="true">|</span>
@@ -153,7 +139,7 @@ export function UpbHeader({ profileOpen, onToggleProfile }: UpbHeaderProps) {
       {/* Menú mobile desplegable */}
       {mobileMenuOpen && (
         <div className="md:hidden bg-white border-t border-gray-100 px-4 py-3" role="navigation" aria-label="Menú móvil">
-          {NAV_LINKS.map((item) => (
+          {UPB_NAV_LINKS.map((item) => (
             <a
               key={item.label}
               href={item.href}

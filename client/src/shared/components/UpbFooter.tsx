@@ -7,15 +7,15 @@
 import LogoUpb2 from '@/assets/Images/LogoUpb (2).png';
 import LogoFacebook from '@/assets/Images/LogoFacebook.png';
 import LogoInstagram from '@/assets/Images/LogoIngtagram.png';
-import LogoTwitter from '@/assets/Images/LogoTwitter.png';
+import LogoX from '@/assets/Images/logoTwitterMejor.png';
 import LogoYoutube from '@/assets/Images/youtube_style_play_icon_512.png';
 
 /* Links de redes sociales */
 const SOCIAL_LINKS = [
-  { href: 'https://www.facebook.com/UPBBGA/?locale=es_LA', icon: LogoFacebook, alt: 'Facebook UPB' },
-  { href: 'https://www.instagram.com/upbbga/?hl=es', icon: LogoInstagram, alt: 'Instagram UPB' },
-  { href: 'https://x.com/UPBBGA', icon: LogoTwitter, alt: 'X (Twitter) UPB' },
-  { href: 'https://www.youtube.com/channel/UCMaBLy4quJbHDcqvM9HFJ_w', icon: LogoYoutube, alt: 'YouTube UPB' },
+  { href: 'https://www.facebook.com/UPBBGA/?locale=es_LA', icon: LogoFacebook, alt: 'Facebook UPB',  imgClass: 'w-8 h-8' },
+  { href: 'https://www.instagram.com/upbbga/?hl=es',       icon: LogoInstagram, alt: 'Instagram UPB', imgClass: 'w-8 h-8' },
+  { href: 'https://x.com/UPBBGA',                          icon: LogoX,         alt: 'X UPB',         imgClass: 'w-8 h-8 scale-[1.75]' },
+  { href: 'https://www.youtube.com/channel/UCMaBLy4quJbHDcqvM9HFJ_w', icon: LogoYoutube, alt: 'YouTube UPB', imgClass: 'w-8 h-8' },
 ];
 
 /* Programas de la oferta académica */
@@ -92,11 +92,11 @@ export function UpbFooter({ className }: UpbFooterProps) {
                 key={link.alt}
                 href={link.href}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="w-8 h-8 flex-shrink-0 flex items-center justify-center hover:opacity-75 transition-opacity focus:outline-none focus:ring-2 focus:ring-purple-400 rounded-full"
                 aria-label={link.alt}
               >
-                <img src={link.icon} alt={link.alt} className="w-8 h-8 object-contain block" loading="lazy" />
+                <img src={link.icon} alt={link.alt} className={`${link.imgClass} object-contain block`} loading="lazy" />
               </a>
             ))}
           </div>
