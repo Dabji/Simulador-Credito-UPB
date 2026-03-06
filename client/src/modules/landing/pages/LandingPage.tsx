@@ -17,6 +17,7 @@ import ImgHero        from '@/assets/Images/pregadroCardHome.png';
 import ImgFondo       from '@/assets/Images/fondoLogin.png';
 
 /* ── URLs de redes sociales — editar aquí ──────────────────────── */
+const FACEBOOK_URL  = 'https://www.facebook.com/UPBBGA/?locale=es_LA';
 const INSTAGRAM_URL = 'https://www.instagram.com/upbbga/';
 const X_URL         = 'https://x.com/UPBBGA';
 const YOUTUBE_URL   = 'https://www.youtube.com/channel/UCMaBLy4quJbHDcqvM9HFJ_w';
@@ -31,6 +32,15 @@ const SLIDES = [
 ];
 
 const SOCIAL_ITEMS = [
+  {
+    label: 'Ver Facebook',
+    href: FACEBOOK_URL,
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+      </svg>
+    ),
+  },
   {
     label: 'Ver Instagram',
     href: INSTAGRAM_URL,
@@ -75,7 +85,7 @@ export function LandingPage() {
   return (
     <div className="relative w-full h-[100svh] overflow-hidden font-sans">
 
-      {/* ── Slideshow de fondo ──────────────────────────────────── */}
+      {/* Slideshow de fondo ────────────────────────────────────── */}
       {SLIDES.map((src, idx) => (
         <div
           key={src}
@@ -92,19 +102,19 @@ export function LandingPage() {
         </div>
       ))}
 
-      {/* Overlay oscuro para legibilidad */}
+      {/* Overlay: gradiente izquierda oscuro, derecha más claro para ver las fotos */}
       <div
         className="absolute inset-0 z-10"
-        style={{ background: 'linear-gradient(135deg, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.40) 100%)' }}
+        style={{ background: 'linear-gradient(100deg, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.45) 50%, rgba(0,0,0,0.18) 100%)' }}
         aria-hidden="true"
       />
 
-      {/* ── Header de landing ───────────────────────────────────── */}
+      {/* Header absolute sobre el slideshow */}
       <LandingHeader />
 
-      {/* ── Contenido hero ──────────────────────────────────────── */}
+      {/* Contenido hero ─────────────────────────────────────── */}
       <div className="relative z-20 h-full w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-10 2xl:px-16 flex items-center">
-        <div className="w-full max-w-xl pt-[74px]">
+        <div className="w-full max-w-xl pt-[78px]">
 
           {/* Badge */}
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/15 text-white border border-white/25 backdrop-blur-sm mb-5">
@@ -170,7 +180,7 @@ export function LandingPage() {
 
       {/* Indicadores de slide (dots) */}
       <div
-        className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2"
+        className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2"
         role="tablist"
         aria-label="Indicadores de diapositiva"
       >
