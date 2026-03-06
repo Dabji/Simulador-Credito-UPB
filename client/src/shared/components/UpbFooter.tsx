@@ -92,7 +92,7 @@ export function UpbFooter({ className }: UpbFooterProps) {
                 key={link.alt}
                 href={link.href}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="w-8 h-8 flex-shrink-0 flex items-center justify-center hover:opacity-75 transition-opacity focus:outline-none focus:ring-2 focus:ring-purple-400 rounded-full"
                 aria-label={link.alt}
               >

@@ -81,25 +81,32 @@ export function LandingPage() {
     return () => clearInterval(id);
   }, []);
 
+  const totalSlides = SLIDES.length;
+  const previousIndex = (current - 1 + totalSlides) % totalSlides;
+  const visibleIndices = new Set([current, previousIndex]);
+
   return (
-    <div className="relative w-full h-[100svh] overflow-hidden font-sans">
+    <div className="relative w-full min-h-[100svh] overflow-y-auto lg:h-[100svh] lg:overflow-hidden font-sans">
 
       {/* Slideshow de fondo ────────────────────────────────────── */}
-      {SLIDES.map((src, idx) => (
-        <div
-          key={src}
-          aria-hidden="true"
-          className="absolute inset-0 w-full h-full transition-opacity duration-1000 pointer-events-none"
-          style={{ opacity: idx === current ? 1 : 0 }}
-        >
-          <img
-            src={src}
-            alt=""
-            className="w-full h-full object-cover object-center"
-            loading={idx === 0 ? 'eager' : 'lazy'}
-          />
-        </div>
-      ))}
+      {SLIDES.map((src, idx) => {
+        if (!visibleIndices.has(idx)) return null;
+        return (
+          <div
+            key={src}
+            aria-hidden="true"
+            className="absolute inset-0 w-full h-full transition-opacity duration-1000 pointer-events-none"
+            style={{ opacity: idx === current ? 1 : 0 }}
+          >
+            <img
+              src={src}
+              alt=""
+              className="w-full h-full object-cover object-center"
+              loading={idx === 0 ? 'eager' : 'lazy'}
+            />
+          </div>
+        );
+      })}
 
       {/* Overlay: gradiente izquierda oscuro, derecha más claro para ver las fotos */}
       <div
@@ -180,16 +187,14 @@ export function LandingPage() {
       {/* Indicadores de slide (dots) */}
       <div
         className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2"
-        role="tablist"
         aria-label="Indicadores de diapositiva"
       >
         {SLIDES.map((_, idx) => (
           <button
             key={idx}
             type="button"
-            role="tab"
-            aria-selected={idx === current}
-            aria-label={`Diapositiva ${idx + 1}`}
+            aria-current={idx === current ? true : undefined}
+            aria-label={`Diapositiva ${idx + 1}${idx === current ? ' (actual)' : ''}`}
             onClick={() => setCurrent(idx)}
             className="transition-all duration-300 rounded-full focus:outline-none focus:ring-2 focus:ring-white/60"
             style={{
