@@ -7,14 +7,14 @@
 import LogoUpb2 from '@/assets/Images/LogoUpb (2).png';
 import LogoFacebook from '@/assets/Images/LogoFacebook.png';
 import LogoInstagram from '@/assets/Images/LogoIngtagram.png';
-import LogoTwitter from '@/assets/Images/LogoTwitter.png';
+import LogoX from '@/assets/Images/png-transparent-twitter-x-logo.png';
 import LogoYoutube from '@/assets/Images/youtube_style_play_icon_512.png';
 
 /* Links de redes sociales */
 const SOCIAL_LINKS = [
   { href: 'https://www.facebook.com/UPBBGA/?locale=es_LA', icon: LogoFacebook, alt: 'Facebook UPB' },
   { href: 'https://www.instagram.com/upbbga/?hl=es', icon: LogoInstagram, alt: 'Instagram UPB' },
-  { href: 'https://x.com/UPBBGA', icon: LogoTwitter, alt: 'X (Twitter) UPB' },
+  { href: 'https://x.com/UPBBGA', icon: LogoX, alt: 'X UPB' },
   { href: 'https://www.youtube.com/channel/UCMaBLy4quJbHDcqvM9HFJ_w', icon: LogoYoutube, alt: 'YouTube UPB' },
 ];
 

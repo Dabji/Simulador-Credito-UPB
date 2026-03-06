@@ -17,6 +17,7 @@ import { Layout } from './shared/components/Layout';
 import { AuthProvider } from './modules/auth/context/AuthContext';
 import { ProtectedRoute } from './shared/components/ProtectedRoute';
 import { PublicRoute } from './shared/components/PublicRoute';
+import { LandingPage } from './modules/landing/pages/LandingPage';
 
 export function App() {
   return (
@@ -30,8 +31,8 @@ export function App() {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/password-updated" element={<PasswordUpdatedPage />} />
 
-          {/* Página principal: redirige a login */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          {/* Página principal: Landing pública */}
+          <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
 
           {/* ── Rutas del estudiante (HU-08) ── */}
           <Route path="/student/main" element={<ProtectedRoute requiredRole="STUDENT"><MainStudentPage /></ProtectedRoute>} />
