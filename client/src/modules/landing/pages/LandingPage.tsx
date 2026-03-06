@@ -6,7 +6,7 @@
 ------------------------------------------------------------------ */
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { LandingHeader } from '@/shared/components/LandingHeader';
 
 import ImgBucaramanga from '@/assets/Images/imagenBucaramanga.png';
@@ -71,7 +71,6 @@ const SOCIAL_ITEMS = [
 ] as const;
 
 export function LandingPage() {
-  const navigate = useNavigate();
   const [current, setCurrent] = useState(0);
 
   /* Slideshow automático — crossfade cada 5s */
@@ -90,7 +89,7 @@ export function LandingPage() {
         <div
           key={src}
           aria-hidden="true"
-          className="absolute inset-0 w-full h-full transition-opacity duration-1000"
+          className="absolute inset-0 w-full h-full transition-opacity duration-1000 pointer-events-none"
           style={{ opacity: idx === current ? 1 : 0 }}
         >
           <img
@@ -104,13 +103,15 @@ export function LandingPage() {
 
       {/* Overlay: gradiente izquierda oscuro, derecha más claro para ver las fotos */}
       <div
-        className="absolute inset-0 z-10"
+        className="absolute inset-0 z-10 pointer-events-none"
         style={{ background: 'linear-gradient(100deg, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.45) 50%, rgba(0,0,0,0.18) 100%)' }}
         aria-hidden="true"
       />
 
-      {/* Header absolute sobre el slideshow */}
-      <LandingHeader />
+      {/* Header absolute sobre el slideshow — z-30 para estar sobre slides y overlay */}
+      <div className="absolute top-0 left-0 right-0 z-30 w-full">
+        <LandingHeader />
+      </div>
 
       {/* Contenido hero ─────────────────────────────────────── */}
       <div className="relative z-20 h-full w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-10 2xl:px-16 flex items-center">
@@ -138,25 +139,23 @@ export function LandingPage() {
 
           {/* CTAs */}
           <div className="flex flex-wrap items-center gap-3 mb-10">
-            <button
-              type="button"
-              onClick={() => navigate('/login')}
-              className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full font-bold text-gray-900 text-base transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#C0D901]"
+            <Link
+              to="/login"
+              className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full font-bold text-gray-900 text-base transition-all duration-150 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#C0D901]"
               style={{ backgroundColor: '#C0D901' }}
             >
               Financiación directa UPB
               <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
-            </button>
+            </Link>
 
-            <button
-              type="button"
-              onClick={() => navigate('/register')}
-              className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full font-semibold text-white text-base border border-white/40 bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-white/60"
+            <Link
+              to="/register"
+              className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full font-semibold text-white text-base border border-white/40 bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-all duration-150 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-white/60"
             >
               Registrarme
-            </button>
+            </Link>
           </div>
 
           {/* Links sociales */}

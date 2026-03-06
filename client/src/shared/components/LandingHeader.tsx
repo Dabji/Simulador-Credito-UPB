@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import LogoUpb from '@/assets/Images/LogoUpb (2).png';
 
 const NAV_LINKS = [
@@ -11,11 +11,10 @@ const NAV_LINKS = [
 ];
 
 export function LandingHeader() {
-  const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <header className="absolute top-0 left-0 right-0 z-20 w-full">
+    <header className="w-full">
       {/* Barra principal */}
       <div
         className="w-full"
@@ -73,20 +72,18 @@ export function LandingHeader() {
                 )}
               </button>
 
-              <button
-                type="button"
-                onClick={() => navigate('/register')}
+              <Link
+                to="/register"
                 className="hidden sm:inline-flex px-4 py-2 rounded-full text-sm font-semibold text-white border border-white/40 bg-white/10 hover:bg-white/20 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-white/60"
               >
                 Registrarme
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate('/login')}
+              </Link>
+              <Link
+                to="/login"
                 className="inline-flex px-4 py-2 rounded-full text-sm font-semibold text-gray-900 bg-[#C0D901] hover:bg-[#d4ef01] transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-[#C0D901]"
               >
                 Iniciar sesión
-              </button>
+              </Link>
             </div>
           </div>
         </div>
@@ -113,13 +110,13 @@ export function LandingHeader() {
             </a>
           ))}
           <div className="border-t border-white/10 mt-2 pt-2">
-            <button
-              type="button"
-              onClick={() => { setMobileOpen(false); navigate('/register'); }}
-              className="block w-full text-left py-2.5 text-sm font-semibold text-white/90 hover:text-[#C0D901] transition-colors focus:outline-none"
+            <Link
+              to="/register"
+              className="block w-full py-2.5 text-sm font-semibold text-white/90 hover:text-[#C0D901] transition-colors focus:outline-none"
+              onClick={() => setMobileOpen(false)}
             >
               Registrarme
-            </button>
+            </Link>
           </div>
         </div>
       )}
