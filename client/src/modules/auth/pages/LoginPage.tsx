@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../../../shared/services/api';
 
 interface LoginResponse {
@@ -105,6 +105,22 @@ export function LoginPage() {
         <p className="text-center text-xs text-gray-400 mt-6">
           Autenticación vía Active Directory UPB
         </p>
+
+        {/* Registro e invitado */}
+        <div className="mt-5 border-t border-gray-100 pt-5 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <Link
+            to="/register"
+            className="btn-secondary w-full sm:w-auto text-center"
+          >
+            Registrarse
+          </Link>
+          <Link
+            to="/simulator"
+            className="text-sm text-gray-500 hover:text-green-700 font-medium transition-colors"
+          >
+            Entrar como invitado →
+          </Link>
+        </div>
       </div>
     </div>
   );
