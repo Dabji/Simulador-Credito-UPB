@@ -337,28 +337,45 @@ export function LoginPage() {
           </form>
 
           {/* Links inferiores */}
-          <div className="mt-12 text-center space-y-4">
-            <p className="text-sm text-gray-600">
-              ¿Aún no estás registrado?{' '}
-              <Link to="/register" className="text-blue-600 hover:underline font-semibold">
-                Regístrate Ahora
+          <div className="mt-10">
+            {/* Fila: Registrarme | Entrar como invitado — centrado */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Link
+                to="/register"
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold text-gray-900 transition-all duration-150 hover:brightness-110 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C0D901]/60"
+                style={{ backgroundColor: '#C0D901' }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Registrarme
               </Link>
-            </p>
 
-            <p>
-              <Link to="/forgot-password" className="text-blue-600 hover:underline font-semibold text-sm">
+              {/* Separador vertical — solo desktop */}
+              <span className="hidden sm:block w-px h-5 bg-gray-300" aria-hidden="true" />
+
+              <Link
+                to="/guest"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold text-gray-500 border border-gray-300 bg-white hover:bg-gray-50 transition-all duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/60"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                Entrar como invitado
+              </Link>
+            </div>
+
+            {/* Separador horizontal */}
+            <div className="w-full border-t border-gray-200 my-5" aria-hidden="true" />
+
+            {/* Olvidé contraseña */}
+            <div className="text-center">
+              <Link
+                to="/forgot-password"
+                className="text-sm text-blue-600 hover:text-blue-700 hover:underline font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rounded"
+              >
                 ¿Olvidaste tu contraseña?
-              </Link>
-            </p>
-
-            <div className="pt-4">
-              <p className="text-xs text-gray-500 leading-relaxed">
-                ¿No eres estudiante UPB todavía?
-                <br />
-                Ingresa en modo invitado y simula tu crédito educativo.
-              </p>
-              <Link to="/simulator/create" className="text-blue-600 hover:underline font-semibold text-sm">
-                Dale click Ahora
               </Link>
             </div>
           </div>

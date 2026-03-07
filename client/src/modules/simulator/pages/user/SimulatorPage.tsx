@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { api } from '../../../shared/services/api';
+import { api } from '../../../../shared/services/api';
 
 interface SimulationResult {
   credit: {
