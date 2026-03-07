@@ -6,7 +6,7 @@
               C) Modalidad de Financiación
 ───────────────────────────────────────────────────────────────── */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { simulateCredit } from '../services/api';
 import type { SimulationSummaryDTO, SimulationInputDTO } from '../services/api';
@@ -50,6 +50,16 @@ function formatPctInput(raw: string): string {
  *  Ejemplo: "20%" → "20" */
 function parsePctInput(displayed: string): string {
   return displayed.replace(/%/g, '').replace(/[^0-9.]/g, '');
+}
+
+/** Limita un string numérico al rango 0-100 (para campos de porcentaje). */
+function clampPct(raw: string): string {
+  if (!raw) return raw;
+  const n = parseFloat(raw);
+  if (isNaN(n)) return raw;
+  if (n > 100) return '100';
+  if (n < 0)   return '0';
+  return raw;
 }
 
 /* ── Constantes de dominio ─────────────────────────────────────
@@ -172,6 +182,10 @@ const INITIAL_FIELDS: FormFields = {
   observations: '',
 };
 
+/* #59 — Aviso de modalidad forzada a sin_interes (dinámico según número de cuotas) */
+const forcedSinInteresText = (n: number): string =>
+  `Por regla institucional, con ${n} cuota${n === 1 ? '' : 's'} totales se aplica modalidad sin intereses.`;
+
 /* Clases CSS compartidas para inputs, labels y helpers */
 const INPUT_BASE =
   'w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none transition-all duration-200 bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-purple-400 focus:border-purple-400';
@@ -198,12 +212,38 @@ const DIALOG_CLOSED: ConfirmDialogState = {
   open: false, title: '', message: '', onConfirm: () => undefined,
 };
 
+/* Clave de sessionStorage para persistir el formulario entre navegaciones */
+const SESSION_KEY = 'sim_form_draft';
+
+/** Lee el borrador guardado en sessionStorage (si existe y es válido) */
+function readDraft(): FormFields {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if (!raw) return INITIAL_FIELDS;
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== 'object' || parsed === null) return INITIAL_FIELDS;
+    // Mezcla con INITIAL_FIELDS para tolerar campos nuevos en versiones futuras
+    return { ...INITIAL_FIELDS, ...(parsed as Partial<FormFields>) };
+  } catch {
+    return INITIAL_FIELDS;
+  }
+}
+
 export function SimulationForm({ onResult }: SimulationFormProps) {
-  const [fields, setFields]     = useState<FormFields>(INITIAL_FIELDS);
+  const [fields, setFields]     = useState<FormFields>(readDraft);
   const [loading, setLoading]   = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   /* Diálogo de confirmación emergente — usado para Limpiar formulario */
   const [dialog, setDialog]     = useState<ConfirmDialogState>(DIALOG_CLOSED);
+
+  /* Persiste el borrador en sessionStorage cada vez que cambian los campos */
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(fields));
+    } catch {
+      // sessionStorage no disponible (modo incognito con cuota llena, etc.) — ignorar
+    }
+  }, [fields]);
 
   /* ── Abre el diálogo modal de confirmación */
   const confirm = (title: string, message: string, onConfirm: () => void) => {
@@ -217,6 +257,9 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
      IMPORTANTE: tuitionValue y downPaymentValue se almacenan SIEMPRE como
      dígitos puros (sin separadores) para no romper cálculos internos.
      Los inputs de display aplican formatCOPInput / formatPctInput al renderizar. */
+  /* #59 — aviso visible cuando la modalidad fue forzada */
+  const [forcedSinInteresMsg, setForcedSinInteresMsg] = useState<string | null>(null);
+
   const set = (key: keyof FormFields, value: string) => {
     setApiError(null);
     setFields((prev) => {
@@ -249,6 +292,22 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
         const pct    = parseFloat(parsePctInput(next.downPaymentPercent)) || 0;
         next.downPaymentValue = newNet > 0 && pct > 0 ? String(Math.round(newNet * pct / 100)) : '';
       }
+      /* #58 — Al seleccionar upbTech, forzar cuota inicial a 15% */
+      if (key === 'educationLevel' && value === 'upbTech') {
+        next.downPaymentPercent = '15';
+        const tuition    = parseFloat(parseCOPInput(next.tuitionValue)) || 0;
+        const scholarship = parseFloat(parsePctInput(next.scholarshipPercent)) || 0;
+        const netT       = tuition * (1 - scholarship / 100);
+        next.downPaymentValue = netT > 0 ? String(Math.round(netT * 0.15)) : '';
+      }
+      /* #58 — Al cambiar de upbTech a otro nivel, restaurar mínimo 20% si estaba en 15 */
+      if (key === 'educationLevel' && value !== 'upbTech' && prev.educationLevel === 'upbTech') {
+        next.downPaymentPercent = '20';
+        const tuition    = parseFloat(parseCOPInput(next.tuitionValue)) || 0;
+        const scholarship = parseFloat(parsePctInput(next.scholarshipPercent)) || 0;
+        const netT       = tuition * (1 - scholarship / 100);
+        next.downPaymentValue = netT > 0 ? String(Math.round(netT * 0.2)) : '';
+      }
       /* Al cambiar periodo, limpiar mes y cuotas dependientes */
       if (key === 'academicPeriod') { next.firstPaymentMonth = ''; next.numberOfPayments = ''; }
       /* Al cambiar mes, limpiar número de cuotas */
@@ -256,6 +315,28 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
 
       return next;
     });
+  };
+
+  /* #59 — Forzar sin_interes si con_interes + numberOfPayments <= 3 */
+  const handleNumberOfPayments = (raw: string) => {
+    const v = raw.replace(/[^0-9]/g, '');
+    const n = parseInt(v, 10);
+    const capped = !v || n <= maxCuotas ? v : String(maxCuotas);
+    const nFinal = parseInt(capped, 10);
+    if (fields.interestMode === 'con_interes' && nFinal >= 1 && nFinal <= 3) {
+      setForcedSinInteresMsg(forcedSinInteresText(nFinal));
+      setFields((prev) => ({ ...prev, interestMode: 'sin_interes', numberOfPayments: capped }));
+      setApiError(null);
+    } else {
+      setForcedSinInteresMsg(null);
+      set('numberOfPayments', capped);
+    }
+  };
+
+  /* Limpiar aviso al cambiar interestMode manualmente */
+  const handleInterestMode = (value: string) => {
+    setForcedSinInteresMsg(null);
+    set('interestMode', value);
   };
 
   /* Porcentaje mínimo de cuota inicial según nivel de formación:
@@ -289,7 +370,11 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
     confirm(
       'Limpiar formulario',
       '¿Estás seguro de que deseas limpiar todos los campos? Esta acción no se puede deshacer.',
-      () => { setFields(INITIAL_FIELDS); setApiError(null); },
+      () => {
+        setFields(INITIAL_FIELDS);
+        setApiError(null);
+        try { sessionStorage.removeItem(SESSION_KEY); } catch { /* ignorar */ }
+      },
     );
   };
 
@@ -455,24 +540,35 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
             <p className={HELPER_CLASS} style={HELPER_COLOR}>Valores en pesos colombianos (COP)</p>
           </div>
 
-          {/* Beca / Descuento */}
+          {/* Beca / Descuento — #57: disabled+gris para UPB Tech, visible siempre */}
           <div>
-            <label htmlFor="scholarshipPercent" className={LABEL_CLASS}>
+            <label
+              htmlFor="scholarshipPercent"
+              className={LABEL_CLASS}
+              style={fields.educationLevel === 'upbTech' ? { color: '#9CA3AF' } : undefined}
+            >
               Beca / Descuento (%)
             </label>
-            {/* Beca/Descuento — muestra símbolo % al final para UX clara.
-                Se guarda internamente sin % vía parsePctInput. */}
             <input
               id="scholarshipPercent"
               type="text"
               inputMode="decimal"
               placeholder="20%"
-              value={formatPctInput(fields.scholarshipPercent)}
+              value={fields.educationLevel === 'upbTech' ? '' : formatPctInput(fields.scholarshipPercent)}
               onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                set('scholarshipPercent', parsePctInput(e.target.value))
+                set('scholarshipPercent', clampPct(parsePctInput(e.target.value)))
               }
+              disabled={fields.educationLevel === 'upbTech'}
               className={INPUT_BASE}
+              style={fields.educationLevel === 'upbTech'
+                ? { backgroundColor: '#F3F4F6', color: '#9CA3AF', cursor: 'not-allowed', borderColor: '#E5E7EB' }
+                : undefined}
             />
+            {fields.educationLevel === 'upbTech' && (
+              <p className={HELPER_CLASS} style={{ color: '#9CA3AF' }}>
+                Beca / Descuento no aplica para el nivel de formación UPB Tech.
+              </p>
+            )}
           </div>
         </div>
 
@@ -494,7 +590,7 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
                 placeholder={`${minDownPct}%`}
                 value={formatPctInput(fields.downPaymentPercent)}
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                  set('downPaymentPercent', parsePctInput(e.target.value))
+                  set('downPaymentPercent', clampPct(parsePctInput(e.target.value)))
                 }
                 className={INPUT_BASE}
                 style={downPctError ? { borderColor: '#EF4444' } : undefined}
@@ -533,7 +629,9 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
           {/* Helper text dinámico: indica el mínimo según el nivel de formación */}
           {!downPctError && (
             <p className={HELPER_CLASS} style={HELPER_COLOR}>
-              Modifica el porcentaje (mín. {minDownPct}%) o el valor COP; el sistema recalculará el campo restante.
+              {fields.educationLevel === 'upbTech'
+                ? 'Cuota inicial predeterminada al 15% para UPB Tech. Puedes modificarla si lo requieres.'
+                : `Modifica el porcentaje (mín. ${minDownPct}%) o el valor COP; el sistema recalculará el campo restante.`}
             </p>
           )}
         </fieldset>
@@ -560,7 +658,7 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
                 name="interestMode"
                 value="sin_interes"
                 checked={fields.interestMode === 'sin_interes'}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => set('interestMode', e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => handleInterestMode(e.target.value)}
                 className="w-4 h-4 text-purple-600 focus:ring-purple-500"
               />
               Sin intereses (0%)
@@ -571,7 +669,7 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
                 name="interestMode"
                 value="con_interes"
                 checked={fields.interestMode === 'con_interes'}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => set('interestMode', e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => handleInterestMode(e.target.value)}
                 className="w-4 h-4 text-purple-600 focus:ring-purple-500"
               />
               Con intereses (0.9% mensual M.V.)
@@ -666,17 +764,24 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
             inputMode="numeric"
             placeholder={fields.firstPaymentMonth ? `Máximo ${maxCuotas}` : '4'}
             value={fields.numberOfPayments}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => {
-              const v = e.target.value.replace(/[^0-9]/g, '');
-              const n = parseInt(v, 10);
-              set('numberOfPayments', !v || n <= maxCuotas ? v : String(maxCuotas));
-            }}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => handleNumberOfPayments(e.target.value)}
             className={INPUT_BASE}
           />
+          {/* #59 — aviso modalidad forzada */}
+          {forcedSinInteresMsg && (
+            <div
+              className="mt-2 rounded-lg px-3 py-2 text-xs font-medium"
+              style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1E40AF' }}
+              role="alert"
+            >
+              {forcedSinInteresMsg}
+            </div>
+          )}
+          {/* #54 — helper text: cuotas incluye la inicial */}
           <p className={HELPER_CLASS} style={HELPER_COLOR}>
             {fields.firstPaymentMonth
-              ? `Máximo ${maxCuotas} cuota(s) para el periodo ${fields.academicPeriod} desde el mes seleccionado.`
-              : 'Selecciona el mes de la primera cuota para ver el máximo de cuotas.'}
+              ? `Máximo ${maxCuotas} cuota(s). El número de cuotas incluye la cuota inicial.`
+              : 'Selecciona el mes de la primera cuota para ver el máximo. El número de cuotas incluye la cuota inicial.'}
           </p>
         </div>
       </section>

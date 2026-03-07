@@ -24,11 +24,10 @@ export class SimulationService {
   calculate(input: SimulationInput, activeVersion?: ActiveParameterVersion): SimulationSummary {
     const params = this.paramService.getActiveVersion();
 
-    // Regla: estudiante nuevo no puede tener beca
+    // #57 — UPB Tech: beca/descuento no aplica (se ignora en el motor, no lanzar error)
+    // Estudiante nuevo: SÍ puede tener beca/descuento (regla corregida #57)
     const rule = new ModalityRule(input.studentType, input.educationLevel);
-    if (!rule.scholarshipAllowed() && input.scholarshipPct > 0) {
-      throw new Error('Los estudiantes nuevos no pueden tener beca o descuento.');
-    }
+    void rule; // reservado para futuras reglas de modalidad
 
     // Regla: cuota inicial mínima dinámica (15% upbTech, 20% pregrado/posgrado)
     InitialPaymentRule.validatePct(input.initialPaymentPct, input.educationLevel);
@@ -53,19 +52,24 @@ export class SimulationService {
       );
     }
 
+    // #59 — Modalidad efectiva: forzar sin_interes si con_interes + cuotas <= 3
+    const effectiveMode = input.interestMode === 'con_interes' && input.numberOfPayments <= 3
+      ? 'sin_interes'
+      : input.interestMode;
+
     // Regla: número de cuotas no puede superar el máximo del periodo
     const maxByPeriod = this.paramService.getMaxInstallments(
       input.academicPeriod,
       input.firstPaymentMonth,
     );
-    // Tope adicional por modalidad: sin_interes → máx 3, con_interes → máx 6
-    const capByMode     = input.interestMode === 'sin_interes' ? 3 : 6;
+    // Tope adicional por modalidad efectiva: sin_interes → máx 3, con_interes → máx 6
+    const capByMode     = effectiveMode === 'sin_interes' ? 3 : 6;
     const maxInstallments = Math.min(maxByPeriod, capByMode);
     if (input.numberOfPayments < 1 || input.numberOfPayments > maxInstallments) {
       throw new Error(
         `El número de cuotas debe estar entre 1 y ${maxInstallments} ` +
         `para el periodo ${input.academicPeriod} comenzando en mes ${input.firstPaymentMonth} ` +
-        `con modalidad ${input.interestMode}.`,
+        `con modalidad ${effectiveMode}.`,
       );
     }
 

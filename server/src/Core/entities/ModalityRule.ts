@@ -21,9 +21,9 @@ export class ModalityRule {
     return this._educationLevel;
   }
 
-  // Regla: estudiante nuevo no puede tener beca
+  // Regla: upbTech nunca puede tener beca; nuevo y continuo sí pueden (#57)
   scholarshipAllowed(): boolean {
-    return this._studentType === 'continuo';
+    return this._educationLevel !== 'upbTech';
   }
 
   // Ambas modalidades (con/sin interés) disponibles para todos
