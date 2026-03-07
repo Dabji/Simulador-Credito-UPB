@@ -113,6 +113,9 @@ export class SimulationEngine {
     // #58: plan de n-1 cuotas (la cuota 1 es la inicial, el plan va de cuota 2..N)
     const planN = Math.max(0, input.numberOfPayments - 1);
 
+    // Caso especial: numberOfPayments=1 → cuota inicial cubre todo, sin plan de cuotas
+    if (planN === 0) return [];
+
     // Tasa mensual: 0 si sin_interes, resuelve desde BD si con_interes
     const effectiveInput = { ...input, interestMode: effectiveInterestMode };
     const r = this.resolveMonthlyRate(effectiveInput, activeVersion);

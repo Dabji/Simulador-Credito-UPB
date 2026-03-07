@@ -294,13 +294,12 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
         const pct    = parseFloat(parsePctInput(next.downPaymentPercent)) || 0;
         next.downPaymentValue = newNet > 0 && pct > 0 ? String(Math.round(newNet * pct / 100)) : '';
       }
-      /* #58 — Al seleccionar upbTech, forzar cuota inicial a 15% */
+      /* #58 — Al seleccionar upbTech, forzar cuota inicial a 15%
+         #57 — Beca no aplica en upbTech: base de cálculo es la matrícula bruta */
       if (key === 'educationLevel' && value === 'upbTech') {
         next.downPaymentPercent = '15';
-        const tuition    = parseFloat(parseCOPInput(next.tuitionValue)) || 0;
-        const scholarship = parseFloat(parsePctInput(next.scholarshipPercent)) || 0;
-        const netT       = tuition * (1 - scholarship / 100);
-        next.downPaymentValue = netT > 0 ? String(Math.round(netT * 0.15)) : '';
+        const tuition = parseFloat(parseCOPInput(next.tuitionValue)) || 0;
+        next.downPaymentValue = tuition > 0 ? String(Math.round(tuition * 0.15)) : '';
       }
       /* #58 — Al cambiar de upbTech a otro nivel, restaurar mínimo 20% si estaba en 15 */
       if (key === 'educationLevel' && value !== 'upbTech' && prev.educationLevel === 'upbTech') {
@@ -339,11 +338,18 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
     }
   };
 
-  /* Limpiar aviso al cambiar interestMode manualmente */
+  /* Cambio de interestMode: aplica regla #59 si se intenta con_interes con cuotas <= 3 */
   const handleInterestMode = (value: string) => {
     clearSubmitForced();
-    setForcedSinInteresMsg(null);
-    set('interestMode', value);
+    const n = parseInt(fields.numberOfPayments || '0', 10);
+    if (value === 'con_interes' && n >= 1 && n <= 3) {
+      setForcedSinInteresMsg(forcedSinInteresText(n));
+      setFields((prev) => ({ ...prev, interestMode: 'sin_interes' }));
+      setApiError(null);
+    } else {
+      setForcedSinInteresMsg(null);
+      set('interestMode', value);
+    }
   };
 
   /* Porcentaje mínimo de cuota inicial según nivel de formación:

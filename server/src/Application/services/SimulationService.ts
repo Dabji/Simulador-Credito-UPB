@@ -2,7 +2,6 @@
 // Usa ParameterService para obtener parámetros vigentes y SimulationEngine
 // para realizar los cálculos financieros.
 
-import { ModalityRule } from '../../Core/entities/ModalityRule';
 import { InitialPaymentRule } from '../../Core/entities/InitialPaymentRule';
 import { Money } from '../../Core/entities/Money';
 import { ParameterService } from './ParameterService';
@@ -24,10 +23,9 @@ export class SimulationService {
   calculate(input: SimulationInput, activeVersion?: ActiveParameterVersion): SimulationSummary {
     const params = this.paramService.getActiveVersion();
 
-    // #57 — UPB Tech: beca/descuento no aplica (se ignora en el motor, no lanzar error)
-    // Estudiante nuevo: SÍ puede tener beca/descuento (regla corregida #57)
-    const rule = new ModalityRule(input.studentType, input.educationLevel);
-    void rule; // reservado para futuras reglas de modalidad
+    // #57 — UPB Tech: beca/descuento no aplica; se normaliza a 0 para todas las validaciones
+    // Estudiante nuevo/continuo: SÍ puede tener beca/descuento
+    const effectiveScholarshipPct = input.educationLevel === 'upbTech' ? 0 : input.scholarshipPct;
 
     // Regla: cuota inicial mínima dinámica (15% upbTech, 20% pregrado/posgrado)
     InitialPaymentRule.validatePct(input.initialPaymentPct, input.educationLevel);
@@ -37,8 +35,8 @@ export class SimulationService {
       throw new Error('El valor de matrícula debe ser mayor a 0.');
     }
 
-    // Regla: tuición neta debe ser positiva
-    const netTuition = Money.of(input.tuitionGross * (1 - input.scholarshipPct / 100));
+    // Regla: tuición neta debe ser positiva (usa scholarship efectivo para upbTech)
+    const netTuition = Money.of(input.tuitionGross * (1 - effectiveScholarshipPct / 100));
     if (netTuition.amount <= 0) {
       throw new Error('El valor neto de matrícula no puede ser 0.');
     }
@@ -76,8 +74,12 @@ export class SimulationService {
     // Regla: valor financiado debe ser positivo
     const initialPayment = Money.of(input.initialPaymentValue);
     const financed       = netTuition.subtract(initialPayment);
-    if (financed.amount <= 0) {
-      throw new Error('El valor financiado debe ser mayor a 0.');
+    // numberOfPayments=1 significa cuota inicial = 100% (sin plan de cuotas), permitido
+    if (financed.amount < 0) {
+      throw new Error('El valor de cuota inicial supera la matrícula neta.');
+    }
+    if (financed.amount === 0 && input.numberOfPayments > 1) {
+      throw new Error('El valor financiado es 0 pero se indicaron más de 1 cuota.');
     }
 
     return this.engine.computeSummary(input, params, activeVersion);
