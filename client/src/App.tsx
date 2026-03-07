@@ -1,8 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { SimulatorPage } from './modules/simulator/pages/SimulatorPage';
-import { CreateSimulationPage } from './modules/simulator/pages/CreateSimulationPage';
-import { MainStudentPage } from './modules/simulator/pages/MainStudentPage';
-import { StudentHistoryPage } from './modules/simulator/pages/StudentHistoryPage';
+import { SimulatorPage } from './modules/simulator/pages/user/SimulatorPage';
+import { CreateSimulationPage } from './modules/simulator/pages/user/CreateSimulationPage';
+import { MainStudentPage } from './modules/simulator/pages/user/MainStudentPage';
+import { StudentHistoryPage } from './modules/simulator/pages/user/StudentHistoryPage';
 import { AdminDashboard } from './modules/admin/pages/AdminDashboard';
 import { AdminMainPage } from './modules/admin/pages/AdminMainPage';
 import { AdminStudentsPage } from './modules/admin/pages/AdminStudentsPage';
@@ -18,6 +18,7 @@ import { AuthProvider } from './modules/auth/context/AuthContext';
 import { ProtectedRoute } from './shared/components/ProtectedRoute';
 import { PublicRoute } from './shared/components/PublicRoute';
 import { LandingPage } from './modules/landing/pages/LandingPage';
+import { GuestPage } from './modules/simulator/pages/guest/GuestPage';
 
 export function App() {
   return (
@@ -33,6 +34,7 @@ export function App() {
 
           {/* Página principal: Landing pública */}
           <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
+          <Route path="/guest" element={<GuestPage />} />
 
           {/* ── Rutas del estudiante (HU-08) ── */}
           <Route path="/student/main" element={<ProtectedRoute requiredRole="STUDENT"><MainStudentPage /></ProtectedRoute>} />
