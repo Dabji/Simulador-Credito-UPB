@@ -280,10 +280,12 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
         next.downPaymentValue = netTuition > 0 ? String(Math.round(netTuition * pct / 100)) : '';
       }
       if (key === 'downPaymentValue') {
-        /* Valor COP editado → recalcular porcentaje */
-        const val = parseFloat(parseCOPInput(value)) || 0;
+        /* Valor COP editado → clamp al máx (matrícula neta) y recalcular % (clampado 0–100) */
+        const raw = parseFloat(parseCOPInput(value)) || 0;
+        const val = netTuition > 0 ? Math.min(raw, netTuition) : raw;
+        if (val !== raw) next.downPaymentValue = String(Math.round(val));
         next.downPaymentPercent = netTuition > 0
-          ? String(Math.round((val / netTuition) * 1000) / 10)
+          ? clampPct(String(Math.round((val / netTuition) * 1000) / 10))
           : '0';
       }
       if (key === 'tuitionValue' || key === 'scholarshipPercent') {
@@ -474,9 +476,9 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
       ? { ...inputOrError, interestMode: 'sin_interes' }
       : inputOrError;
 
-    /* Mostrar aviso post-cálculo si aplica regla (incluye caso ya estaba sin_interes) */
+    /* Mostrar aviso post-cálculo SOLO si la modalidad fue forzada en este submit */
     const nPay = effectiveInput.numberOfPayments;
-    if (effectiveInput.interestMode === 'sin_interes' && nPay >= 1 && nPay <= 3) {
+    if (modeWillForce && nPay >= 1 && nPay <= 3) {
       setSubmitForcedMsg(
         `La simulación se calculó en modalidad Sin intereses (0%) porque seleccionaste ` +
         `${nPay} cuota${nPay === 1 ? '' : 's'} total${nPay === 1 ? '' : 'es'}. ` +

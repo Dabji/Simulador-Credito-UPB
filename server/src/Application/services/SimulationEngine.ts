@@ -41,22 +41,25 @@ import type { ActiveParameterVersion } from '../../Core/repositories/IParameterV
 
 export class SimulationEngine {
 
+  // Normaliza el input aplicando reglas de negocio (#57 beca UPB Tech, #59 modalidad forzada).
+  // Punto único de verdad: evita duplicar la lógica en computeSummary y buildAmortizationSchedule.
+  private normalizeInput(input: SimulationInput): SimulationInput {
+    return {
+      ...input,
+      // #57 — UPB Tech: ignorar beca/descuento aunque llegue en payload
+      scholarshipPct: input.educationLevel === 'upbTech' ? 0 : input.scholarshipPct,
+      // #59 — Forzar sin_interes si numberOfPayments <= 3 y se envió con_interes
+      interestMode: input.interestMode === 'con_interes' && input.numberOfPayments <= 3
+        ? 'sin_interes'
+        : input.interestMode,
+    };
+  }
+
   // Calcula el resumen completo + tabla a partir del input y los parámetros activos
   computeSummary(input: SimulationInput, _params: ParameterVersion, activeVersion?: ActiveParameterVersion): SimulationSummary {
-    // #57 — UPB Tech: ignorar beca/descuento aunque llegue en payload
-    const effectiveScholarshipPct = input.educationLevel === 'upbTech' ? 0 : input.scholarshipPct;
-
-    // #59 — Forzar sin_interes si numberOfPayments <= 3 y se envió con_interes
-    const effectiveInterestMode =
-      input.interestMode === 'con_interes' && input.numberOfPayments <= 3
-        ? 'sin_interes'
-        : input.interestMode;
-
-    const effectiveInput: SimulationInput = {
-      ...input,
-      scholarshipPct: effectiveScholarshipPct,
-      interestMode:   effectiveInterestMode,
-    };
+    const effectiveInput          = this.normalizeInput(input);
+    const effectiveScholarshipPct = effectiveInput.scholarshipPct;
+    const effectiveInterestMode   = effectiveInput.interestMode;
 
     const schedule = this.buildAmortizationSchedule(effectiveInput, _params, activeVersion);
 
@@ -90,6 +93,7 @@ export class SimulationEngine {
   }
 
   // Construye la tabla de amortización fila a fila.
+  // Recibe input ya normalizado (desde computeSummary vía normalizeInput).
   // #58: n = numberOfPayments − 1 (la cuota inicial NO es cuota del plan).
   // #60: fechas avanzan por mes calendario, no por +30 días.
   buildAmortizationSchedule(
@@ -97,16 +101,7 @@ export class SimulationEngine {
     _params: ParameterVersion,
     activeVersion?: ActiveParameterVersion,
   ): AmortizationRowDTO[] {
-    // #57 — UPB Tech: ignorar beca/descuento
-    const effectiveScholarshipPct = input.educationLevel === 'upbTech' ? 0 : input.scholarshipPct;
-
-    // #59 — Forzar sin_interes si numberOfPayments <= 3 y se envió con_interes
-    const effectiveInterestMode =
-      input.interestMode === 'con_interes' && input.numberOfPayments <= 3
-        ? 'sin_interes'
-        : input.interestMode;
-
-    const tuitionNet     = Money.of(input.tuitionGross * (1 - effectiveScholarshipPct / 100));
+    const tuitionNet     = Money.of(input.tuitionGross * (1 - input.scholarshipPct / 100));
     const initialPayment = Money.of(input.initialPaymentValue);
     const financed       = tuitionNet.subtract(initialPayment);
 
@@ -117,8 +112,7 @@ export class SimulationEngine {
     if (planN === 0) return [];
 
     // Tasa mensual: 0 si sin_interes, resuelve desde BD si con_interes
-    const effectiveInput = { ...input, interestMode: effectiveInterestMode };
-    const r = this.resolveMonthlyRate(effectiveInput, activeVersion);
+    const r = this.resolveMonthlyRate(input, activeVersion);
 
     // Cuota fija del plan (Sistema Francés o lineal)
     const periodicPayment = this.computePeriodicPayment(financed.amount, r, planN);
