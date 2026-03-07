@@ -231,10 +231,12 @@ function readDraft(): FormFields {
 
 export function SimulationForm({ onResult }: SimulationFormProps) {
   const [fields, setFields]     = useState<FormFields>(readDraft);
-  const [loading, setLoading]   = useState(false);
-  const [apiError, setApiError] = useState<string | null>(null);
+  const [loading, setLoading]         = useState(false);
+  const [apiError, setApiError]       = useState<string | null>(null);
+  /* Mensaje post-submit: informa que la modalidad fue forzada a sin_interes (#59) */
+  const [submitForcedMsg, setSubmitForcedMsg] = useState<string | null>(null);
   /* Diálogo de confirmación emergente — usado para Limpiar formulario */
-  const [dialog, setDialog]     = useState<ConfirmDialogState>(DIALOG_CLOSED);
+  const [dialog, setDialog]           = useState<ConfirmDialogState>(DIALOG_CLOSED);
 
   /* Persiste el borrador en sessionStorage cada vez que cambian los campos */
   useEffect(() => {
@@ -317,8 +319,12 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
     });
   };
 
+  /* Limpiar submitForcedMsg al cambiar cuotas o modalidad para no mostrar info vieja */
+  const clearSubmitForced = () => setSubmitForcedMsg(null);
+
   /* #59 — Forzar sin_interes si con_interes + numberOfPayments <= 3 */
   const handleNumberOfPayments = (raw: string) => {
+    clearSubmitForced();
     const v = raw.replace(/[^0-9]/g, '');
     const n = parseInt(v, 10);
     const capped = !v || n <= maxCuotas ? v : String(maxCuotas);
@@ -335,6 +341,7 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
 
   /* Limpiar aviso al cambiar interestMode manualmente */
   const handleInterestMode = (value: string) => {
+    clearSubmitForced();
     setForcedSinInteresMsg(null);
     set('interestMode', value);
   };
@@ -441,16 +448,47 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setApiError(null);
+
+    /* #59 — Si el usuario tiene con_interes + cuotas <=3, corregir el radio ANTES
+       de construir el input. Así el radio queda en sin_interes visualmente y el
+       input enviado al backend es consistente con lo que ve el usuario. */
+    const nPayRaw = parseInt(fields.numberOfPayments, 10);
+    const modeWillForce = fields.interestMode === 'con_interes'
+      && nPayRaw >= 1 && nPayRaw <= 3;
+    if (modeWillForce) {
+      setFields((prev) => ({ ...prev, interestMode: 'sin_interes' }));
+      setForcedSinInteresMsg(forcedSinInteresText(nPayRaw));
+    }
+
     const inputOrError = buildInput();
     if (typeof inputOrError === 'string') { setApiError(inputOrError); return; }
+
+    /* Usar la modalidad efectiva en el objeto enviado al backend */
+    const effectiveInput: typeof inputOrError = modeWillForce
+      ? { ...inputOrError, interestMode: 'sin_interes' }
+      : inputOrError;
+
+    /* Mostrar aviso post-cálculo si aplica regla (incluye caso ya estaba sin_interes) */
+    const nPay = effectiveInput.numberOfPayments;
+    if (effectiveInput.interestMode === 'sin_interes' && nPay >= 1 && nPay <= 3) {
+      setSubmitForcedMsg(
+        `La simulación se calculó en modalidad Sin intereses (0%) porque seleccionaste ` +
+        `${nPay} cuota${nPay === 1 ? '' : 's'} total${nPay === 1 ? '' : 'es'}. ` +
+        `Por regla institucional, financiaciones de hasta 3 cuotas no generan intereses.`,
+      );
+    } else {
+      setSubmitForcedMsg(null);
+    }
+
     setLoading(true);
-    const response = await simulateCredit(inputOrError);
+    const response = await simulateCredit(effectiveInput);
     setLoading(false);
     if (response.error || !response.data) {
       setApiError(response.error ?? 'Error al calcular la simulación.');
+      setSubmitForcedMsg(null);
       return;
     }
-    onResult(response.data, inputOrError);
+    onResult(response.data, effectiveInput);
   };
 
   return (
@@ -846,7 +884,7 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
       )}
 
       {/* ── Botones de acción ── */}
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10">
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
         <button
           type="submit"
           disabled={loading}
@@ -865,6 +903,21 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
           Limpiar formulario
         </button>
       </div>
+
+      {/* #59 — Aviso post-cálculo: modalidad ajustada automáticamente a sin_interes */}
+      {submitForcedMsg && (
+        <div
+          className="rounded-xl px-4 py-3 mb-6 text-sm flex items-start gap-3"
+          style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', color: '#92400E' }}
+          role="status"
+          aria-live="polite"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>{submitForcedMsg}</span>
+        </div>
+      )}
     </form>
   );
 }

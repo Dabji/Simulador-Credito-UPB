@@ -145,7 +145,7 @@ export function SimulationResultsPreview({ summary, input, onNewSimulation }: Si
           <div className="flex items-center justify-center">
             <DonutChartPlaceholder
               capitalPct={summary.totalPaid > 0
-                ? Math.round((summary.financedValue / summary.totalPaid) * 100)
+                ? 100 - Math.round((summary.totalInterest / summary.totalPaid) * 100)
                 : 100}
             />
           </div>
