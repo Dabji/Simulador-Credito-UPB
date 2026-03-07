@@ -2,7 +2,6 @@
 // Usa ParameterService para obtener parámetros vigentes y SimulationEngine
 // para realizar los cálculos financieros.
 
-import { ModalityRule } from '../../Core/entities/ModalityRule';
 import { InitialPaymentRule } from '../../Core/entities/InitialPaymentRule';
 import { Money } from '../../Core/entities/Money';
 import { ParameterService } from './ParameterService';
@@ -24,11 +23,9 @@ export class SimulationService {
   calculate(input: SimulationInput, activeVersion?: ActiveParameterVersion): SimulationSummary {
     const params = this.paramService.getActiveVersion();
 
-    // Regla: estudiante nuevo no puede tener beca
-    const rule = new ModalityRule(input.studentType, input.educationLevel);
-    if (!rule.scholarshipAllowed() && input.scholarshipPct > 0) {
-      throw new Error('Los estudiantes nuevos no pueden tener beca o descuento.');
-    }
+    // #57 — UPB Tech: beca/descuento no aplica; se normaliza a 0 para todas las validaciones
+    // Estudiante nuevo/continuo: SÍ puede tener beca/descuento
+    const effectiveScholarshipPct = input.educationLevel === 'upbTech' ? 0 : input.scholarshipPct;
 
     // Regla: cuota inicial mínima dinámica (15% upbTech, 20% pregrado/posgrado)
     InitialPaymentRule.validatePct(input.initialPaymentPct, input.educationLevel);
@@ -38,8 +35,8 @@ export class SimulationService {
       throw new Error('El valor de matrícula debe ser mayor a 0.');
     }
 
-    // Regla: tuición neta debe ser positiva
-    const netTuition = Money.of(input.tuitionGross * (1 - input.scholarshipPct / 100));
+    // Regla: tuición neta debe ser positiva (usa scholarship efectivo para upbTech)
+    const netTuition = Money.of(input.tuitionGross * (1 - effectiveScholarshipPct / 100));
     if (netTuition.amount <= 0) {
       throw new Error('El valor neto de matrícula no puede ser 0.');
     }
@@ -53,27 +50,36 @@ export class SimulationService {
       );
     }
 
+    // #59 — Modalidad efectiva: forzar sin_interes si con_interes + cuotas <= 3
+    const effectiveMode = input.interestMode === 'con_interes' && input.numberOfPayments <= 3
+      ? 'sin_interes'
+      : input.interestMode;
+
     // Regla: número de cuotas no puede superar el máximo del periodo
     const maxByPeriod = this.paramService.getMaxInstallments(
       input.academicPeriod,
       input.firstPaymentMonth,
     );
-    // Tope adicional por modalidad: sin_interes → máx 3, con_interes → máx 6
-    const capByMode     = input.interestMode === 'sin_interes' ? 3 : 6;
+    // Tope adicional por modalidad efectiva: sin_interes → máx 3, con_interes → máx 6
+    const capByMode     = effectiveMode === 'sin_interes' ? 3 : 6;
     const maxInstallments = Math.min(maxByPeriod, capByMode);
     if (input.numberOfPayments < 1 || input.numberOfPayments > maxInstallments) {
       throw new Error(
         `El número de cuotas debe estar entre 1 y ${maxInstallments} ` +
         `para el periodo ${input.academicPeriod} comenzando en mes ${input.firstPaymentMonth} ` +
-        `con modalidad ${input.interestMode}.`,
+        `con modalidad ${effectiveMode}.`,
       );
     }
 
     // Regla: valor financiado debe ser positivo
     const initialPayment = Money.of(input.initialPaymentValue);
     const financed       = netTuition.subtract(initialPayment);
-    if (financed.amount <= 0) {
-      throw new Error('El valor financiado debe ser mayor a 0.');
+    // numberOfPayments=1 significa cuota inicial = 100% (sin plan de cuotas), permitido
+    if (financed.amount < 0) {
+      throw new Error('El valor de cuota inicial supera la matrícula neta.');
+    }
+    if (financed.amount === 0 && input.numberOfPayments > 1) {
+      throw new Error('El valor financiado es 0 pero se indicaron más de 1 cuota.');
     }
 
     return this.engine.computeSummary(input, params, activeVersion);
