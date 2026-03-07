@@ -148,7 +148,7 @@ export function LandingPage() {
           <div className="flex flex-wrap items-center gap-3 mb-10">
             <Link
               to="/login"
-              className="inline-flex items-center gap-2 px-24 py-3.5 rounded-full font-bold text-gray-900 text-base transition-all duration-150 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#C0D901]"
+              className="inline-flex items-center gap-2 px-7 sm:px-24 py-3.5 rounded-full font-bold text-gray-900 text-base transition-all duration-150 hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#C0D901]"
               style={{ backgroundColor: '#C0D901' }}
             >
               Financiación directa UPB

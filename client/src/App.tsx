@@ -34,7 +34,7 @@ export function App() {
 
           {/* Página principal: Landing pública */}
           <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
-          <Route path="/guest" element={<GuestPage />} />
+          <Route path="/guest" element={<PublicRoute><GuestPage /></PublicRoute>} />
 
           {/* ── Rutas del estudiante (HU-08) ── */}
           <Route path="/student/main" element={<ProtectedRoute requiredRole="STUDENT"><MainStudentPage /></ProtectedRoute>} />
