@@ -8,6 +8,7 @@ import crypto from 'crypto';
 import type { IUserRepository } from '../../Core/repositories/IUserRepository';
 import { PasswordResetTokenModel } from '../../Infrastructure/persistence/models/PasswordResetTokenModel';
 import type { ForgotPasswordInput } from '../dtos/ForgotPasswordInput';
+import { EmailService } from '../../Infrastructure/email/EmailService';
 import { logger, logDev } from '../../Infrastructure/logger';
 
 const TOKEN_EXPIRY_HOURS = 1;
@@ -18,6 +19,8 @@ export interface PasswordResetContext {
 }
 
 export class RequestPasswordResetUseCase {
+  private readonly emailService = new EmailService();
+
   constructor(private readonly userRepository: IUserRepository) {}
 
   async execute(input: ForgotPasswordInput, context?: PasswordResetContext): Promise<void> {
@@ -65,6 +68,17 @@ export class RequestPasswordResetUseCase {
       '══════════════════════════════════════════════════════════',
       '',
     );
+
+    // Enviar correo electrónico con el enlace de recuperación
+    try {
+      await this.emailService.sendPasswordResetEmail(input.email, tokenPlain);
+    } catch (emailErr) {
+      logger.error('Error al enviar correo de recuperación', {
+        email: input.email,
+        error: emailErr instanceof Error ? emailErr.message : 'Unknown',
+      });
+      // No lanzar error al usuario por seguridad (no revelar si el email existe)
+    }
 
     logger.info('Reset-token generado correctamente', { email: input.email });
   }

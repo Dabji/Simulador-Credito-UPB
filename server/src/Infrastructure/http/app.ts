@@ -12,6 +12,7 @@ import simulatorPublicRoutes from './routes/simulatorPublicRoutes';
 import { errorHandler } from './middlewares/errorHandler';
 import { authGuard } from './middlewares/authGuard';
 import { roleGuard } from './middlewares/roleGuard';
+import { authLimiter, simulatorLimiter } from './middlewares/rateLimitGuard';
 import { UserRole } from '../../Core/entities/User';
 import { swaggerDocument } from './swagger';
 
@@ -47,11 +48,11 @@ export function createApp(): express.Application {
   });
 
   // ── Rutas Públicas ────────────────────────────────────────
-  app.use('/api/auth', authRoutes);
+  app.use('/api/auth', authLimiter, authRoutes);
 
   // API: endpoints públicos temporales HU-13 (sin auth, sin DB)
   // Solo `/preview` es público. Se monta ANTES del authGuard.
-  app.use('/api/simulator', simulatorPublicRoutes);
+  app.use('/api/simulator', simulatorLimiter, simulatorPublicRoutes);
 
   // ── Rutas Protegidas ──────────────────────────────────────
   // Rutas protegidas por rol (HU-07)

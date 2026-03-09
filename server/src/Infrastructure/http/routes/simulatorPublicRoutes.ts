@@ -5,7 +5,7 @@ import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { PreviewSimulationUseCase } from '../../../Application/use-cases/PreviewSimulationUseCase';
 import { SequelizeParameterVersionRepository } from '../../persistence/repositories/SequelizeParameterVersionRepository';
-import type { SimulationInput } from '../../../Application/dtos/SimulationInput';
+import { SimulationInputSchema } from '../../../Application/dtos/SimulationInput';
 
 const router = Router();
 
@@ -19,23 +19,14 @@ const previewUseCase = new PreviewSimulationUseCase(paramRepo);
  */
 router.post('/preview', async (req: Request, res: Response): Promise<void> => {
   try {
-    const input = req.body as SimulationInput;
-
-    // Validaciones básicas de presencia
-    if (!input.studentType || !input.educationLevel) {
-      res.status(400).json({ error: 'studentType y educationLevel son requeridos.' });
-      return;
-    }
-    if (!input.tuitionGross || input.tuitionGross <= 0) {
-      res.status(400).json({ error: 'tuitionGross debe ser un número positivo.' });
-      return;
-    }
-    if (!input.academicPeriod || !input.firstPaymentMonth || !input.numberOfPayments) {
-      res.status(400).json({ error: 'academicPeriod, firstPaymentMonth y numberOfPayments son requeridos.' });
+    const result = SimulationInputSchema.safeParse(req.body);
+    if (!result.success) {
+      const messages = result.error.issues.map(i => i.message);
+      res.status(400).json({ error: messages.join('. ') });
       return;
     }
 
-    const summary = await previewUseCase.execute(input);
+    const summary = await previewUseCase.execute(result.data);
     res.json(summary);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Error interno del servidor';

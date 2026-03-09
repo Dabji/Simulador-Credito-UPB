@@ -41,7 +41,7 @@ export function ForgotPasswordPage() {
     setSuccessMsg('');
     const result = await forgotPassword(data.email);
     if (result.error) { setApiError(result.error); return; }
-    setSuccessMsg('Si el correo está registrado, revisa la consola del backend para copiar el enlace de recuperación.');
+    setSuccessMsg('Si el correo está registrado, recibirás un enlace de recuperación en tu bandeja de entrada.');
   };
 
   return (

@@ -35,11 +35,28 @@ import { Money } from '../../Core/entities/Money';
 import { SimulationRow } from '../../Core/entities/SimulationRow';
 import { ParameterVersion } from '../../Core/entities/ParameterVersion';
 import type { SimulationInput } from '../dtos/SimulationInput';
-import { LEVEL_MAP } from '../dtos/constants';
 import type { SimulationSummary, AmortizationRowDTO } from '../dtos/SimulationSummary';
 import type { ActiveParameterVersion } from '../../Core/repositories/IParameterVersionRepository';
+import type { InterestStrategy } from '../strategies/InterestStrategy';
+import { NoInterestStrategy } from '../strategies/NoInterestStrategy';
+import { FrenchAmortizationStrategy } from '../strategies/FrenchAmortizationStrategy';
 
 export class SimulationEngine {
+
+  // ── Strategy registry ─────────────────────────────────────
+
+  private static readonly strategies: Record<string, InterestStrategy> = {
+    sin_interes: new NoInterestStrategy(),
+    con_interes: new FrenchAmortizationStrategy(),
+  };
+
+  private getStrategy(mode: string): InterestStrategy {
+    const strategy = SimulationEngine.strategies[mode];
+    if (!strategy) {
+      throw new Error(`Modalidad de interés desconocida: ${mode}`);
+    }
+    return strategy;
+  }
 
   // Normaliza el input aplicando reglas de negocio (#57 beca UPB Tech, #59 modalidad forzada).
   // Punto único de verdad: evita duplicar la lógica en computeSummary y buildAmortizationSchedule.
@@ -111,11 +128,10 @@ export class SimulationEngine {
     // Caso especial: numberOfPayments=1 → cuota inicial cubre todo, sin plan de cuotas
     if (planN === 0) return [];
 
-    // Tasa mensual: 0 si sin_interes, resuelve desde BD si con_interes
-    const r = this.resolveMonthlyRate(input, activeVersion);
-
-    // Cuota fija del plan (Sistema Francés o lineal)
-    const periodicPayment = this.computePeriodicPayment(financed.amount, r, planN);
+    // Resolución de tasa y cuota delegada a la estrategia de interés (Strategy Pattern)
+    const strategy = this.getStrategy(input.interestMode);
+    const r = strategy.resolveMonthlyRate(input, activeVersion);
+    const periodicPayment = strategy.computePeriodicPayment(financed.amount, r, planN);
 
     // Fecha base del primer pago del plan (= cuota 2 cronológicamente)
     const baseDate = this.buildFirstPaymentDate(input.academicPeriod, input.firstPaymentMonth);
@@ -149,15 +165,6 @@ export class SimulationEngine {
     return rows;
   }
 
-  // Fórmula de cuota fija Sistema Francés: M = P*r*(1+r)^n / ((1+r)^n - 1)
-  // Si r=0: M = P/n
-  private computePeriodicPayment(principal: number, r: number, n: number): number {
-    if (principal <= 0 || n <= 0) return 0;
-    if (r === 0) return principal / n;
-    const factor = Math.pow(1 + r, n);
-    return (principal * r * factor) / (factor - 1);
-  }
-
   // Construye la fecha del primer pago como Date (día 1 del mes elegido).
   // Para periodos YYYY-01: si firstPaymentMonth=12 usar año-1, si 1-5 usar año.
   // Para periodos YYYY-02: meses 6-11 del año.
@@ -174,13 +181,11 @@ export class SimulationEngine {
 
   // #60: avanza una fecha exactamente `months` meses calendario.
   // Usa el mismo día del mes; si no existe en el mes destino, clamp al último día.
-  // Ejemplos: 01/03 +1 → 01/04 | 31/01 +1 → 28/02 | 15/08 +6 → 15/02
   private addMonths(date: Date, months: number): Date {
     const d    = date.getDate();
     const m    = date.getMonth() + months;
     const year = date.getFullYear() + Math.floor(m / 12);
     const month = ((m % 12) + 12) % 12;
-    // Último día del mes destino para clamp
     const lastDay = new Date(year, month + 1, 0).getDate();
     return new Date(year, month, Math.min(d, lastDay));
   }
@@ -191,33 +196,6 @@ export class SimulationEngine {
     const m  = String(date.getMonth() + 1).padStart(2, '0');
     const d  = String(date.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
-  }
-
-  // Mapa de niveles del input a los ENUMs de BD (importado de constante compartida)
-  private static readonly LEVEL_MAP = LEVEL_MAP;
-
-  // Resuelve la tasa mensual usando la versión activa de parámetros de BD
-  private resolveMonthlyRate(input: SimulationInput, activeVersion?: ActiveParameterVersion): number {
-    if (input.interestMode === 'sin_interes') return 0;
-
-    if (!activeVersion) {
-      throw new Error(
-        'No se puede calcular: se requiere la versión de parámetros activa para resolver la tasa de interés.',
-      );
-    }
-
-    const dbLevel = SimulationEngine.LEVEL_MAP[input.educationLevel];
-    const rateEntry = dbLevel
-      ? activeVersion.interestRates.find(r => r.levelScope === dbLevel)
-      : undefined;
-
-    if (rateEntry?.rateMonthly == null) {
-      throw new Error(
-        'No se puede calcular: la versión de parámetros activa no define una tasa de interés para este nivel.',
-      );
-    }
-
-    return rateEntry.rateMonthly;
   }
 
   // Expuesto para SimulationService cuando solo necesita la tabla separada
