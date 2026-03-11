@@ -30,6 +30,7 @@ interface SimulationAttributes {
   total_interest: number;
   total_paid: number;
   applied_rate_monthly: number;       // decimal(8,6)
+  academic_period: string;
   student_observation: string | null;
   user_id: string;
   parameter_version_id: string;
@@ -37,7 +38,7 @@ interface SimulationAttributes {
 
 type SimulationCreation = Optional<
   SimulationAttributes,
-  'created_at' | 'saved_at' | 'deleted_at' | 'deleted_by' | 'delete_reason' | 'student_observation'
+  'created_at' | 'saved_at' | 'deleted_at' | 'deleted_by' | 'delete_reason' | 'student_observation' | 'academic_period'
 >;
 
 export class SimulationModel
@@ -65,6 +66,7 @@ export class SimulationModel
   declare total_interest: number;
   declare total_paid: number;
   declare applied_rate_monthly: number;
+  declare academic_period: string;
   declare student_observation: string | null;
   declare user_id: string;
   declare parameter_version_id: string;
@@ -163,6 +165,11 @@ SimulationModel.init(
       type: DataTypes.DECIMAL(8, 6),
       allowNull: false,
       defaultValue: 0,
+    },
+    academic_period: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      defaultValue: '',
     },
     student_observation: {
       type: DataTypes.STRING(255),

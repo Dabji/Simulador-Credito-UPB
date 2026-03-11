@@ -83,6 +83,7 @@ export class SaveSimulationUseCase {
       totalInterest: summary.totalInterest,
       totalPaid: summary.totalPaid,
       appliedRateMonthly: appliedRate,
+      academicPeriod: input.academicPeriod,
       studentObservation: input.observations || null,
       schedule: summary.schedule,
     };

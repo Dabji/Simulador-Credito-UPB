@@ -3,6 +3,7 @@ import { SimulatorPage } from './modules/simulator/pages/user/SimulatorPage';
 import { CreateSimulationPage } from './modules/simulator/pages/user/CreateSimulationPage';
 import { MainStudentPage } from './modules/simulator/pages/user/MainStudentPage';
 import { StudentHistoryPage } from './modules/simulator/pages/user/StudentHistoryPage';
+import { UserProfilePage } from './modules/simulator/pages/user/UserProfilePage';
 import { AdminDashboard } from './modules/admin/pages/AdminDashboard';
 import { AdminMainPage } from './modules/admin/pages/AdminMainPage';
 import { AdminStudentsPage } from './modules/admin/pages/AdminStudentsPage';
@@ -39,6 +40,7 @@ export function App() {
           {/* ── Rutas del estudiante (HU-08) ── */}
           <Route path="/student/main" element={<ProtectedRoute requiredRole="STUDENT"><MainStudentPage /></ProtectedRoute>} />
           <Route path="/student/history" element={<ProtectedRoute requiredRole="STUDENT"><StudentHistoryPage /></ProtectedRoute>} />
+          <Route path="/student/profile" element={<ProtectedRoute requiredRole="STUDENT"><UserProfilePage /></ProtectedRoute>} />
 
           {/* Rutas protegidas — requieren sesión activa */}
           <Route path="/simulator/create" element={<ProtectedRoute requiredRole="STUDENT"><CreateSimulationPage /></ProtectedRoute>} />

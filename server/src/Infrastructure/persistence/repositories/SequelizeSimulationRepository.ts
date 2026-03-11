@@ -41,6 +41,7 @@ export class SequelizeSimulationRepository implements ISimulationRepository {
           total_interest: data.totalInterest,
           total_paid: data.totalPaid,
           applied_rate_monthly: data.appliedRateMonthly,
+          academic_period: data.academicPeriod,
           student_observation: data.studentObservation,
           user_id: data.userId,
           parameter_version_id: data.parameterVersionId,
@@ -141,7 +142,7 @@ export class SequelizeSimulationRepository implements ISimulationRepository {
         initialPaymentPct: Number(sim.initial_payment_pct) * 100,
         financedValue: Number(sim.financed_value),
         interestMode: sim.modality === 'CON_INTERES' ? 'con_interes' : 'sin_interes',
-        academicPeriod: '',          // not stored in simulations table
+        academicPeriod: sim.academic_period ?? '',
         firstPaymentMonth: new Date(sim.first_payment_date).getMonth() + 1,
         numberOfPayments: sim.total_payments,
         periodicPayment: Number(sim.periodic_payment_value),

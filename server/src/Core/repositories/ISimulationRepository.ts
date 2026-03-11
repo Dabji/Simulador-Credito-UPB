@@ -25,6 +25,7 @@ export interface SaveSimulationData {
   readonly totalInterest: number;
   readonly totalPaid: number;
   readonly appliedRateMonthly: number;  // decimal
+  readonly academicPeriod: string;
   readonly studentObservation: string | null;
   readonly schedule: AmortizationRowDTO[];
 }
