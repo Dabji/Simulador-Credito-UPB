@@ -25,6 +25,7 @@ export function createApp(): express.Application {
   const app = express();
 
   // ── Middlewares Globales ───────────────────────────────────
+  app.set('trust proxy', 1);
   app.use(cors());
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
@@ -52,7 +53,8 @@ export function createApp(): express.Application {
 
   // API: endpoints públicos temporales HU-13 (sin auth, sin DB)
   // Solo `/preview` es público. Se monta ANTES del authGuard.
-  app.use('/api/simulator', simulatorLimiter, simulatorPublicRoutes);
+  app.use('/api/simulator/preview', simulatorLimiter);
+  app.use('/api/simulator', simulatorPublicRoutes);
 
   // ── Rutas Protegidas ──────────────────────────────────────
   // Rutas protegidas por rol (HU-07)

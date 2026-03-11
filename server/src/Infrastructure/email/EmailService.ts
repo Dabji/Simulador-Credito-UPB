@@ -42,6 +42,11 @@ export class EmailService {
   async sendPasswordResetEmail(to: string, resetToken: string): Promise<void> {
     const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${resetToken}`;
 
+    if (!env.SMTP_FROM_EMAIL) {
+      logger.warn('Modo dev: No se envía correo real. Link: ' + resetUrl);
+      return;
+    }
+
     const info = await this.transporter.sendMail({
       from: `"Simulador UPB" <${env.SMTP_FROM_EMAIL}>`,
       to,
