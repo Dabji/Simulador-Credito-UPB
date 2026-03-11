@@ -32,6 +32,7 @@ export class FrenchAmortizationStrategy implements InterestStrategy {
 
   computePeriodicPayment(principal: number, rate: number, installments: number): number {
     if (principal <= 0 || installments <= 0) return 0;
+    if (Math.abs(rate) < 1e-10) return principal / installments;
     const factor = Math.pow(1 + rate, installments);
     return (principal * rate * factor) / (factor - 1);
   }

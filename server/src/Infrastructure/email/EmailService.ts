@@ -14,10 +14,12 @@ export class EmailService {
 
   constructor() {
     if (!env.SMTP_HOST || !env.SMTP_USER || !env.SMTP_PASS || !env.SMTP_FROM_EMAIL) {
-      throw new Error(
+      logger.warn(
         'EmailService: faltan variables SMTP (SMTP_HOST, SMTP_USER, SMTP_PASS, SMTP_FROM_EMAIL). '
-        + 'Revisa el archivo .env.',
+        + 'Inicializando en modo deshabilitado (no se enviarán correos reales). Revisa el archivo .env.',
       );
+      this.transporter = nodemailer.createTransport({ jsonTransport: true });
+      return;
     }
 
     logger.info('EmailService: usando SMTP configurado', { host: env.SMTP_HOST });
