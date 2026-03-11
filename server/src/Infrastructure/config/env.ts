@@ -49,6 +49,14 @@ const envSchema = z.object({
   // ── JWT ─────────────────────────────────────────────────
   JWT_SECRET: z.string().default('dev-secret-change-in-production'),
   JWT_EXPIRES_IN: z.string().default('24h'),
+
+  // ── Email / SMTP ────────────────────────────────────────
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.string().optional(),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM_EMAIL: z.string().optional(),
+  FRONTEND_URL: z.string().default('http://localhost:5173'),
 });
 
 /** Tipo inferido del esquema de entorno — utilizado en toda la app */
