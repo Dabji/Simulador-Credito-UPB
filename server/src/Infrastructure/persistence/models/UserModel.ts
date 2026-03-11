@@ -12,14 +12,19 @@ interface UserAttributes {
   email: string;
   first_name: string;
   last_name: string;
-  identification_number: string;
+  document_type: 'CC' | 'TI' | null;
+  document_number: string;
+  password: string | null;
+  phone: string | null;
   role: 'STUDENT' | 'ADMIN';
   is_active: boolean;
+  terms_accepted_at: Date | null;
+  last_login_at: Date | null;
   created_at: Date;
   updated_at: Date;
 }
 
-type UserCreationAttributes = Optional<UserAttributes, 'created_at' | 'updated_at'>;
+type UserCreationAttributes = Optional<UserAttributes, 'document_type' | 'password' | 'phone' | 'terms_accepted_at' | 'last_login_at' | 'created_at' | 'updated_at'>;
 
 export class UserModel extends Model<UserAttributes, UserCreationAttributes>
   implements UserAttributes {
@@ -27,9 +32,14 @@ export class UserModel extends Model<UserAttributes, UserCreationAttributes>
   declare email: string;
   declare first_name: string;
   declare last_name: string;
-  declare identification_number: string;
+  declare document_type: 'CC' | 'TI' | null;
+  declare document_number: string;
+  declare password: string | null;
+  declare phone: string | null;
   declare role: 'STUDENT' | 'ADMIN';
   declare is_active: boolean;
+  declare terms_accepted_at: Date | null;
+  declare last_login_at: Date | null;
   declare created_at: Date;
   declare updated_at: Date;
 }
@@ -56,10 +66,22 @@ UserModel.init(
       type: DataTypes.STRING(100),
       allowNull: false,
     },
-    identification_number: {
+    document_type: {
+      type: DataTypes.ENUM('CC', 'TI'),
+      allowNull: true,
+    },
+    document_number: {
       type: DataTypes.STRING(20),
       allowNull: false,
       unique: true,
+    },
+    password: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+    phone: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
     },
     role: {
       type: DataTypes.ENUM('STUDENT', 'ADMIN'),
@@ -70,6 +92,14 @@ UserModel.init(
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: true,
+    },
+    terms_accepted_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    last_login_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
     },
     created_at: {
       type: DataTypes.DATE,

@@ -9,14 +9,21 @@ export enum UserRole {
   ADMIN = 'ADMIN',
 }
 
+export type DocumentType = 'CC' | 'TI';
+
 export interface UserProps {
   id: string;
   email: string;
   firstName: string;
   lastName: string;
+  documentType?: DocumentType;
   identificationNumber: string;
+  password?: string;
+  phone?: string;
   role: UserRole;
   isActive: boolean;
+  termsAcceptedAt?: Date | null;
+  lastLoginAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -63,8 +70,20 @@ export class User {
     return `${this.props.firstName} ${this.props.lastName}`;
   }
 
+  get documentType(): DocumentType | undefined {
+    return this.props.documentType;
+  }
+
   get identificationNumber(): string {
     return this.props.identificationNumber;
+  }
+
+  get password(): string | undefined {
+    return this.props.password;
+  }
+
+  get phone(): string | undefined {
+    return this.props.phone;
   }
 
   get role(): UserRole {
@@ -77,6 +96,14 @@ export class User {
 
   get createdAt(): Date {
     return this.props.createdAt;
+  }
+
+  get termsAcceptedAt(): Date | null | undefined {
+    return this.props.termsAcceptedAt;
+  }
+
+  get lastLoginAt(): Date | null | undefined {
+    return this.props.lastLoginAt;
   }
 
   get updatedAt(): Date {

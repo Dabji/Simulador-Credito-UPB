@@ -3,12 +3,22 @@
 // ============================================================
 
 import { Router } from 'express';
-import type { Request, Response } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { AuthenticateUserUseCase } from '../../../Application/use-cases/AuthenticateUserUseCase';
+import { RegisterUserUseCase } from '../../../Application/use-cases/RegisterUserUseCase';
+import { RegisterUserSchema } from '../../../Application/dtos/RegisterUserInput';
+import { LoginUserSchema } from '../../../Application/dtos/LoginUserInput';
+import { ForgotPasswordSchema } from '../../../Application/dtos/ForgotPasswordInput';
+import { ResetPasswordSchema } from '../../../Application/dtos/ResetPasswordInput';
+import { RequestPasswordResetUseCase } from '../../../Application/use-cases/RequestPasswordResetUseCase';
+import { ResetPasswordUseCase } from '../../../Application/use-cases/ResetPasswordUseCase';
+import { AppError, BadRequestError, NotFoundError, UnauthorizedError, ValidationError } from '../../../Core/errors';
+import { authGuard } from '../middlewares/authGuard';
+import type { AuthenticatedRequest } from '../middlewares/authGuard';
 import { SequelizeUserRepository } from '../../persistence/repositories/SequelizeUserRepository';
 import { LdapAuthService } from '../../auth/LdapAuthService';
 import { JwtTokenService } from '../../auth/JwtTokenService';
-// Note: relative paths go from http/routes/ -> up 2 to Infrastructure/, then up 1 more to src/
+import { logger } from '../../logger';
 
 const router = Router();
 
@@ -20,32 +30,171 @@ const authenticateUseCase = new AuthenticateUserUseCase(
   authService,
   tokenService,
 );
+const registerUseCase = new RegisterUserUseCase(userRepository);
+const requestPasswordResetUseCase = new RequestPasswordResetUseCase(userRepository);
+const resetPasswordUseCase = new ResetPasswordUseCase(userRepository);
 
 /**
  * POST /api/auth/login
- * Autenticación de usuario vía LDAP/AD
+ * Autenticación dual: STUDENT (BD + bcrypt) / ADMIN (LDAP)
  */
-router.post('/login', async (req: Request, res: Response): Promise<void> => {
+router.post('/login', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { username, password } = req.body as {
-      username: string;
-      password: string;
-    };
+    const parsed = LoginUserSchema.safeParse(req.body);
 
-    if (!username || !password) {
-      res.status(400).json({ error: 'Username y password son requeridos' });
-      return;
+    if (!parsed.success) {
+      const messages = parsed.error.issues.map((i) => i.message).join(', ');
+      throw new BadRequestError(messages);
     }
 
-    const result = await authenticateUseCase.execute({ username, password });
+    const result = await authenticateUseCase.execute(parsed.data);
+
+    logger.info('Usuario autenticado exitosamente', {
+      email: parsed.data.email,
+      role: parsed.data.role,
+    });
 
     res.json({
-      user: result.user.toJSON(),
+      user: result.user,
       token: result.token,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Error interno';
-    res.status(401).json({ error: message });
+    if (error instanceof AppError) {
+      next(error);
+    } else {
+      logger.error('Error inesperado durante autenticación', {
+        message: error instanceof Error ? error.message : 'Unknown',
+        email: req.body?.email,
+      });
+      next(error);
+    }
+  }
+});
+
+/**
+ * POST /api/auth/register
+ * Registro de nuevo usuario (HU-01)
+ */
+router.post('/register', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const parsed = RegisterUserSchema.safeParse(req.body);
+
+    if (!parsed.success) {
+      // Construir errores agrupados por campo (HU-02)
+      const fieldErrors: Record<string, string[]> = {};
+      for (const issue of parsed.error.issues) {
+        const field = issue.path.join('.') || '_form';
+        if (!fieldErrors[field]) fieldErrors[field] = [];
+        fieldErrors[field].push(issue.message);
+      }
+      throw new ValidationError('Los datos de registro no son válidos', fieldErrors);
+    }
+
+    await registerUseCase.execute(parsed.data);
+
+    logger.info('Usuario registrado exitosamente', { email: parsed.data.email });
+
+    res.status(201).json({ message: 'Usuario registrado exitosamente' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/auth/forgot-password
+ * Solicita un token de recuperación de contraseña
+ */
+router.post('/forgot-password', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const parsed = ForgotPasswordSchema.safeParse(req.body);
+
+    if (!parsed.success) {
+      const messages = parsed.error.issues.map((i) => i.message).join(', ');
+      throw new BadRequestError(messages);
+    }
+
+    await requestPasswordResetUseCase.execute(parsed.data, {
+      ip: req.ip,
+      userAgent: typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : undefined,
+    });
+
+    // Siempre retornar éxito (no revelar si el email existe)
+    res.json({ message: 'Si el correo está registrado, recibirás un enlace de recuperación.' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/auth/reset-password
+ * Restablece la contraseña usando el token
+ */
+router.post('/reset-password', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const parsed = ResetPasswordSchema.safeParse(req.body);
+
+    if (!parsed.success) {
+      const messages = parsed.error.issues.map((i) => i.message).join(', ');
+      throw new BadRequestError(messages);
+    }
+
+    await resetPasswordUseCase.execute(parsed.data);
+
+    logger.info('Contraseña restablecida exitosamente');
+
+    res.json({ message: 'Contraseña actualizada exitosamente' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/auth/me
+ * Retorna el usuario autenticado (sin contraseña)
+ */
+router.get('/me', authGuard, async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.user?.userId as string | undefined;
+
+    if (!userId) {
+      throw new UnauthorizedError('No se pudo identificar al usuario');
+    }
+
+    const user = await userRepository.findById(userId);
+
+    if (!user) {
+      throw new NotFoundError('Usuario');
+    }
+
+    if (!user.isActive) {
+      throw new UnauthorizedError('La cuenta está desactivada');
+    }
+
+    const { password: _, ...safeUser } = user.toJSON();
+    void _;
+    res.json({ user: safeUser });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/auth/logout
+ * Cierra la sesión del usuario autenticado (HU-05).
+ * Con JWT stateless no hay token que invalidar del lado del servidor,
+ * pero el endpoint permite registrar el evento y podría usarse en el
+ * futuro para una lista de revocación (blacklist).
+ */
+router.post('/logout', authGuard, async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.user?.userId as string | undefined;
+    const email  = req.user?.email  as string | undefined;
+
+    logger.info('Sesión cerrada', { userId, email });
+
+    res.json({ message: 'Sesión cerrada exitosamente.' });
+  } catch (error) {
+    next(error);
   }
 });
 
