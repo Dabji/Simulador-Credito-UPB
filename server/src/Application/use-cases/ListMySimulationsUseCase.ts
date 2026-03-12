@@ -14,18 +14,14 @@ export class ListMySimulationsUseCase {
   async execute(userId: string): Promise<MySimulationItemOutput[]> {
     if (!userId) throw new UnauthorizedError('Usuario no identificado.');
 
-    const simulations = await this.simulationRepo.findByUserId(userId);
+    const simulations = await this.simulationRepo.findSummariesByUserId(userId, 20);
 
-    // Orden descendente (más reciente primero), límite 20
-    return simulations
-      .sort((a, b) => b.savedAt.getTime() - a.savedAt.getTime())
-      .slice(0, 20)
-      .map((sim) => ({
-        id:              sim.id,
-        academicPeriod:  sim.summary.academicPeriod,
-        numberOfPayments: sim.summary.numberOfPayments,
-        totalPaid:       sim.summary.totalPaid,
-        createdAt:       sim.savedAt.toISOString(),
-      }));
+    return simulations.map((sim) => ({
+      id:               sim.id,
+      academicPeriod:   sim.academicPeriod,
+      numberOfPayments: sim.numberOfPayments,
+      totalPaid:        sim.totalPaid,
+      createdAt:        sim.createdAt.toISOString(),
+    }));
   }
 }

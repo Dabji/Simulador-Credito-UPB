@@ -11,6 +11,7 @@ import type {
   ISimulationRepository,
   SaveSimulationData,
   PersistedSimulation,
+  SimulationSummaryItem,
 } from '../../../Core/repositories/ISimulationRepository';
 import type { AmortizationRowDTO } from '../../../Application/dtos/SimulationSummary';
 
@@ -41,7 +42,6 @@ export class SequelizeSimulationRepository implements ISimulationRepository {
           total_interest: data.totalInterest,
           total_paid: data.totalPaid,
           applied_rate_monthly: data.appliedRateMonthly,
-          academic_period: data.academicPeriod,
           student_observation: data.studentObservation,
           user_id: data.userId,
           parameter_version_id: data.parameterVersionId,
@@ -111,6 +111,23 @@ export class SequelizeSimulationRepository implements ISimulationRepository {
     });
 
     return this.toPersistedSimulation(sim, rows);
+  }
+
+  async findSummariesByUserId(userId: string, limit = 20): Promise<SimulationSummaryItem[]> {
+    const simulations = await SimulationModel.findAll({
+      attributes: ['id', 'total_payments', 'total_paid', 'created_at'],
+      where: { user_id: userId, deleted_at: null },
+      order: [['created_at', 'DESC']],
+      limit,
+    });
+
+    return simulations.map((sim) => ({
+      id:               sim.id,
+      academicPeriod:   sim.academic_period ?? '',
+      numberOfPayments: sim.total_payments,
+      totalPaid:        Number(sim.total_paid),
+      createdAt:        sim.created_at,
+    }));
   }
 
   private toPersistedSimulation(

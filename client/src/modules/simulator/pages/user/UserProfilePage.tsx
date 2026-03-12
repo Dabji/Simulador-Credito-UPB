@@ -67,6 +67,7 @@ export function UserProfilePage() {
   const [profile, setProfile] = useState<MyProfileDTO | null>(null);
   const [simulations, setSimulations] = useState<MySimulationItemDTO[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [simsError, setSimsError] = useState<string | null>(null);
   const [isPageLoading, setIsPageLoading] = useState(true);
 
   // Estado del formulario
@@ -112,7 +113,9 @@ export function UserProfilePage() {
         phone:                p.phone ?? '',
       });
 
-      if (simsRes.data?.simulations) {
+      if (simsRes.error) {
+        setSimsError('No se pudieron cargar tus simulaciones. Intenta de nuevo más tarde.');
+      } else if (simsRes.data?.simulations) {
         setSimulations(simsRes.data.simulations);
       }
 
@@ -477,7 +480,15 @@ export function UserProfilePage() {
           </div>
 
           <div className="px-6 sm:px-8 py-5">
-            {simulations.length === 0 ? (
+            {simsError ? (
+              <div
+                className="rounded-xl px-4 py-3 text-sm font-medium"
+                style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', color: '#92400E' }}
+                role="alert"
+              >
+                {simsError}
+              </div>
+            ) : simulations.length === 0 ? (
               <p className="text-sm text-gray-400 text-center py-6">
                 No tienes simulaciones guardadas aún.
               </p>
