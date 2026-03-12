@@ -58,7 +58,7 @@ export function UpbFooter({ className }: UpbFooterProps) {
             <div>
               <p className="text-sm text-gray-300 font-medium">Horarios de atención:</p>
               <p className="text-sm">Lunes a jueves 7:30 a.m. a 12:30 p.m. - 1:30 p.m. a 5:00 p.m.</p>
-              <p className="text-sm">Viernes 7:30 a.m. a 10:30 p.m. - 1:30 p.m. a 4:30 p.m.</p>
+              <p className="text-sm">Viernes 7:30 a.m. a 12:30 p.m. - 1:30 p.m. a 4:30 p.m.</p>
             </div>
             <div>
               <p className="text-xs text-gray-600">Solo para temas judiciales</p>

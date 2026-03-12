@@ -74,7 +74,7 @@ router.get('/parameters', async (_req: Request, res: Response, next: NextFunctio
  * GET /api/admin/parameters/:id
  * Retorna una versión específica de parámetros con todas sus reglas.
  */
-router.get('/parameters/:id', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.get('/parameters/:id', async (req: Request<{ id: string }>, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     const version = await paramRepo.findById(id);
@@ -109,7 +109,7 @@ router.get('/parameters/:id', async (req: Request, res: Response, next: NextFunc
  *  - Las tasas de interés deben ser mayores que cero para con_interes.
  *  - No puede existir superposición de vigencias con otras versiones.
  */
-router.put('/parameters/:id', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.put('/parameters/:id', async (req: Request<{ id: string }>, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     const body = req.body as {

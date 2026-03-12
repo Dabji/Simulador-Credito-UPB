@@ -195,6 +195,7 @@ const HELPER_COLOR = { color: '#4A5565' } as const;
 
 interface SimulationFormProps {
   onResult: (summary: SimulationSummaryDTO, input: SimulationInputDTO) => void;
+  mode?: 'student' | 'guest';
 }
 
 /* ── Tipo para el diálogo de confirmación ──────────────────────────────────
@@ -229,7 +230,8 @@ function readDraft(): FormFields {
   }
 }
 
-export function SimulationForm({ onResult }: SimulationFormProps) {
+export function SimulationForm({ onResult, mode = 'student' }: SimulationFormProps) {
+  void mode; // mode consumed by parent orchestrator for guest restrictions
   const [fields, setFields]     = useState<FormFields>(readDraft);
   const [loading, setLoading]         = useState(false);
   const [apiError, setApiError]       = useState<string | null>(null);
@@ -330,6 +332,24 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
     const n = parseInt(v, 10);
     const capped = !v || n <= maxCuotas ? v : String(maxCuotas);
     const nFinal = parseInt(capped, 10);
+
+    /* Bug fix: cuotas=1 → pago único, cuota inicial auto 100% */
+    if (nFinal === 1) {
+      const tuition     = parseFloat(parseCOPInput(fields.tuitionValue)) || 0;
+      const scholarship = parseFloat(parsePctInput(fields.scholarshipPercent)) || 0;
+      const netTuition  = tuition * (1 - scholarship / 100);
+      setForcedSinInteresMsg(null);
+      setFields((prev) => ({
+        ...prev,
+        numberOfPayments: capped,
+        downPaymentPercent: '100',
+        downPaymentValue: netTuition > 0 ? String(Math.round(netTuition)) : '',
+        interestMode: prev.interestMode === 'con_interes' ? 'sin_interes' : prev.interestMode,
+      }));
+      setApiError(null);
+      return;
+    }
+
     if (fields.interestMode === 'con_interes' && nFinal >= 1 && nFinal <= 3) {
       setForcedSinInteresMsg(forcedSinInteresText(nFinal));
       setFields((prev) => ({ ...prev, interestMode: 'sin_interes', numberOfPayments: capped }));
@@ -374,11 +394,10 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
 
   /* Máximo de cuotas según periodo, mes elegido Y modalidad:
      con_interes → tope 6  |  sin_interes → tope 3 */
-  const maxCuotas = useMemo(() => {
-    const m = parseInt(fields.firstPaymentMonth, 10);
-    if (!fields.academicPeriod || !m) return fields.interestMode === 'sin_interes' ? 3 : 6;
-    return maxInstallmentsFor(fields.academicPeriod, m, fields.interestMode);
-  }, [fields.academicPeriod, fields.firstPaymentMonth, fields.interestMode]);
+  const firstPayMonth = parseInt(fields.firstPaymentMonth, 10);
+  const maxCuotas = (!fields.academicPeriod || !firstPayMonth)
+    ? (fields.interestMode === 'sin_interes' ? 3 : 6)
+    : maxInstallmentsFor(fields.academicPeriod, firstPayMonth, fields.interestMode);
 
   /* Limpiar formulario — pide confirmación antes de borrar */
   const handleReset = () => {
@@ -638,8 +657,11 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
                   set('downPaymentPercent', clampPct(parsePctInput(e.target.value)))
                 }
+                disabled={fields.numberOfPayments === '1'}
                 className={INPUT_BASE}
-                style={downPctError ? { borderColor: '#EF4444' } : undefined}
+                style={fields.numberOfPayments === '1'
+                  ? { backgroundColor: '#F3F4F6', color: '#9CA3AF', cursor: 'not-allowed', borderColor: '#E5E7EB' }
+                  : downPctError ? { borderColor: '#EF4444' } : undefined}
                 aria-invalid={!!downPctError}
                 aria-describedby="downPctErrorMsg"
               />
@@ -668,12 +690,26 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
                   set('downPaymentValue', parseCOPInput(e.target.value))
                 }
+                disabled={fields.numberOfPayments === '1'}
                 className={INPUT_BASE}
+                style={fields.numberOfPayments === '1'
+                  ? { backgroundColor: '#F3F4F6', color: '#9CA3AF', cursor: 'not-allowed', borderColor: '#E5E7EB' }
+                  : undefined}
               />
             </div>
           </div>
+          {/* Banner informativo: cuotas=1 → pago único */}
+          {fields.numberOfPayments === '1' && (
+            <div
+              className="mt-3 rounded-lg px-3 py-2 text-xs font-medium"
+              style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1E40AF' }}
+              role="alert"
+            >
+              Con 1 cuota total, el pago se realiza en una sola cuota. La cuota inicial se ajustó al 100%.
+            </div>
+          )}
           {/* Helper text dinámico: indica el mínimo según el nivel de formación */}
-          {!downPctError && (
+          {fields.numberOfPayments !== '1' && !downPctError && (
             <p className={HELPER_CLASS} style={HELPER_COLOR}>
               {fields.educationLevel === 'upbTech'
                 ? 'Cuota inicial predeterminada al 15% para UPB Tech. Puedes modificarla si lo requieres.'
