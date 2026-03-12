@@ -1,0 +1,76 @@
+# =============================================================================
+# CI Pipeline — Escudo de Integración Continua
+# =============================================================================
+# Se dispara en Pull Requests hacia main y develop.
+# Ejecuta en la nube de GitHub (ubuntu-latest), NO en el self-hosted runner.
+# Si algún job falla, el PR queda bloqueado y no se puede fusionar.
+# =============================================================================
+
+name: "🛡️ CI Pipeline"
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─────────────────────────────────────────────
+  # JOB 1: Frontend (React / Vite)
+  # ─────────────────────────────────────────────
+  frontend:
+    name: "🎨 Frontend — Lint, Types & Build"
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+
+      - name: 🟢 Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json # ✅ Corregido: Mira a la raíz
+
+      - name: 📦 Instalar dependencias (Monorepo)
+        run: npm ci # ✅ Instala todo desde la raíz
+
+      - name: 🔍 Verificar tipos (TypeScript)
+        run: npx tsc -p client/tsconfig.json --noEmit
+
+      - name: 🧹 Linter
+        run: npm run lint --workspace=client --if-present
+
+      - name: 🏗️ Compilar producción
+        run: npm run build --workspace=client
+
+  # ─────────────────────────────────────────────
+  # JOB 2: Backend (Node.js / Express)
+  # ─────────────────────────────────────────────
+  backend:
+    name: "⚙️ Backend — Lint, Types & Build"
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+
+      - name: 🟢 Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json # ✅ Corregido: Mira a la raíz
+
+      - name: 📦 Instalar dependencias (Monorepo)
+        run: npm ci
+
+      - name: 🔍 Verificar tipos (TypeScript)
+        run: npx tsc -p server/tsconfig.json --noEmit
+
+      - name: 🏗️ Compilar producción
+        run: npm run build --workspace=server
+
+      - name: 🧪 Ejecutar tests
+        run: npm run test --workspace=server --if-present

@@ -1,0 +1,28 @@
+# =============================================================================
+# CAPA 3: Automatización — Labeler (Etiquetas Automáticas en PRs)
+# =============================================================================
+# Asigna etiquetas automáticas a los Pull Requests según las carpetas
+# que fueron modificadas. Usa la configuración en .github/labeler.yml.
+# =============================================================================
+
+name: "🏷️ PR Labeler"
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  label:
+    name: "Etiquetar PR automáticamente"
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🏷️ Aplicar etiquetas por ruta
+        uses: actions/labeler@v5
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          configuration-path: .github/labeler.yml
+          sync-labels: true
