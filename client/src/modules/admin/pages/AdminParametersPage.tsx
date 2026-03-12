@@ -268,7 +268,23 @@ export function AdminParametersPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { void loadParams(); }, [loadParams]);
+  useEffect(() => {
+    let cancelled = false;
+    async function init() {
+      const res = await getActiveParameters();
+      if (cancelled) return;
+      if (res.error) {
+        setError(res.error);
+      } else if (res.data?.data) {
+        const version = res.data.data;
+        setOriginal(version);
+        setForm(buildFormFromVersion(version));
+      }
+      setLoading(false);
+    }
+    void init();
+    return () => { cancelled = true; };
+  }, []);
 
   // ── Validation ─────────────────────────────────────────────────────────
 
@@ -574,7 +590,7 @@ export function AdminParametersPage() {
     return (
       <Card icon={<Percent size={18} />} title="Cuotas vs Tasas de Interés" className="grow">
         <p className="text-[11px] text-gray-400 mb-4">
-          Porcentaje requerido de cuota inicial según el número de cuotas adicionales financiadas (aplica a Pregrado / Posgrado con intereses)
+          Porcentaje requerido de cuota inicial según el número de cuotas adicionales financiadas (aplica a Pregrado / Posgrado con intereses)
         </p>
         <div className="grow grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 content-evenly">
           {items.map(({ label, helper, key }) => (

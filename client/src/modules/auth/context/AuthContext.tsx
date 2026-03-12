@@ -19,7 +19,9 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(
+    () => !!localStorage.getItem('token'),
+  );
 
   const isAuthenticated = !!user;
 
@@ -47,7 +49,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const token = localStorage.getItem('token');
 
     if (!token) {
-      setIsLoading(false);
       return;
     }
 

@@ -394,11 +394,10 @@ export function SimulationForm({ onResult, mode = 'student' }: SimulationFormPro
 
   /* Máximo de cuotas según periodo, mes elegido Y modalidad:
      con_interes → tope 6  |  sin_interes → tope 3 */
-  const maxCuotas = useMemo(() => {
-    const m = parseInt(fields.firstPaymentMonth, 10);
-    if (!fields.academicPeriod || !m) return fields.interestMode === 'sin_interes' ? 3 : 6;
-    return maxInstallmentsFor(fields.academicPeriod, m, fields.interestMode);
-  }, [fields.academicPeriod, fields.firstPaymentMonth, fields.interestMode]);
+  const firstPayMonth = parseInt(fields.firstPaymentMonth, 10);
+  const maxCuotas = (!fields.academicPeriod || !firstPayMonth)
+    ? (fields.interestMode === 'sin_interes' ? 3 : 6)
+    : maxInstallmentsFor(fields.academicPeriod, firstPayMonth, fields.interestMode);
 
   /* Limpiar formulario — pide confirmación antes de borrar */
   const handleReset = () => {
