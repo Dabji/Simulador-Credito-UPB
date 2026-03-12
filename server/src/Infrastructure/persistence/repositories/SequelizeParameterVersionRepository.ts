@@ -115,7 +115,8 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
       }
 
       // Reemplazar tasas de interés si se proporcionaron
-      if (data.interestRates && data.interestRates.length > 0) {
+      // undefined = no tocar; [] = reemplazar por vacío
+      if (data.interestRates !== undefined) {
         await InterestRateModel.destroy({ where: { parameter_version_id: id }, transaction: t });
         for (const rate of data.interestRates) {
           await InterestRateModel.create(
@@ -132,7 +133,8 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
       }
 
       // Reemplazar reglas de modalidad si se proporcionaron
-      if (data.modalityRules && data.modalityRules.length > 0) {
+      // undefined = no tocar; [] = reemplazar por vacío
+      if (data.modalityRules !== undefined) {
         await ModalityRuleModel.destroy({ where: { parameter_version_id: id }, transaction: t });
         for (const rule of data.modalityRules) {
           await ModalityRuleModel.create(
@@ -150,7 +152,8 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
       }
 
       // Reemplazar reglas de cuota inicial si se proporcionaron
-      if (data.initialPaymentRules && data.initialPaymentRules.length > 0) {
+      // undefined = no tocar; [] = reemplazar por vacío
+      if (data.initialPaymentRules !== undefined) {
         await InitialPaymentRuleModel.destroy({ where: { parameter_version_id: id }, transaction: t });
         for (const rule of data.initialPaymentRules) {
           await InitialPaymentRuleModel.create(

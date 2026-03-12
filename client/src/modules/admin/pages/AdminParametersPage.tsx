@@ -347,14 +347,18 @@ export function AdminParametersPage() {
       },
     ]);
 
-    const formInitPcts: Record<number, number> = {
-      0: percentToRate(form.initialPayments.extra0),
-      1: percentToRate(form.initialPayments.extra1),
-      2: percentToRate(form.initialPayments.extra2),
-      3: percentToRate(form.initialPayments.extra3),
-      4: percentToRate(form.initialPayments.extra4),
-      5: percentToRate(form.initialPayments.extra5),
-    };
+    const formInitPcts: Record<number, number> = {};
+    ([
+      [0, form.initialPayments.extra0],
+      [1, form.initialPayments.extra1],
+      [2, form.initialPayments.extra2],
+      [3, form.initialPayments.extra3],
+      [4, form.initialPayments.extra4],
+      [5, form.initialPayments.extra5],
+    ] as [number, string][]).forEach(([key, value]) => {
+      const rate = percentToRate(value);
+      if (Number.isFinite(rate)) formInitPcts[key] = rate;
+    });
 
     const initialPaymentRules = original.initialPaymentRules.map(rule => {
       const isEditable =
