@@ -25,8 +25,18 @@ export interface SaveSimulationData {
   readonly totalInterest: number;
   readonly totalPaid: number;
   readonly appliedRateMonthly: number;  // decimal
+  readonly academicPeriod: string;
   readonly studentObservation: string | null;
   readonly schedule: AmortizationRowDTO[];
+}
+
+/** Resumen ligero para listar simulaciones del perfil (sin amortización) */
+export interface SimulationSummaryItem {
+  readonly id: string;
+  readonly academicPeriod: string;
+  readonly numberOfPayments: number;
+  readonly totalPaid: number;
+  readonly createdAt: Date;
 }
 
 /** Simulación persistida tal como la retorna el repositorio */
@@ -46,4 +56,7 @@ export interface ISimulationRepository {
 
   /** Busca una simulación por id */
   findById(id: string): Promise<PersistedSimulation | null>;
+
+  /** Lista resúmenes ligeros de simulaciones del usuario (sin filas de amortización), orden desc, límite 20 */
+  findSummariesByUserId(userId: string, limit?: number): Promise<SimulationSummaryItem[]>;
 }
