@@ -8,9 +8,9 @@
 version: 2
 
 updates:
-  # ─── Frontend (client/) ───
+  # ─── npm (Monorepo raíz — cubre client/ y server/ via workspaces) ───
   - package-ecosystem: npm
-    directory: /client
+    directory: /
     schedule:
       interval: weekly
       day: monday
@@ -18,26 +18,8 @@ updates:
       timezone: America/Bogota
     labels:
       - "dependencies"
-      - "frontend 🎨"
     commit-message:
-      prefix: "deps(client):"
-    open-pull-requests-limit: 10
-    reviewers:
-      - "Dabji"
-
-  # ─── Backend (server/) ───
-  - package-ecosystem: npm
-    directory: /server
-    schedule:
-      interval: weekly
-      day: monday
-      time: "08:00"
-      timezone: America/Bogota
-    labels:
-      - "dependencies"
-      - "backend ⚙️"
-    commit-message:
-      prefix: "deps(server):"
+      prefix: "deps(npm):"
     open-pull-requests-limit: 10
     reviewers:
       - "Dabji"

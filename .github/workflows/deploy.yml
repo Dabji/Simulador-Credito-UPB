@@ -84,4 +84,4 @@ jobs:
         run: |
           sleep 5
           curl --fail --silent --max-time 10 http://localhost:3000/api/health \
-            || echo "⚠️ Health check falló — verificar logs con: pm2 logs simulador-backend"
+            || { echo "⚠️ Health check falló — verificar logs con: pm2 logs simulador-backend"; exit 1; }

@@ -1,3 +1,11 @@
+# =============================================================================
+# CI Pipeline — Escudo de Integración Continua
+# =============================================================================
+# Se dispara en Pull Requests hacia main y develop.
+# Ejecuta en la nube de GitHub (ubuntu-latest), NO en el self-hosted runner.
+# Si algún job falla, el PR queda bloqueado y no se puede fusionar.
+# =============================================================================
+
 name: "🛡️ CI Pipeline"
 
 on:
