@@ -30,8 +30,14 @@ jobs:
           LDAP_BIND_PASSWORD: ${{ secrets.LDAP_BIND_PASSWORD }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          DB_CA_CERT: ${{ secrets.DB_CA_CERT }}
         run: |
           cd server
+
+          # Certificado SSL para Aiven (obligatorio para evitar ataques MITM)
+          mkdir -p certs
+          echo "$DB_CA_CERT" > certs/ca.pem
+          chmod 600 certs/ca.pem
           cat > .env <<'STATIC_EOF'
           PORT=3000
           NODE_ENV=production
@@ -82,6 +88,7 @@ jobs:
 
       - name: ✅ Health Check
         run: |
-          sleep 5
+          # Esperar a que Sequelize sincronice tablas y el servidor esté listo
+          sleep 15
           curl --fail --silent --max-time 10 http://localhost:3000/api/health \
             || { echo "⚠️ Health check falló — verificar logs con: pm2 logs simulador-backend"; exit 1; }
