@@ -7,6 +7,7 @@
 
 import { useState } from 'react';
 import type { ChangeEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { SummaryCard } from './SummaryCard';
 import { DonutChartPlaceholder } from './DonutChartPlaceholder';
 import { saveSimulation } from '../services/api';
@@ -255,7 +256,7 @@ export function SimulationResultsPreview({ summary, input, onNewSimulation, mode
             <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span><strong>Modo invitado:</strong> para guardar o exportar tus simulaciones debes <a href="/login" className="underline font-semibold hover:text-blue-700">iniciar sesión</a>.</span>
+            <span><strong>Modo invitado:</strong> para guardar o exportar tus simulaciones debes <Link to="/login" className="underline font-semibold hover:text-blue-700">iniciar sesión</Link>.</span>
           </div>
         )}
 
