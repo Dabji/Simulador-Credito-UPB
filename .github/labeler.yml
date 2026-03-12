@@ -1,0 +1,24 @@
+# =============================================================================
+# Configuración del Labeler — Mapeo de rutas a etiquetas
+# =============================================================================
+# Formato: "nombre de etiqueta" → lista de patrones glob de archivos.
+# Si un PR modifica archivos que coinciden, se le asigna la etiqueta.
+# =============================================================================
+
+"frontend 🎨":
+  - changed-files:
+      - any-glob-to-any-file: "client/**"
+
+"backend ⚙️":
+  - changed-files:
+      - any-glob-to-any-file: "server/**"
+
+"ci/cd":
+  - changed-files:
+      - any-glob-to-any-file: ".github/**"
+
+"documentation":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.md"
+          - "docs/**"

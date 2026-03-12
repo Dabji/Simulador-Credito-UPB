@@ -54,7 +54,11 @@ export const SimulationInputSchema = z
   .superRefine((input, ctx) => {
     if (input.educationLevel !== 'upbTech' && input.initialPaymentPct < 20) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: z.ZodIssueCode.too_small,
+        minimum: 20,
+        type: 'number',
+        inclusive: true,
+        origin: 'number',
         message: 'Para pregrado y posgrado el porcentaje de cuota inicial mínimo es 20%',
         path: ['initialPaymentPct'],
       });
