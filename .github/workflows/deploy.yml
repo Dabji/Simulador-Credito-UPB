@@ -4,31 +4,27 @@ on:
   push:
     branches: [main]
 
-# Evita despliegues concurrentes que podrían corromper el servidor
 concurrency:
   group: production-deploy
-  cancel-in-progress: false # NO cancelar un deploy en curso
+  cancel-in-progress: false
 
 jobs:
   deploy:
     name: "Desplegar a Producción"
     runs-on: self-hosted
-    environment: production # Habilita protection rules en GitHub
+    environment: production
 
     steps:
       - name: 📥 Descargar último código
         uses: actions/checkout@v4
 
       # --- INYECCIÓN DE VARIABLES Y SECRETOS ---
-      # NOTA: Los secretos se inyectan vía variables de entorno del step,
-      # nunca se interpolan directamente en echo para prevenir exposición en logs.
-
-      - name: 🔐 Crear .env para Frontend (React/Vite)
+      - name: 🔐 Crear .env para Frontend
         run: |
           cd client
           echo "VITE_API_URL=https://simuladorupbbga.app/api" > .env
 
-      - name: 🔐 Crear .env para Backend (Node.js)
+      - name: 🔐 Crear .env para Backend
         env:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           LDAP_BIND_PASSWORD: ${{ secrets.LDAP_BIND_PASSWORD }}
@@ -36,8 +32,6 @@ jobs:
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
         run: |
           cd server
-
-          # 1. Variables de Servidor
           cat > .env <<'STATIC_EOF'
           PORT=3000
           NODE_ENV=production
@@ -57,52 +51,36 @@ jobs:
           SMTP_USER=a3a6ad001@smtp-brevo.com
           SMTP_FROM_EMAIL=no-reply@simuladorupbbga.app
           STATIC_EOF
-
-          # Eliminar espacios iniciales del heredoc
           sed -i 's/^[[:space:]]*//' .env
-
-          # 2. Secretos inyectados de forma segura vía variables de entorno
           echo "DB_PASSWORD=${DB_PASSWORD}" >> .env
           echo "LDAP_BIND_PASSWORD=${LDAP_BIND_PASSWORD}" >> .env
           echo "JWT_SECRET=${JWT_SECRET}" >> .env
           echo "SMTP_PASS=${SMTP_PASS}" >> .env
-
-          # 3. Proteger permisos del archivo
           chmod 600 .env
 
-      # --- CONSTRUCCIÓN E INSTALACIÓN ---
-      - name: 📦 Instalar y Construir Frontend (React)
-        run: |
-          cd client
-          npm ci --ignore-scripts=false
-          npm run build
+      # --- INSTALACIÓN Y CONSTRUCCIÓN (Workspaces) ---
+      - name: 📦 Instalar dependencias (Monorepo)
+        run: npm ci # ✅ Se instala una sola vez en la raíz
 
-      - name: 🚀 Desplegar Frontend (Nginx)
+      - name: 🏗️ Construir Frontend y Backend
         run: |
-          # Limpiamos antes de copiar para eliminar assets huérfanos
-          rm -rf /usr/share/nginx/html/*
-          cp -r client/dist/* /usr/share/nginx/html/
-
-      - name: ⚙️ Instalar y Construir Backend (Node.js)
-        run: |
-          cd server
-          npm ci --ignore-scripts=false
-          npm run build
+          npm run build --workspace=client
+          npm run build --workspace=server
 
       # --- DESPLIEGUE FINAL ---
-      - name: 🔄 Desplegar y Reiniciar Backend (PM2)
+      - name: 🚀 Desplegar Frontend (Nginx)
+        run: |
+          sudo rm -rf /usr/share/nginx/html/*
+          sudo cp -r client/dist/* /usr/share/nginx/html/
+
+      - name: 🔄 Reiniciar Backend (PM2)
         run: |
           cd server
-
-          # Usar 'reload' para zero-downtime en cluster mode (graceful restart)
-          # Si el proceso no existe aún, 'reload' falla y hacemos 'start'
           pm2 reload ecosystem.config.js --env production \
             || pm2 start ecosystem.config.js --env production
-
-          # Guardar estado para supervivencia ante reboot
           pm2 save
 
-      - name: ✅ Verificar que el backend responde
+      - name: ✅ Health Check
         run: |
           sleep 5
           curl --fail --silent --max-time 10 http://localhost:3000/api/health \
