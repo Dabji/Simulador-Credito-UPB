@@ -18,10 +18,13 @@ import type {
 
 export class SequelizeParameterVersionRepository implements IParameterVersionRepository {
 
+  /** Returns today's date (YYYY-MM-DD) in Colombia time (America/Bogota), regardless of server TZ. */
+  private static todayInColombia(): string {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date());
+  }
+
   async findActive(): Promise<ActiveParameterVersion | null> {
-    const now = new Date();
-    const colombiaOffset = new Date(now.getTime() - 5 * 60 * 60 * 1000);
-    const today = colombiaOffset.toISOString().slice(0, 10); // "YYYY-MM-DD" en hora Colombia (UTC-5)
+    const today = SequelizeParameterVersionRepository.todayInColombia();
 
     const version = await ParameterVersionModel.findOne({
       where: {
@@ -45,9 +48,7 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
   }
 
   async findAll(): Promise<ParameterVersionSummary[]> {
-    const now = new Date();
-    const colombiaOffset = new Date(now.getTime() - 5 * 60 * 60 * 1000);
-    const today = colombiaOffset.toISOString().slice(0, 10);
+    const today = SequelizeParameterVersionRepository.todayInColombia();
 
     const versions = await ParameterVersionModel.findAll({
       order: [['valid_from', 'DESC']],
