@@ -88,7 +88,7 @@ export class SimulationEngine {
     const planTotal       = schedule.reduce((acc, r) => acc + r.payment, 0);
     const totalPaid       = initialPayment.amount + planTotal;
     const totalInterest   = schedule.reduce((acc, r) => acc + r.interest, 0);
-    const periodicPayment = schedule.length > 0 ? schedule[0].payment : initialPayment.amount;
+    const periodicPayment = schedule.length > 0 ? schedule[0].payment : 0;
 
     return {
       id:                 crypto.randomUUID(),
