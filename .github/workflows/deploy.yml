@@ -70,8 +70,8 @@ jobs:
       # --- DESPLIEGUE FINAL ---
       - name: 🚀 Desplegar Frontend (Nginx)
         run: |
-          sudo rm -rf /usr/share/nginx/html/*
-          sudo cp -r client/dist/* /usr/share/nginx/html/
+          rm -rf /usr/share/nginx/html/* # Sin sudo
+          cp -r client/dist/* /usr/share/nginx/html/ # Sin sudo
 
       - name: 🔄 Reiniciar Backend (PM2)
         run: |
