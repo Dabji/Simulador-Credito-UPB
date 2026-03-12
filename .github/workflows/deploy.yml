@@ -1,0 +1,87 @@
+name: "🚀 Deploy to Production (Red Hat)"
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: "Desplegar a Producción"
+    runs-on: self-hosted
+    environment: production
+
+    steps:
+      - name: 📥 Descargar último código
+        uses: actions/checkout@v4
+
+      # --- INYECCIÓN DE VARIABLES Y SECRETOS ---
+      - name: 🔐 Crear .env para Frontend
+        run: |
+          cd client
+          echo "VITE_API_URL=https://simuladorupbbga.app/api" > .env
+
+      - name: 🔐 Crear .env para Backend
+        env:
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          LDAP_BIND_PASSWORD: ${{ secrets.LDAP_BIND_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+        run: |
+          cd server
+          cat > .env <<'STATIC_EOF'
+          PORT=3000
+          NODE_ENV=production
+          CORS_ORIGIN=https://simuladorupbbga.app
+          FRONTEND_URL=https://simuladorupbbga.app
+          DB_HOST=simuladordecredito20261-simuladordecredito20261.e.aivencloud.com
+          DB_PORT=13557
+          DB_NAME=simulador_upb
+          DB_USER=avnadmin
+          DB_SSL=true
+          LDAP_URL=ldap://ldap.upb.edu.co
+          LDAP_BIND_DN=cn=admin,dc=upb,dc=edu,dc=co
+          LDAP_SEARCH_BASE=ou=students,dc=upb,dc=edu,dc=co
+          JWT_EXPIRES_IN=8h
+          SMTP_HOST=smtp-relay.sendinblue.com
+          SMTP_PORT=587
+          SMTP_USER=a3a6ad001@smtp-brevo.com
+          SMTP_FROM_EMAIL=no-reply@simuladorupbbga.app
+          STATIC_EOF
+          sed -i 's/^[[:space:]]*//' .env
+          echo "DB_PASSWORD=${DB_PASSWORD}" >> .env
+          echo "LDAP_BIND_PASSWORD=${LDAP_BIND_PASSWORD}" >> .env
+          echo "JWT_SECRET=${JWT_SECRET}" >> .env
+          echo "SMTP_PASS=${SMTP_PASS}" >> .env
+          chmod 600 .env
+
+      # --- INSTALACIÓN Y CONSTRUCCIÓN (Workspaces) ---
+      - name: 📦 Instalar dependencias (Monorepo)
+        run: npm ci # ✅ Se instala una sola vez en la raíz
+
+      - name: 🏗️ Construir Frontend y Backend
+        run: |
+          npm run build --workspace=client
+          npm run build --workspace=server
+
+      # --- DESPLIEGUE FINAL ---
+      - name: 🚀 Desplegar Frontend (Nginx)
+        run: |
+          sudo rm -rf /usr/share/nginx/html/*
+          sudo cp -r client/dist/* /usr/share/nginx/html/
+
+      - name: 🔄 Reiniciar Backend (PM2)
+        run: |
+          cd server
+          pm2 reload ecosystem.config.js --env production \
+            || pm2 start ecosystem.config.js --env production
+          pm2 save
+
+      - name: ✅ Health Check
+        run: |
+          sleep 5
+          curl --fail --silent --max-time 10 http://localhost:3000/api/health \
+            || { echo "⚠️ Health check falló — verificar logs con: pm2 logs simulador-backend"; exit 1; }

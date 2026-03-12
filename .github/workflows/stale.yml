@@ -1,0 +1,57 @@
+# =============================================================================
+# CAPA 3: Automatización — Stale (Limpieza de Issues/PRs Abandonados)
+# =============================================================================
+# Marca como "stale" los Issues y PRs sin actividad por 30 días.
+# Si no hay respuesta en 7 días más, los cierra automáticamente.
+# Se ejecuta diariamente a medianoche UTC.
+# =============================================================================
+
+name: "🧹 Stale Issues & PRs"
+
+on:
+  schedule:
+    # Ejecutar todos los días a las 00:00 UTC
+    - cron: "0 0 * * *"
+  workflow_dispatch: # Permite ejecución manual desde la UI de GitHub
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    name: "Cerrar issues/PRs abandonados"
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🧹 Marcar y cerrar stale
+        uses: actions/stale@v9
+        with:
+          # ─── Issues ───
+          days-before-stale: 30
+          days-before-close: 7
+          stale-issue-label: "stale"
+          stale-issue-message: >
+            ⚠️ Este issue lleva **30 días sin actividad** y ha sido marcado como `stale`.
+            Si aún es relevante, por favor comenta para mantenerlo abierto.
+            Se cerrará automáticamente en **7 días** si no hay respuesta.
+          close-issue-message: >
+            🔒 Este issue fue cerrado automáticamente por inactividad.
+            Si el problema persiste, puedes reabrirlo con un nuevo comentario.
+
+          # ─── Pull Requests ───
+          stale-pr-label: "stale"
+          stale-pr-message: >
+            ⚠️ Este PR lleva **30 días sin actividad** y ha sido marcado como `stale`.
+            Si aún es necesario, actualiza la rama o deja un comentario.
+            Se cerrará automáticamente en **7 días** si no hay respuesta.
+          close-pr-message: >
+            🔒 Este PR fue cerrado automáticamente por inactividad.
+            Puedes reabrirlo cuando estés listo para continuar.
+
+          # ─── Excepciones ───
+          # Issues/PRs con estas etiquetas NUNCA se marcan como stale
+          exempt-issue-labels: "pinned,security,bug"
+          exempt-pr-labels: "pinned,security,work-in-progress"
+
+          # Procesar hasta 100 items por ejecución
+          operations-per-run: 100

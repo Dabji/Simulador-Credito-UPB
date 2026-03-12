@@ -7,7 +7,7 @@
 import express from 'express';
 import cors from 'cors';
 import swaggerUi from 'swagger-ui-express';
-import { authRoutes, simulatorRoutes, adminRoutes } from './routes';
+import { authRoutes, simulatorRoutes, adminRoutes, userRoutes } from './routes';
 import simulatorPublicRoutes from './routes/simulatorPublicRoutes';
 import { errorHandler } from './middlewares/errorHandler';
 import { authGuard } from './middlewares/authGuard';
@@ -60,6 +60,9 @@ export function createApp(): express.Application {
   // Rutas protegidas por rol (HU-07)
   app.use('/api/simulator', authGuard, simulatorRoutes);
   app.use('/api/admin', authGuard, roleGuard(UserRole.ADMIN), adminRoutes);
+
+  // ── HU-81: Perfil del estudiante autenticado ──────────────
+  app.use('/api/users', userRoutes);
 
   // ── Manejador de Errores (siempre al final) ───────────────
   app.use(errorHandler);
