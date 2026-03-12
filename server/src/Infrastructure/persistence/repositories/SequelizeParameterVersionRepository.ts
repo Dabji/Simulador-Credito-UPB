@@ -4,6 +4,7 @@
 // ============================================================
 
 import { Op } from 'sequelize';
+import { Database } from '../../config/database';
 import { ParameterVersionModel } from '../models/ParameterVersionModel';
 import { InterestRateModel } from '../models/InterestRateModel';
 import { ModalityRuleModel } from '../models/ModalityRuleModel';
@@ -11,6 +12,8 @@ import { InitialPaymentRuleModel } from '../models/InitialPaymentRuleModel';
 import type {
   IParameterVersionRepository,
   ActiveParameterVersion,
+  ParameterVersionSummary,
+  UpdateParameterVersionData,
 } from '../../../Core/repositories/IParameterVersionRepository';
 
 export class SequelizeParameterVersionRepository implements IParameterVersionRepository {
@@ -39,6 +42,136 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
     const version = await ParameterVersionModel.findByPk(id);
     if (!version) return null;
     return this.buildWithRules(version);
+  }
+
+  async findAll(): Promise<ParameterVersionSummary[]> {
+    const now = new Date();
+    const colombiaOffset = new Date(now.getTime() - 5 * 60 * 60 * 1000);
+    const today = colombiaOffset.toISOString().slice(0, 10);
+
+    const versions = await ParameterVersionModel.findAll({
+      order: [['valid_from', 'DESC']],
+    });
+
+    return versions.map(v => {
+      const isActive =
+        v.valid_from <= today &&
+        (v.valid_to === null || v.valid_to >= today);
+      return {
+        id: v.id,
+        validFrom: v.valid_from,
+        validTo: v.valid_to,
+        notes: v.notes,
+        createdAt: v.created_at,
+        isActive,
+      };
+    });
+  }
+
+  async hasOverlap(
+    validFrom: string,
+    validTo: string | null,
+    excludeId?: string,
+  ): Promise<boolean> {
+    // Una versión B se superpone con [validFrom, validTo] si:
+    //   B.valid_from <= validTo  AND  (B.valid_to IS NULL OR B.valid_to >= validFrom)
+    const where: Record<string, unknown> = {
+      valid_from: { [Op.lte]: validTo ?? '9999-12-31' },
+      [Op.or]: [
+        { valid_to: null },
+        { valid_to: { [Op.gte]: validFrom } },
+      ],
+    };
+
+    if (excludeId) {
+      (where as Record<string, unknown>).id = { [Op.ne]: excludeId };
+    }
+
+    const count = await ParameterVersionModel.count({ where });
+    return count > 0;
+  }
+
+  async updateVersion(
+    id: string,
+    data: UpdateParameterVersionData,
+  ): Promise<ActiveParameterVersion | null> {
+    const version = await ParameterVersionModel.findByPk(id);
+    if (!version) return null;
+
+    const sequelize = Database.getInstance().getSequelize();
+
+    await sequelize.transaction(async (t) => {
+      // Actualizar campos de la versión
+      const versionUpdates: Record<string, unknown> = {};
+      if (data.validFrom !== undefined) versionUpdates.valid_from = data.validFrom;
+      if (data.validTo !== undefined) versionUpdates.valid_to = data.validTo;
+      if (data.notes !== undefined) versionUpdates.notes = data.notes;
+      if (data.installmentsWindowFrom !== undefined) versionUpdates.installments_window_from = data.installmentsWindowFrom;
+      if (data.installmentsWindowTo !== undefined) versionUpdates.installments_window_to = data.installmentsWindowTo;
+      if (data.paymentPeriodDays !== undefined) versionUpdates.payment_period_days = data.paymentPeriodDays;
+
+      if (Object.keys(versionUpdates).length > 0) {
+        await version.update(versionUpdates, { transaction: t });
+      }
+
+      // Reemplazar tasas de interés si se proporcionaron
+      if (data.interestRates && data.interestRates.length > 0) {
+        await InterestRateModel.destroy({ where: { parameter_version_id: id }, transaction: t });
+        for (const rate of data.interestRates) {
+          await InterestRateModel.create(
+            {
+              id: crypto.randomUUID(),
+              rate_monthly: rate.rateMonthly,
+              rate_type: 'MV',
+              level_scope: rate.levelScope,
+              parameter_version_id: id,
+            },
+            { transaction: t },
+          );
+        }
+      }
+
+      // Reemplazar reglas de modalidad si se proporcionaron
+      if (data.modalityRules && data.modalityRules.length > 0) {
+        await ModalityRuleModel.destroy({ where: { parameter_version_id: id }, transaction: t });
+        for (const rule of data.modalityRules) {
+          await ModalityRuleModel.create(
+            {
+              id: crypto.randomUUID(),
+              modality: rule.modality,
+              level: rule.level,
+              max_total_payments: rule.maxTotalPayments,
+              min_initial_pct: rule.minInitialPct,
+              parameter_version_id: id,
+            },
+            { transaction: t },
+          );
+        }
+      }
+
+      // Reemplazar reglas de cuota inicial si se proporcionaron
+      if (data.initialPaymentRules && data.initialPaymentRules.length > 0) {
+        await InitialPaymentRuleModel.destroy({ where: { parameter_version_id: id }, transaction: t });
+        for (const rule of data.initialPaymentRules) {
+          await InitialPaymentRuleModel.create(
+            {
+              id: crypto.randomUUID(),
+              level: rule.level,
+              modality: rule.modality,
+              extra_installments: rule.extraInstallments,
+              initial_pct_required: rule.initialPctRequired,
+              parameter_version_id: id,
+            },
+            { transaction: t },
+          );
+        }
+      }
+    });
+
+    // Recargar versión actualizada
+    const updated = await ParameterVersionModel.findByPk(id);
+    if (!updated) return null;
+    return this.buildWithRules(updated);
   }
 
   private async buildWithRules(version: ParameterVersionModel): Promise<ActiveParameterVersion> {

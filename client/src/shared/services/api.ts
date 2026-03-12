@@ -262,3 +262,96 @@ export async function saveSimulation(
     body: JSON.stringify(input),
   });
 }
+
+// ── DTOs de Parámetros Administrativos (RF-10, RF-23, RF-24) ────────────
+
+export type EducationLevelScope = 'PREGRADO' | 'POSGRADO' | 'UPB_TEC';
+export type ModalityType = 'SIN_INTERES' | 'CON_INTERES';
+
+export interface AdminInterestRate {
+  readonly levelScope: EducationLevelScope;
+  readonly rateMonthly: number;
+}
+
+export interface AdminModalityRule {
+  readonly modality: ModalityType;
+  readonly level: EducationLevelScope;
+  readonly maxTotalPayments: number;
+  readonly minInitialPct: number;
+}
+
+export interface AdminInitialPaymentRule {
+  readonly level: EducationLevelScope;
+  readonly modality: ModalityType;
+  readonly extraInstallments: number;
+  readonly initialPctRequired: number;
+}
+
+export interface AdminParameterVersion {
+  readonly id: string;
+  readonly validFrom: string;
+  readonly validTo: string | null;
+  readonly installmentsWindowFrom: string;
+  readonly installmentsWindowTo: string;
+  readonly paymentPeriodDays: number;
+  readonly notes?: string | null;
+  readonly interestRates: AdminInterestRate[];
+  readonly modalityRules: AdminModalityRule[];
+  readonly initialPaymentRules: AdminInitialPaymentRule[];
+}
+
+export interface AdminParameterVersionSummary {
+  readonly id: string;
+  readonly validFrom: string;
+  readonly validTo: string | null;
+  readonly notes: string | null;
+  readonly createdAt: string;
+  readonly isActive: boolean;
+}
+
+export interface UpdateParameterVersionPayload {
+  validFrom?: string;
+  validTo?: string | null;
+  notes?: string | null;
+  interestRates?: { levelScope: EducationLevelScope; rateMonthly: number }[];
+  modalityRules?: {
+    modality: ModalityType;
+    level: EducationLevelScope;
+    maxTotalPayments: number;
+    minInitialPct: number;
+  }[];
+  initialPaymentRules?: {
+    level: EducationLevelScope;
+    modality: ModalityType;
+    extraInstallments: number;
+    initialPctRequired: number;
+  }[];
+}
+
+/** GET /api/admin/parameters/active — versión vigente con todas sus reglas */
+export async function getActiveParameters(): Promise<ApiResponse<{ data: AdminParameterVersion }>> {
+  return request<{ data: AdminParameterVersion }>('/admin/parameters/active');
+}
+
+/** GET /api/admin/parameters — listado de todas las versiones (resumen) */
+export async function listParameterVersions(): Promise<ApiResponse<{ data: AdminParameterVersionSummary[] }>> {
+  return request<{ data: AdminParameterVersionSummary[] }>('/admin/parameters');
+}
+
+/** GET /api/admin/parameters/:id — versión específica con todas sus reglas */
+export async function getParameterVersion(
+  id: string,
+): Promise<ApiResponse<{ data: AdminParameterVersion }>> {
+  return request<{ data: AdminParameterVersion }>(`/admin/parameters/${id}`);
+}
+
+/** PUT /api/admin/parameters/:id — actualiza una versión de parámetros */
+export async function updateParameterVersion(
+  id: string,
+  payload: UpdateParameterVersionPayload,
+): Promise<ApiResponse<{ data: AdminParameterVersion; message: string }>> {
+  return request<{ data: AdminParameterVersion; message: string }>(
+    `/admin/parameters/${id}`,
+    { method: 'PUT', body: JSON.stringify(payload) },
+  );
+}
