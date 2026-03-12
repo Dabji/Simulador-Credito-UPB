@@ -1,5 +1,34 @@
 @import "tailwindcss";
+/* ── Pencil-write animation ────────────────────────────── */
+@keyframes pencil-write {
+  0%   { transform: rotate(0deg)    translate(0, 0); }
+  15%  { transform: rotate(-18deg)  translate(-2px, 1px); }
+  30%  { transform: rotate(12deg)   translate(1px, -1px); }
+  45%  { transform: rotate(-14deg)  translate(-1px, 1px); }
+  60%  { transform: rotate(10deg)   translate(1px, 0); }
+  75%  { transform: rotate(-8deg)   translate(-1px, 1px); }
+  90%  { transform: rotate(5deg)    translate(0, 0); }
+  100% { transform: rotate(0deg)    translate(0, 0); }
+}
 
+.animate-pencil-write {
+  animation: pencil-write 0.55s ease-in-out;
+  transform-origin: bottom left;
+}
+
+/* ── Save-bounce animation ───────────────────────────── */
+@keyframes save-bounce {
+  0%   { transform: translateY(0)    scale(1); }
+  20%  { transform: translateY(-5px) scale(1.15); }
+  45%  { transform: translateY(3px)  scale(0.92); }
+  65%  { transform: translateY(-3px) scale(1.07); }
+  80%  { transform: translateY(1px)  scale(0.97); }
+  100% { transform: translateY(0)    scale(1); }
+}
+
+.animate-save-bounce {
+  animation: save-bounce 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
 /* ── UPB Design Tokens (Tailwind v4 @theme) ──────────────── */
 @theme {
   --color-upb-green: #006838;
