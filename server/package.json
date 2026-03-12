@@ -21,7 +21,7 @@
     "mysql2": "^3.17.3",
     "nodemailer": "^8.0.2",
     "passport-ldapauth": "^3.0.1",
-    "sequelize": "^6.37.7",
+    "sequelize": "^6.37.8",
     "swagger-ui-express": "^5.0.1",
     "winston": "^3.19.0",
     "zod": "^4.3.6"
