@@ -1,0 +1,109 @@
+name: "🚀 Deploy to Production (Red Hat)"
+
+on:
+  push:
+    branches: [main]
+
+# Evita despliegues concurrentes que podrían corromper el servidor
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false # NO cancelar un deploy en curso
+
+jobs:
+  deploy:
+    name: "Desplegar a Producción"
+    runs-on: self-hosted
+    environment: production # Habilita protection rules en GitHub
+
+    steps:
+      - name: 📥 Descargar último código
+        uses: actions/checkout@v4
+
+      # --- INYECCIÓN DE VARIABLES Y SECRETOS ---
+      # NOTA: Los secretos se inyectan vía variables de entorno del step,
+      # nunca se interpolan directamente en echo para prevenir exposición en logs.
+
+      - name: 🔐 Crear .env para Frontend (React/Vite)
+        run: |
+          cd client
+          echo "VITE_API_URL=https://simuladorupbbga.app/api" > .env
+
+      - name: 🔐 Crear .env para Backend (Node.js)
+        env:
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          LDAP_BIND_PASSWORD: ${{ secrets.LDAP_BIND_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+        run: |
+          cd server
+
+          # 1. Variables de Servidor
+          cat > .env <<'STATIC_EOF'
+          PORT=3000
+          NODE_ENV=production
+          CORS_ORIGIN=https://simuladorupbbga.app
+          FRONTEND_URL=https://simuladorupbbga.app
+          DB_HOST=simuladordecredito20261-simuladordecredito20261.e.aivencloud.com
+          DB_PORT=13557
+          DB_NAME=simulador_upb
+          DB_USER=avnadmin
+          DB_SSL=true
+          LDAP_URL=ldap://ldap.upb.edu.co
+          LDAP_BIND_DN=cn=admin,dc=upb,dc=edu,dc=co
+          LDAP_SEARCH_BASE=ou=students,dc=upb,dc=edu,dc=co
+          JWT_EXPIRES_IN=8h
+          SMTP_HOST=smtp-relay.sendinblue.com
+          SMTP_PORT=587
+          SMTP_USER=a3a6ad001@smtp-brevo.com
+          SMTP_FROM_EMAIL=no-reply@simuladorupbbga.app
+          STATIC_EOF
+
+          # Eliminar espacios iniciales del heredoc
+          sed -i 's/^[[:space:]]*//' .env
+
+          # 2. Secretos inyectados de forma segura vía variables de entorno
+          echo "DB_PASSWORD=${DB_PASSWORD}" >> .env
+          echo "LDAP_BIND_PASSWORD=${LDAP_BIND_PASSWORD}" >> .env
+          echo "JWT_SECRET=${JWT_SECRET}" >> .env
+          echo "SMTP_PASS=${SMTP_PASS}" >> .env
+
+          # 3. Proteger permisos del archivo
+          chmod 600 .env
+
+      # --- CONSTRUCCIÓN E INSTALACIÓN ---
+      - name: 📦 Instalar y Construir Frontend (React)
+        run: |
+          cd client
+          npm ci --ignore-scripts=false
+          npm run build
+
+      - name: 🚀 Desplegar Frontend (Nginx)
+        run: |
+          # Limpiamos antes de copiar para eliminar assets huérfanos
+          rm -rf /usr/share/nginx/html/*
+          cp -r client/dist/* /usr/share/nginx/html/
+
+      - name: ⚙️ Instalar y Construir Backend (Node.js)
+        run: |
+          cd server
+          npm ci --ignore-scripts=false
+          npm run build
+
+      # --- DESPLIEGUE FINAL ---
+      - name: 🔄 Desplegar y Reiniciar Backend (PM2)
+        run: |
+          cd server
+
+          # Usar 'reload' para zero-downtime en cluster mode (graceful restart)
+          # Si el proceso no existe aún, 'reload' falla y hacemos 'start'
+          pm2 reload ecosystem.config.js --env production \
+            || pm2 start ecosystem.config.js --env production
+
+          # Guardar estado para supervivencia ante reboot
+          pm2 save
+
+      - name: ✅ Verificar que el backend responde
+        run: |
+          sleep 5
+          curl --fail --silent --max-time 10 http://localhost:3000/api/health \
+            || echo "⚠️ Health check falló — verificar logs con: pm2 logs simulador-backend"

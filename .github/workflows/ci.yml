@@ -1,0 +1,91 @@
+# =============================================================================
+# CAPA 1: Integración Continua (CI) — El Escudo del Monorepo
+# =============================================================================
+# Se dispara en Pull Requests hacia main. Ejecuta en la nube de GitHub
+# (ubuntu-latest), NO en el self-hosted runner de producción.
+# Si algún job falla, el PR queda bloqueado y no se puede fusionar.
+# =============================================================================
+
+name: "🛡️ CI Pipeline"
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+# Cancela ejecuciones previas del mismo PR para ahorrar minutos
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─────────────────────────────────────────────
+  # JOB 1: Frontend (React / Vite / TypeScript)
+  # ─────────────────────────────────────────────
+  frontend:
+    name: "🎨 Frontend — Lint, Types & Build"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+
+      - name: 🟢 Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: 📦 Instalar dependencias (CI mode)
+        run: npm ci
+
+      - name: 🔍 Verificar tipos (TypeScript)
+        run: npx tsc --noEmit
+
+      - name: 🧹 Linter (ESLint)
+        run: npm run lint --if-present
+
+      - name: 🏗️ Compilar producción
+        run: npm run build
+
+      - name: 🧪 Ejecutar tests
+        run: npm run test --if-present
+
+  # ─────────────────────────────────────────────
+  # JOB 2: Backend (Node.js / Express / TypeScript)
+  # ─────────────────────────────────────────────
+  backend:
+    name: "⚙️ Backend — Lint, Types & Build"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+
+      - name: 🟢 Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: 📦 Instalar dependencias (CI mode)
+        run: npm ci
+
+      - name: 🔍 Verificar tipos (TypeScript)
+        run: npx tsc --noEmit
+
+      - name: 🧹 Linter (ESLint)
+        run: npm run lint --if-present
+
+      - name: 🏗️ Compilar producción
+        run: npm run build
+
+      - name: 🧪 Ejecutar tests
+        run: npm run test --if-present

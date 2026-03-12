@@ -1,0 +1,57 @@
+# =============================================================================
+# CAPA 2: DevSecOps — Dependabot (Gestión de Dependencias)
+# =============================================================================
+# Revisa semanalmente las dependencias npm de cada directorio del monorepo.
+# Si detecta actualizaciones o vulnerabilidades, crea PRs automáticos.
+# =============================================================================
+
+version: 2
+
+updates:
+  # ─── Frontend (client/) ───
+  - package-ecosystem: npm
+    directory: /client
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: America/Bogota
+    labels:
+      - "dependencies"
+      - "frontend 🎨"
+    commit-message:
+      prefix: "deps(client):"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "Dabji"
+
+  # ─── Backend (server/) ───
+  - package-ecosystem: npm
+    directory: /server
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: America/Bogota
+    labels:
+      - "dependencies"
+      - "backend ⚙️"
+    commit-message:
+      prefix: "deps(server):"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "Dabji"
+
+  # ─── GitHub Actions ───
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: America/Bogota
+    labels:
+      - "dependencies"
+      - "ci/cd"
+    commit-message:
+      prefix: "deps(actions):"
