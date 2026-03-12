@@ -99,13 +99,16 @@ export function UpbHeader({ profileOpen, onToggleProfile }: UpbHeaderProps) {
                       <div className="px-4 py-2.5 text-sm text-gray-700 font-medium border-b border-gray-100">
                         Hola, {user?.firstName}
                       </div>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="block w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
-                      >
-                        Datos personales
-                      </button>
+                      {user?.role === 'STUDENT' && (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="block w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
+                          onClick={() => navigate('/student/profile')}
+                        >
+                          Datos personales
+                        </button>
+                      )}
                       <div className="border-t border-gray-100 my-1" />
                       <button
                         type="button"
