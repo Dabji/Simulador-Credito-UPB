@@ -58,6 +58,7 @@ export const SimulationInputSchema = z
         minimum: 20,
         type: 'number',
         inclusive: true,
+        origin: 'number',
         message: 'Para pregrado y posgrado el porcentaje de cuota inicial mínimo es 20%',
         path: ['initialPaymentPct'],
       });
