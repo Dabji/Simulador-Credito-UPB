@@ -355,3 +355,56 @@ export async function updateParameterVersion(
     { method: 'PUT', body: JSON.stringify(payload) },
   );
 }
+
+// ── HU-81: Perfil del usuario ─────────────────────────────────────────────
+
+/** Datos del perfil devueltos por GET /api/users/me */
+export interface MyProfileDTO {
+  readonly id: string;
+  readonly email: string;
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly documentType?: 'CC' | 'TI';
+  readonly identificationNumber: string;
+  readonly phone?: string;
+  readonly role: 'STUDENT' | 'ADMIN';
+  readonly createdAt: string;
+}
+
+/** Payload para PATCH /api/users/me */
+export interface UpdateMyProfilePayload {
+  documentType?: 'CC' | 'TI';
+  identificationNumber?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+}
+
+/** Ítem de simulación devuelto por GET /api/users/me/simulations */
+export interface MySimulationItemDTO {
+  readonly id: string;
+  readonly academicPeriod: string;
+  readonly numberOfPayments: number;
+  readonly totalPaid: number;
+  readonly createdAt: string;
+}
+
+/** GET /api/users/me — Retorna el perfil del estudiante autenticado */
+export async function getMyProfile(): Promise<ApiResponse<{ user: MyProfileDTO }>> {
+  return request<{ user: MyProfileDTO }>('/users/me');
+}
+
+/** PATCH /api/users/me — Actualiza campos permitidos del perfil */
+export async function updateMyProfile(
+  data: UpdateMyProfilePayload,
+): Promise<ApiResponse<{ user: MyProfileDTO; message: string }>> {
+  return request<{ user: MyProfileDTO; message: string }>('/users/me', {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+/** GET /api/users/me/simulations — Lista simulaciones del estudiante (máx. 20) */
+export async function getMySimulations(): Promise<ApiResponse<{ simulations: MySimulationItemDTO[] }>> {
+  return request<{ simulations: MySimulationItemDTO[] }>('/users/me/simulations');
+}
