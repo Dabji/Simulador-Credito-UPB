@@ -19,7 +19,8 @@ import { AuthProvider } from './modules/auth/context/AuthContext';
 import { ProtectedRoute } from './shared/components/ProtectedRoute';
 import { PublicRoute } from './shared/components/PublicRoute';
 import { LandingPage } from './modules/landing/pages/LandingPage';
-import { GuestPage } from './modules/simulator/pages/guest/GuestPage';
+import { GuestMainPage } from './modules/simulator/pages/guest/GuestMainPage';
+import { GuestCreateSimulationPage } from './modules/simulator/pages/guest/GuestCreateSimulationPage';
 
 export function App() {
   return (
@@ -35,7 +36,9 @@ export function App() {
 
           {/* Página principal: Landing pública */}
           <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
-          <Route path="/guest" element={<PublicRoute><GuestPage /></PublicRoute>} />
+          <Route path="/guest" element={<Navigate to="/guest/main" replace />} />
+          <Route path="/guest/main" element={<GuestMainPage />} />
+          <Route path="/guest/simulator/create" element={<GuestCreateSimulationPage />} />
 
           {/* ── Rutas del estudiante (HU-08) ── */}
           <Route path="/student/main" element={<ProtectedRoute requiredRole="STUDENT"><MainStudentPage /></ProtectedRoute>} />
