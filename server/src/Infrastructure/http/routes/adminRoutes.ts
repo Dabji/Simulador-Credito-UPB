@@ -5,10 +5,12 @@
 // ============================================================
 
 import { Router } from 'express';
-import type { Request, Response, NextFunction } from 'express';
+import type { Response, NextFunction } from 'express';
 import { SequelizeParameterVersionRepository } from '../../persistence/repositories/SequelizeParameterVersionRepository';
 import { BadRequestError, NotFoundError } from '../../../Core/errors';
 import type { UpdateParameterVersionData } from '../../../Core/repositories/IParameterVersionRepository';
+import { ParameterAuditLogModel } from '../../persistence/models/ParameterAuditLogModel';
+import type { AuthenticatedRequest } from '../middlewares/authGuard';
 
 const router = Router();
 const paramRepo = new SequelizeParameterVersionRepository();
@@ -19,13 +21,54 @@ function isValidDate(str: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(str) && !isNaN(new Date(str).getTime());
 }
 
+// ── GET /api/admin/parameters/audit ─────────────────────────────────────
+
+/**
+ * GET /api/admin/parameters/audit
+ * Retorna el historial de cambios de parametrización (HU-25, Criterio 3).
+ * Query params: limit (default 50), offset (default 0)
+ */
+router.get('/parameters/audit', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const limit  = Math.min(parseInt(String(req.query['limit']  ?? '50'), 10) || 50, 200);
+    const offset = parseInt(String(req.query['offset'] ?? '0'),  10) || 0;
+
+    const { rows, count } = await ParameterAuditLogModel.findAndCountAll({
+      order: [['changed_at', 'DESC']],
+      limit,
+      offset,
+    });
+
+    res.json({
+      success: true,
+      data: {
+        total: count,
+        limit,
+        offset,
+        logs: rows.map(r => ({
+          id:                   r.id,
+          parameterVersionId:   r.parameter_version_id,
+          adminUserId:          r.admin_user_id,
+          adminEmail:           r.admin_email,
+          changedAt:            r.changed_at,
+          changeSummary:        r.change_summary,
+          previousSnapshot:     JSON.parse(r.previous_snapshot),
+          newSnapshot:          JSON.parse(r.new_snapshot),
+        })),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // ── GET /api/admin/stats ────────────────────────────────────────────────
 
 /**
  * GET /api/admin/stats
  * Retorna estadísticas generales de administración.
  */
-router.get('/stats', (_req: Request, res: Response): void => {
+router.get('/stats', (_req: AuthenticatedRequest, res: Response): void => {
   // TODO: Implementar conteos reales desde los repositorios en la HU del Dashboard Admin.
   res.json({
     success: true,
@@ -41,7 +84,7 @@ router.get('/stats', (_req: Request, res: Response): void => {
  * Retorna la versión de parámetros actualmente vigente con todas sus reglas.
  * Si no existe versión activa, retorna 404.
  */
-router.get('/parameters/active', async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.get('/parameters/active', async (_req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const version = await paramRepo.findActive();
     if (!version) {
@@ -59,7 +102,7 @@ router.get('/parameters/active', async (_req: Request, res: Response, next: Next
  * GET /api/admin/parameters
  * Lista todas las versiones de parámetros (resumen: id, vigencia, notas, isActive).
  */
-router.get('/parameters', async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.get('/parameters', async (_req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const versions = await paramRepo.findAll();
     res.json({ success: true, data: versions });
@@ -74,9 +117,9 @@ router.get('/parameters', async (_req: Request, res: Response, next: NextFunctio
  * GET /api/admin/parameters/:id
  * Retorna una versión específica de parámetros con todas sus reglas.
  */
-router.get('/parameters/:id', async (req: Request<{ id: string }>, res: Response, next: NextFunction): Promise<void> => {
+router.get('/parameters/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { id } = req.params;
+    const id = req.params['id'] as string;
     const version = await paramRepo.findById(id);
     if (!version) {
       return next(new NotFoundError(`Versión de parámetros con id '${id}' no encontrada`));
@@ -109,9 +152,9 @@ router.get('/parameters/:id', async (req: Request<{ id: string }>, res: Response
  *  - Las tasas de interés deben ser mayores que cero para con_interes.
  *  - No puede existir superposición de vigencias con otras versiones.
  */
-router.put('/parameters/:id', async (req: Request<{ id: string }>, res: Response, next: NextFunction): Promise<void> => {
+router.put('/parameters/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const body = req.body as {
       validFrom?: string;
       validTo?: string | null;
@@ -250,14 +293,41 @@ router.put('/parameters/:id', async (req: Request<{ id: string }>, res: Response
       }),
     };
 
+    // ── Capturar snapshot anterior para auditoría (HU-25, Criterio 2) ──
+    const previous = await paramRepo.findById(id);
+    if (!previous) {
+      return next(new NotFoundError(`Versión de parámetros con id '${id}' no encontrada`));
+    }
+
     const updated = await paramRepo.updateVersion(id, updateData);
     if (!updated) {
       return next(new NotFoundError(`Versión de parámetros con id '${id}' no encontrada`));
     }
 
+    // ── Persistir registro de auditoría ─────────────────────────────────
+    const adminUserId = String(req.user?.['userId'] ?? 'unknown');
+    const adminEmail  = String(req.user?.['email']  ?? 'unknown');
+
+    const changedFields: string[] = [];
+    if (updateData.validFrom       !== undefined) changedFields.push('validFrom');
+    if (updateData.validTo         !== undefined) changedFields.push('validTo');
+    if (updateData.notes           !== undefined) changedFields.push('notes');
+    if (updateData.interestRates   !== undefined) changedFields.push('interestRates');
+    if (updateData.modalityRules   !== undefined) changedFields.push('modalityRules');
+    if (updateData.initialPaymentRules !== undefined) changedFields.push('initialPaymentRules');
+
+    await ParameterAuditLogModel.create({
+      parameter_version_id: id,
+      admin_user_id:        adminUserId,
+      admin_email:          adminEmail,
+      change_summary:       `Campos modificados: ${changedFields.join(', ')}`,
+      previous_snapshot:    JSON.stringify(previous),
+      new_snapshot:         JSON.stringify(updated),
+    });
+
     res.json({
       success: true,
-      message: 'Parámetros actualizados correctamente',
+      message: 'Parámetros actualizados correctamente. El cambio ha quedado registrado y aplicará a simulaciones futuras.',
       data: updated,
     });
   } catch (error) {
