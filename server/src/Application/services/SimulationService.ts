@@ -9,6 +9,7 @@ import { SimulationEngine } from './SimulationEngine';
 import type { SimulationInput } from '../dtos/SimulationInput';
 import type { SimulationSummary } from '../dtos/SimulationSummary';
 import type { ActiveParameterVersion } from '../../Core/repositories/IParameterVersionRepository';
+import { LEVEL_MAP } from '../dtos/constants';
 
 export class SimulationService {
   private readonly paramService: ParameterService;
@@ -27,8 +28,31 @@ export class SimulationService {
     // Estudiante nuevo/continuo: SÍ puede tener beca/descuento
     const effectiveScholarshipPct = input.educationLevel === 'upbTech' ? 0 : input.scholarshipPct;
 
-    // Regla: cuota inicial mínima dinámica (15% upbTech, 20% pregrado/posgrado)
-    InitialPaymentRule.validatePct(input.initialPaymentPct, input.educationLevel);
+    // Regla: cuota inicial mínima — usar parámetros de BD si están disponibles
+    const dbLevel = LEVEL_MAP[input.educationLevel];
+    if (activeVersion && dbLevel) {
+      // #59 — Modalidad efectiva anticipada para leer la regla correcta
+      const modeForRule = input.interestMode === 'con_interes' && input.numberOfPayments <= 3
+        ? 'sin_interes'
+        : input.interestMode;
+      const dbModality = modeForRule === 'sin_interes' ? 'SIN_INTERES' : 'CON_INTERES';
+      const modalityRule = activeVersion.modalityRules.find(
+        r => r.level === dbLevel && r.modality === dbModality,
+      );
+      if (modalityRule) {
+        const minPct = modalityRule.minInitialPct * 100; // decimal → porcentaje
+        if (input.initialPaymentPct < minPct) {
+          throw new Error(
+            `La cuota inicial debe ser al menos ${minPct}% del valor neto de matrícula para ${input.educationLevel}.`,
+          );
+        }
+      } else {
+        InitialPaymentRule.validatePct(input.initialPaymentPct, input.educationLevel);
+      }
+    } else {
+      // Fallback: validación hardcodeada (15% upbTech, 20% pregrado/posgrado)
+      InitialPaymentRule.validatePct(input.initialPaymentPct, input.educationLevel);
+    }
 
     // Regla: tuición bruta debe ser positiva
     if (input.tuitionGross <= 0) {
@@ -60,8 +84,19 @@ export class SimulationService {
       input.academicPeriod,
       input.firstPaymentMonth,
     );
-    // Tope adicional por modalidad efectiva: sin_interes → máx 3, con_interes → máx 6
-    const capByMode     = effectiveMode === 'sin_interes' ? 3 : 6;
+
+    // Tope por modalidad: leer desde BD si está disponible, sino usar fallback hardcodeado
+    let capByMode: number;
+    if (activeVersion && dbLevel) {
+      const dbModality = effectiveMode === 'sin_interes' ? 'SIN_INTERES' : 'CON_INTERES';
+      const modalityRule = activeVersion.modalityRules.find(
+        r => r.level === dbLevel && r.modality === dbModality,
+      );
+      capByMode = modalityRule ? modalityRule.maxTotalPayments : (effectiveMode === 'sin_interes' ? 3 : 6);
+    } else {
+      capByMode = effectiveMode === 'sin_interes' ? 3 : 6;
+    }
+
     const maxInstallments = Math.min(maxByPeriod, capByMode);
     if (input.numberOfPayments < 1 || input.numberOfPayments > maxInstallments) {
       throw new Error(
