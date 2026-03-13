@@ -8,8 +8,20 @@ import { ParameterService } from './ParameterService';
 import { SimulationEngine } from './SimulationEngine';
 import type { SimulationInput } from '../dtos/SimulationInput';
 import type { SimulationSummary } from '../dtos/SimulationSummary';
-import type { ActiveParameterVersion } from '../../Core/repositories/IParameterVersionRepository';
+import type { ActiveParameterVersion, ActiveModalityRule } from '../../Core/repositories/IParameterVersionRepository';
 import { LEVEL_MAP } from '../dtos/constants';
+
+function findModalityRule(
+  activeVersion: ActiveParameterVersion | null | undefined,
+  dbLevel: string | null | undefined,
+  effectiveMode: string,
+): ActiveModalityRule | undefined {
+  if (!activeVersion || !dbLevel) return undefined;
+  const dbModality = effectiveMode === 'sin_interes' ? 'SIN_INTERES' : 'CON_INTERES';
+  return activeVersion.modalityRules.find(
+    r => r.level === dbLevel && r.modality === dbModality,
+  );
+}
 
 export class SimulationService {
   private readonly paramService: ParameterService;
@@ -30,24 +42,17 @@ export class SimulationService {
 
     // Regla: cuota inicial mínima — usar parámetros de BD si están disponibles
     const dbLevel = LEVEL_MAP[input.educationLevel];
-    if (activeVersion && dbLevel) {
-      // #59 — Modalidad efectiva anticipada para leer la regla correcta
-      const modeForRule = input.interestMode === 'con_interes' && input.numberOfPayments <= 3
-        ? 'sin_interes'
-        : input.interestMode;
-      const dbModality = modeForRule === 'sin_interes' ? 'SIN_INTERES' : 'CON_INTERES';
-      const modalityRule = activeVersion.modalityRules.find(
-        r => r.level === dbLevel && r.modality === dbModality,
-      );
-      if (modalityRule) {
-        const minPct = modalityRule.minInitialPct * 100; // decimal → porcentaje
-        if (input.initialPaymentPct < minPct) {
-          throw new Error(
-            `La cuota inicial debe ser al menos ${minPct}% del valor neto de matrícula para ${input.educationLevel}.`,
-          );
-        }
-      } else {
-        InitialPaymentRule.validatePct(input.initialPaymentPct, input.educationLevel);
+    // #59 — Modalidad efectiva anticipada para leer la regla de cuota inicial correcta
+    const modeForRule = input.interestMode === 'con_interes' && input.numberOfPayments <= 3
+      ? 'sin_interes'
+      : input.interestMode;
+    const initialModalityRule = findModalityRule(activeVersion, dbLevel, modeForRule);
+    if (initialModalityRule) {
+      const minPct = initialModalityRule.minInitialPct * 100; // decimal → porcentaje
+      if (input.initialPaymentPct < minPct) {
+        throw new Error(
+          `La cuota inicial debe ser al menos ${minPct}% del valor neto de matrícula para ${input.educationLevel}.`,
+        );
       }
     } else {
       // Fallback: validación hardcodeada (15% upbTech, 20% pregrado/posgrado)
@@ -86,16 +91,10 @@ export class SimulationService {
     );
 
     // Tope por modalidad: leer desde BD si está disponible, sino usar fallback hardcodeado
-    let capByMode: number;
-    if (activeVersion && dbLevel) {
-      const dbModality = effectiveMode === 'sin_interes' ? 'SIN_INTERES' : 'CON_INTERES';
-      const modalityRule = activeVersion.modalityRules.find(
-        r => r.level === dbLevel && r.modality === dbModality,
-      );
-      capByMode = modalityRule ? modalityRule.maxTotalPayments : (effectiveMode === 'sin_interes' ? 3 : 6);
-    } else {
-      capByMode = effectiveMode === 'sin_interes' ? 3 : 6;
-    }
+    const capModalityRule = findModalityRule(activeVersion, dbLevel, effectiveMode);
+    const capByMode = capModalityRule
+      ? capModalityRule.maxTotalPayments
+      : (effectiveMode === 'sin_interes' ? 3 : 6);
 
     const maxInstallments = Math.min(maxByPeriod, capByMode);
     if (input.numberOfPayments < 1 || input.numberOfPayments > maxInstallments) {
