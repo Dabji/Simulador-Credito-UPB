@@ -9,7 +9,7 @@ import type { Response, NextFunction } from 'express';
 import { SequelizeParameterVersionRepository } from '../../persistence/repositories/SequelizeParameterVersionRepository';
 import { BadRequestError, NotFoundError } from '../../../Core/errors';
 import type { UpdateParameterVersionData } from '../../../Core/repositories/IParameterVersionRepository';
-import { ParameterAuditLogModel } from '../../persistence/models/ParameterAuditLogModel';
+import { AuditLogModel } from '../../persistence/models/AuditLogModel';
 import type { AuthenticatedRequest } from '../middlewares/authGuard';
 
 const router = Router();
@@ -33,8 +33,9 @@ router.get('/parameters/audit', async (req: AuthenticatedRequest, res: Response,
     const limit  = Math.min(parseInt(String(req.query['limit']  ?? '50'), 10) || 50, 200);
     const offset = parseInt(String(req.query['offset'] ?? '0'),  10) || 0;
 
-    const { rows, count } = await ParameterAuditLogModel.findAndCountAll({
-      order: [['changed_at', 'DESC']],
+    const { rows, count } = await AuditLogModel.findAndCountAll({
+      where: { entity: 'PARAMETER_VERSION' },
+      order: [['created_at', 'DESC']],
       limit,
       offset,
     });
@@ -45,16 +46,24 @@ router.get('/parameters/audit', async (req: AuthenticatedRequest, res: Response,
         total: count,
         limit,
         offset,
-        logs: rows.map(r => ({
-          id:                   r.id,
-          parameterVersionId:   r.parameter_version_id,
-          adminUserId:          r.admin_user_id,
-          adminEmail:           r.admin_email,
-          changedAt:            r.changed_at,
-          changeSummary:        r.change_summary,
-          previousSnapshot:     JSON.parse(r.previous_snapshot),
-          newSnapshot:          JSON.parse(r.new_snapshot),
-        })),
+        logs: rows.map(r => {
+          const parsed = JSON.parse(r.details) as {
+            changeSummary: string;
+            previousSnapshot: unknown;
+            newSnapshot: unknown;
+          };
+          return {
+            id:                 r.id,
+            parameterVersionId: r.entity_id,
+            adminUserId:        r.user_id,
+            action:             r.action,
+            ipAddress:          r.ip_address,
+            changedAt:          r.created_at,
+            changeSummary:      parsed.changeSummary,
+            previousSnapshot:   parsed.previousSnapshot,
+            newSnapshot:        parsed.newSnapshot,
+          };
+        }),
       },
     });
   } catch (error) {
@@ -316,13 +325,23 @@ router.put('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
     if (updateData.modalityRules   !== undefined) changedFields.push('modalityRules');
     if (updateData.initialPaymentRules !== undefined) changedFields.push('initialPaymentRules');
 
-    await ParameterAuditLogModel.create({
-      parameter_version_id: id,
-      admin_user_id:        adminUserId,
-      admin_email:          adminEmail,
-      change_summary:       `Campos modificados: ${changedFields.join(', ')}`,
-      previous_snapshot:    JSON.stringify(previous),
-      new_snapshot:         JSON.stringify(updated),
+    const ipAddress = (req.headers['x-forwarded-for'] as string | undefined)
+      ?? req.socket.remoteAddress
+      ?? null;
+
+    await AuditLogModel.create({
+      action:     'UPDATE_PARAMETER_VERSION',
+      entity:     'PARAMETER_VERSION',
+      entity_id:  id,
+      actor_type: 'ADMIN',
+      user_id:    adminUserId !== 'unknown' ? adminUserId : null,
+      ip_address: ipAddress ?? null,
+      details: JSON.stringify({
+        adminEmail,
+        changeSummary:      `Campos modificados: ${changedFields.join(', ')}`,
+        previousSnapshot:   previous,
+        newSnapshot:        updated,
+      }),
     });
 
     res.json({
