@@ -11,6 +11,7 @@ import { PreviewSimulationUseCase } from '../../../Application/use-cases/Preview
 import { SaveSimulationUseCase } from '../../../Application/use-cases/SaveSimulationUseCase';
 import { SequelizeSimulationRepository } from '../../persistence/repositories/SequelizeSimulationRepository';
 import { SequelizeParameterVersionRepository } from '../../persistence/repositories/SequelizeParameterVersionRepository';
+import { SimulationModel } from '../../persistence/models/SimulationModel';
 import type { SimulationInput } from '../../../Application/dtos/SimulationInput';
 import { logger } from '../../logger';
 import type { AuthenticatedRequest } from '../middlewares/authGuard';
@@ -114,6 +115,96 @@ router.get('/history', async (req: AuthenticatedRequest, res: Response, next: Ne
 
     const simulations = await simulationRepo.findByUserId(userId);
     res.json({ simulations });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * DELETE /api/simulator/:id
+ * Soft-delete de una simulación del usuario autenticado.
+ */
+router.delete('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.user?.userId as string | undefined;
+    if (!userId) {
+      res.status(401).json({ error: 'Usuario no autenticado.' });
+      return;
+    }
+
+    const simId = req.params['id'] as string;
+    const reason = (req.body as { reason?: string })?.reason ?? 'Eliminado por el usuario';
+
+    const sim = await SimulationModel.findOne({ where: { id: simId, user_id: userId, deleted_at: null } });
+    if (!sim) {
+      res.status(404).json({ error: 'Simulación no encontrada.' });
+      return;
+    }
+
+    await SimulationModel.update(
+      { deleted_at: new Date(), deleted_by: userId, delete_reason: reason },
+      { where: { id: simId } },
+    );
+
+    await auditLog({
+      action:     'SIMULATION_DELETED',
+      entity:     'SIMULATION',
+      entity_id:  simId,
+      actor_type: 'STUDENT',
+      user_id:    userId,
+      ip_address: extractIp(req),
+      details:    { simulation_id: simId, reason, origin: 'STUDENT' },
+    });
+
+    logger.info('Simulación eliminada (soft-delete)', { id: simId, userId });
+    res.json({ success: true, message: 'Simulación eliminada correctamente.' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/simulator/:id/export
+ * Exporta los datos de una simulación en formato JSON.
+ * Registra SIMULATION_EXPORTED en auditoría.
+ */
+router.get('/:id/export', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.user?.userId as string | undefined;
+    if (!userId) {
+      res.status(401).json({ error: 'Usuario no autenticado.' });
+      return;
+    }
+
+    const simId = req.params['id'] as string;
+    const format = (req.query['format'] as string) ?? 'json';
+
+    const simulation = await simulationRepo.findById(simId);
+    if (!simulation || simulation.userId !== userId) {
+      res.status(404).json({ error: 'Simulación no encontrada.' });
+      return;
+    }
+
+    await auditLog({
+      action:     'SIMULATION_EXPORTED',
+      entity:     'SIMULATION',
+      entity_id:  simId,
+      actor_type: 'STUDENT',
+      user_id:    userId,
+      ip_address: extractIp(req),
+      details:    {
+        simulation_id: simId,
+        format,
+        education_level: simulation.summary.interestMode,
+        total_paid:      simulation.summary.totalPaid,
+      },
+    });
+
+    logger.info('Simulación exportada', { id: simId, userId, format });
+
+    res.setHeader('Content-Disposition', `attachment; filename="simulacion-${simId}.json"`);
+    res.setHeader('Content-Type', 'application/json');
+    res.json({ success: true, data: simulation.summary });
   } catch (error) {
     next(error);
   }
