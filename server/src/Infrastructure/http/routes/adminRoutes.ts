@@ -30,8 +30,10 @@ function isValidDate(str: string): boolean {
  */
 router.get('/parameters/audit', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const limit  = Math.min(parseInt(String(req.query['limit']  ?? '50'), 10) || 50, 200);
-    const offset = parseInt(String(req.query['offset'] ?? '0'),  10) || 0;
+    const rawLimit  = Number.parseInt(String(req.query['limit']  ?? '50'), 10);
+    const rawOffset = Number.parseInt(String(req.query['offset'] ?? '0'),  10);
+    const limit  = Math.min(Math.max(Number.isNaN(rawLimit)  ? 50 : rawLimit,  1), 200);
+    const offset = Math.max(Number.isNaN(rawOffset) ? 0 : rawOffset, 0);
 
     const { rows, count } = await AuditLogModel.findAndCountAll({
       where: { entity: 'PARAMETER_VERSION' },
@@ -264,15 +266,16 @@ router.put('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
       }
     }
 
+    // ── Cargar versión actual: sirve para overlap check Y snapshot de auditoría ──
+    const previous = await paramRepo.findById(id);
+    if (!previous) {
+      return next(new NotFoundError(`Versión de parámetros con id '${id}' no encontrada`));
+    }
+
     // ── Verificación de superposición de vigencias ───────────
     if (body.validFrom !== undefined || body.validTo !== undefined) {
-      // Para verificar el solapamiento necesitamos saber los valores actuales de la versión
-      const current = await paramRepo.findById(id);
-      if (!current) {
-        return next(new NotFoundError(`Versión de parámetros con id '${id}' no encontrada`));
-      }
-      const fromToCheck = body.validFrom ?? current.validFrom;
-      const toToCheck = body.validTo !== undefined ? body.validTo : current.validTo;
+      const fromToCheck = body.validFrom ?? previous.validFrom;
+      const toToCheck   = body.validTo !== undefined ? body.validTo : previous.validTo;
 
       const overlaps = await paramRepo.hasOverlap(fromToCheck, toToCheck, id);
       if (overlaps) {
@@ -312,12 +315,6 @@ router.put('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
       }),
     };
 
-    // ── Capturar snapshot anterior para auditoría (HU-25, Criterio 2) ──
-    const previous = await paramRepo.findById(id);
-    if (!previous) {
-      return next(new NotFoundError(`Versión de parámetros con id '${id}' no encontrada`));
-    }
-
     const updated = await paramRepo.updateVersion(id, updateData);
     if (!updated) {
       return next(new NotFoundError(`Versión de parámetros con id '${id}' no encontrada`));
@@ -335,24 +332,32 @@ router.put('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
     if (updateData.modalityRules   !== undefined) changedFields.push('modalityRules');
     if (updateData.initialPaymentRules !== undefined) changedFields.push('initialPaymentRules');
 
-    const ipAddress = (req.headers['x-forwarded-for'] as string | undefined)
-      ?? req.socket.remoteAddress
-      ?? null;
+    const ipAddress = req.ip ?? req.socket.remoteAddress ?? null;
 
-    await AuditLogModel.create({
-      action:     'UPDATE_PARAMETER_VERSION',
-      entity:     'PARAMETER_VERSION',
-      entity_id:  id,
-      actor_type: 'ADMIN',
-      user_id:    adminUserId !== 'unknown' ? adminUserId : null,
-      ip_address: ipAddress ?? null,
-      details: JSON.stringify({
+    try {
+      await AuditLogModel.create({
+        action:     'UPDATE_PARAMETER_VERSION',
+        entity:     'PARAMETER_VERSION',
+        entity_id:  id,
+        actor_type: 'ADMIN',
+        user_id:    adminUserId !== 'unknown' ? adminUserId : null,
+        ip_address: ipAddress ?? null,
+        details: JSON.stringify({
+          adminEmail,
+          changeSummary:    `Campos modificados: ${changedFields.join(', ')}`,
+          previousSnapshot: previous,
+          newSnapshot:      updated,
+        }),
+      });
+    } catch (auditError) {
+      console.error('No se pudo persistir el audit log del parámetro', {
+        error:              auditError,
+        parameterVersionId: id,
+        adminUserId,
         adminEmail,
-        changeSummary:      `Campos modificados: ${changedFields.join(', ')}`,
-        previousSnapshot:   previous,
-        newSnapshot:        updated,
-      }),
-    });
+        changedFields,
+      });
+    }
 
     res.json({
       success: true,
