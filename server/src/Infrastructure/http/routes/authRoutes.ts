@@ -19,6 +19,7 @@ import { SequelizeUserRepository } from '../../persistence/repositories/Sequeliz
 import { LdapAuthService } from '../../auth/LdapAuthService';
 import { JwtTokenService } from '../../auth/JwtTokenService';
 import { logger } from '../../logger';
+import { auditLog, extractIp } from '../../../Application/services/AuditService';
 
 const router = Router();
 
@@ -54,11 +55,35 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction): P
       role: parsed.data.role,
     });
 
+    await auditLog({
+      action:     'LOGIN_SUCCESS',
+      entity:     'SESSION',
+      entity_id:  result.user.id,
+      actor_type: parsed.data.role === 'ADMIN' ? 'ADMIN' : 'STUDENT',
+      user_id:    result.user.id,
+      ip_address: extractIp(req),
+      details:    { email: parsed.data.email, role: parsed.data.role },
+    });
+
     res.json({
       user: result.user,
       token: result.token,
     });
   } catch (error) {
+    await auditLog({
+      action:     'LOGIN_FAILED',
+      entity:     'SESSION',
+      entity_id:  'N/A',
+      actor_type: 'SYSTEM',
+      user_id:    null,
+      ip_address: extractIp(req),
+      details:    {
+        email:  req.body?.email ?? 'unknown',
+        role:   req.body?.role  ?? 'unknown',
+        reason: error instanceof Error ? error.message : 'Unknown',
+      },
+    });
+
     if (error instanceof AppError) {
       next(error);
     } else {
@@ -94,6 +119,17 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
 
     logger.info('Usuario registrado exitosamente', { email: parsed.data.email });
 
+    const newUser = await userRepository.findByEmail(parsed.data.email);
+    await auditLog({
+      action:     'USER_REGISTERED',
+      entity:     'USER',
+      entity_id:  newUser?.id ?? 'unknown',
+      actor_type: 'SYSTEM',
+      user_id:    newUser?.id ?? null,
+      ip_address: extractIp(req),
+      details:    { email: parsed.data.email },
+    });
+
     res.status(201).json({ message: 'Usuario registrado exitosamente' });
   } catch (error) {
     next(error);
@@ -116,6 +152,16 @@ router.post('/forgot-password', async (req: Request, res: Response, next: NextFu
     await requestPasswordResetUseCase.execute(parsed.data, {
       ip: req.ip,
       userAgent: typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : undefined,
+    });
+
+    await auditLog({
+      action:     'PASSWORD_RESET_REQUESTED',
+      entity:     'USER',
+      entity_id:  'N/A',
+      actor_type: 'SYSTEM',
+      user_id:    null,
+      ip_address: extractIp(req),
+      details:    { email: parsed.data.email },
     });
 
     // Siempre retornar éxito (no revelar si el email existe)
@@ -141,6 +187,16 @@ router.post('/reset-password', async (req: Request, res: Response, next: NextFun
     await resetPasswordUseCase.execute(parsed.data);
 
     logger.info('Contraseña restablecida exitosamente');
+
+    await auditLog({
+      action:     'PASSWORD_RESET_COMPLETED',
+      entity:     'USER',
+      entity_id:  'N/A',
+      actor_type: 'SYSTEM',
+      user_id:    null,
+      ip_address: extractIp(req),
+      details:    { context: 'Token de recuperación utilizado exitosamente' },
+    });
 
     res.json({ message: 'Contraseña actualizada exitosamente' });
   } catch (error) {
@@ -189,8 +245,19 @@ router.post('/logout', authGuard, async (req: AuthenticatedRequest, res: Respons
   try {
     const userId = req.user?.userId as string | undefined;
     const email  = req.user?.email  as string | undefined;
+    const role   = req.user?.role   as string | undefined;
 
     logger.info('Sesión cerrada', { userId, email });
+
+    await auditLog({
+      action:     'LOGOUT',
+      entity:     'SESSION',
+      entity_id:  userId ?? 'unknown',
+      actor_type: role === 'ADMIN' ? 'ADMIN' : 'STUDENT',
+      user_id:    userId ?? null,
+      ip_address: extractIp(req),
+      details:    { email: email ?? 'unknown' },
+    });
 
     res.json({ message: 'Sesión cerrada exitosamente.' });
   } catch (error) {

@@ -19,6 +19,7 @@ import { ListMySimulationsUseCase } from '../../../Application/use-cases/ListMyS
 import { UpdateMyProfileSchema } from '../../../Application/dtos/UpdateMyProfileInput';
 import { BadRequestError, UnauthorizedError } from '../../../Core/errors';
 import { UserRole } from '../../../Core/entities/User';
+import { auditLog, extractIp } from '../../../Application/services/AuditService';
 
 const router = Router();
 
@@ -63,7 +64,23 @@ router.patch('/me', async (req: AuthenticatedRequest, res: Response, next: NextF
       throw new BadRequestError(messages);
     }
 
+    const profileBefore = await getMyProfileUseCase.execute(userId);
     const updated = await updateMyProfileUseCase.execute(userId, parsed.data);
+
+    await auditLog({
+      action:     'PROFILE_UPDATED',
+      entity:     'USER',
+      entity_id:  userId,
+      actor_type: 'STUDENT',
+      user_id:    userId,
+      ip_address: extractIp(req),
+      details:    {
+        old_value: profileBefore,
+        new_value: updated,
+        changed_fields: Object.keys(parsed.data),
+      },
+    });
+
     res.json({ user: updated, message: 'Datos actualizados correctamente.' });
   } catch (error) {
     next(error);

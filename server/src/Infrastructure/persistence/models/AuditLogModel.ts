@@ -13,7 +13,7 @@ interface AuditLogAttributes {
   action: string;
   entity: string;
   entity_id: string;
-  actor_type: 'ADMIN' | 'SYSTEM';
+  actor_type: 'ADMIN' | 'STUDENT' | 'SYSTEM';
   user_id: string | null;
   ip_address: string | null;
   details: string;
@@ -33,7 +33,7 @@ export class AuditLogModel
   declare action: string;
   declare entity: string;
   declare entity_id: string;
-  declare actor_type: 'ADMIN' | 'SYSTEM';
+  declare actor_type: 'ADMIN' | 'STUDENT' | 'SYSTEM';
   declare user_id: string | null;
   declare ip_address: string | null;
   declare details: string;
@@ -62,7 +62,7 @@ AuditLogModel.init(
       allowNull: false,
     },
     actor_type: {
-      type: DataTypes.ENUM('ADMIN', 'SYSTEM'),
+      type: DataTypes.ENUM('ADMIN', 'STUDENT', 'SYSTEM'),
       allowNull: false,
       defaultValue: 'ADMIN',
     },
