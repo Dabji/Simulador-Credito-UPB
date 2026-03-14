@@ -47,21 +47,31 @@ router.get('/parameters/audit', async (req: AuthenticatedRequest, res: Response,
         limit,
         offset,
         logs: rows.map(r => {
-          const parsed = JSON.parse(r.details) as {
-            changeSummary: string;
-            previousSnapshot: unknown;
-            newSnapshot: unknown;
-          };
+          // Lógica robusta: Si ya es un objeto, lo usamos; si es string, lo parseamos.
+          let parsed: { changeSummary: string; previousSnapshot: any; newSnapshot: any };
+          
+          try {
+            parsed = typeof r.details === 'string' 
+              ? JSON.parse(r.details) 
+              : r.details;
+          } catch (e) {
+            parsed = { 
+              changeSummary: 'Error al procesar detalles', 
+              previousSnapshot: {}, 
+              newSnapshot: {} 
+            };
+          }
+
           return {
             id:                 r.id,
             parameterVersionId: r.entity_id,
-            adminUserId:        r.user_id,
+            adminUserId:         r.user_id,
             action:             r.action,
-            ipAddress:          r.ip_address,
-            changedAt:          r.created_at,
-            changeSummary:      parsed.changeSummary,
-            previousSnapshot:   parsed.previousSnapshot,
-            newSnapshot:        parsed.newSnapshot,
+            ipAddress:           r.ip_address,
+            changedAt:           r.created_at,
+            changeSummary:       parsed?.changeSummary || 'Sin resumen',
+            previousSnapshot:    parsed?.previousSnapshot || {},
+            newSnapshot:         parsed?.newSnapshot || {},
           };
         }),
       },
