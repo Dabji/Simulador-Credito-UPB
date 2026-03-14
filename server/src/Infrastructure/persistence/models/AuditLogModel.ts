@@ -62,9 +62,12 @@ AuditLogModel.init(
       allowNull: false,
     },
     actor_type: {
-      type: DataTypes.ENUM('ADMIN', 'STUDENT', 'SYSTEM'),
+      type: DataTypes.STRING(20),
       allowNull: false,
       defaultValue: 'ADMIN',
+      validate: {
+        isIn: [['ADMIN', 'STUDENT', 'SYSTEM']],
+      },
     },
     user_id: {
       type: DataTypes.UUID,

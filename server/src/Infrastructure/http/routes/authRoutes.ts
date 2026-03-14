@@ -115,17 +115,16 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
       throw new ValidationError('Los datos de registro no son válidos', fieldErrors);
     }
 
-    await registerUseCase.execute(parsed.data);
+    const newUserId = await registerUseCase.execute(parsed.data);
 
     logger.info('Usuario registrado exitosamente', { email: parsed.data.email });
 
-    const newUser = await userRepository.findByEmail(parsed.data.email);
     await auditLog({
       action:     'USER_REGISTERED',
       entity:     'USER',
-      entity_id:  newUser?.id ?? 'unknown',
+      entity_id:  newUserId,
       actor_type: 'SYSTEM',
-      user_id:    newUser?.id ?? null,
+      user_id:    newUserId,
       ip_address: extractIp(req),
       details:    { email: parsed.data.email },
     });
@@ -253,7 +252,7 @@ router.post('/logout', authGuard, async (req: AuthenticatedRequest, res: Respons
       action:     'LOGOUT',
       entity:     'SESSION',
       entity_id:  userId ?? 'unknown',
-      actor_type: role === 'ADMIN' ? 'ADMIN' : 'STUDENT',
+      actor_type: role === 'ADMIN' ? 'ADMIN' : role === 'STUDENT' ? 'STUDENT' : 'SYSTEM',
       user_id:    userId ?? null,
       ip_address: extractIp(req),
       details:    { email: email ?? 'unknown' },

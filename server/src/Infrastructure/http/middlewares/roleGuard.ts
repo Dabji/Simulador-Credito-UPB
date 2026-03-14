@@ -38,7 +38,7 @@ export function roleGuard(...allowedRoles: UserRole[]) {
       const userRole = user.role as UserRole | undefined;
 
       if (!userRole || !allowedRoles.includes(userRole)) {
-        await auditLog({
+        void auditLog({
           action:     'ACCESS_DENIED',
           entity:     'ROUTE',
           entity_id:  req.originalUrl ?? req.path ?? 'unknown',

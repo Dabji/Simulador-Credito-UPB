@@ -30,6 +30,31 @@ const getMyProfileUseCase      = new GetMyProfileUseCase(userRepo);
 const updateMyProfileUseCase   = new UpdateMyProfileUseCase(userRepo);
 const listMySimulationsUseCase = new ListMySimulationsUseCase(simulationRepo);
 
+const PII_FIELDS = new Set<string>([
+  'identification', 'identificacion', 'document_number', 'documento',
+  'phone', 'telefono', 'mobile', 'celular',
+]);
+
+function maskPii(field: string, value: unknown): unknown {
+  if (!PII_FIELDS.has(field) || value == null) return value;
+  const s = String(value);
+  return s.length <= 4 ? '*'.repeat(s.length) : s.slice(0, 2) + '***' + s.slice(-2);
+}
+
+function auditSubset(
+  source: Record<string, unknown> | null | undefined,
+  fields: string[],
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (!source) return out;
+  for (const f of fields) {
+    if (Object.prototype.hasOwnProperty.call(source, f)) {
+      out[f] = maskPii(f, source[f]);
+    }
+  }
+  return out;
+}
+
 // Todos los endpoints exigen token válido + rol STUDENT
 router.use(authGuard, roleGuard(UserRole.STUDENT));
 
@@ -67,6 +92,7 @@ router.patch('/me', async (req: AuthenticatedRequest, res: Response, next: NextF
     const profileBefore = await getMyProfileUseCase.execute(userId);
     const updated = await updateMyProfileUseCase.execute(userId, parsed.data);
 
+    const changedFields = Object.keys(parsed.data);
     await auditLog({
       action:     'PROFILE_UPDATED',
       entity:     'USER',
@@ -75,9 +101,9 @@ router.patch('/me', async (req: AuthenticatedRequest, res: Response, next: NextF
       user_id:    userId,
       ip_address: extractIp(req),
       details:    {
-        old_value: profileBefore,
-        new_value: updated,
-        changed_fields: Object.keys(parsed.data),
+        old_value:      auditSubset(profileBefore as unknown as Record<string, unknown> | null, changedFields),
+        new_value:      auditSubset(updated as unknown as Record<string, unknown> | null, changedFields),
+        changed_fields: changedFields,
       },
     });
 
