@@ -5,10 +5,12 @@
 // ============================================================
 
 import { Router } from 'express';
-import type { Request, Response, NextFunction } from 'express';
+import type { Response, NextFunction } from 'express';
 import { SequelizeParameterVersionRepository } from '../../persistence/repositories/SequelizeParameterVersionRepository';
 import { BadRequestError, NotFoundError } from '../../../Core/errors';
 import type { UpdateParameterVersionData } from '../../../Core/repositories/IParameterVersionRepository';
+import { AuditLogModel } from '../../persistence/models/AuditLogModel';
+import type { AuthenticatedRequest } from '../middlewares/authGuard';
 
 const router = Router();
 const paramRepo = new SequelizeParameterVersionRepository();
@@ -19,13 +21,75 @@ function isValidDate(str: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(str) && !isNaN(new Date(str).getTime());
 }
 
+// ── GET /api/admin/parameters/audit ─────────────────────────────────────
+
+/**
+ * GET /api/admin/parameters/audit
+ * Retorna el historial de cambios de parametrización (HU-25, Criterio 3).
+ * Query params: limit (default 50), offset (default 0)
+ */
+router.get('/parameters/audit', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const rawLimit  = Number.parseInt(String(req.query['limit']  ?? '50'), 10);
+    const rawOffset = Number.parseInt(String(req.query['offset'] ?? '0'),  10);
+    const limit  = Math.min(Math.max(Number.isNaN(rawLimit)  ? 50 : rawLimit,  1), 200);
+    const offset = Math.max(Number.isNaN(rawOffset) ? 0 : rawOffset, 0);
+
+    const { rows, count } = await AuditLogModel.findAndCountAll({
+      where: { entity: 'PARAMETER_VERSION' },
+      order: [['created_at', 'DESC']],
+      limit,
+      offset,
+    });
+
+    res.json({
+      success: true,
+      data: {
+        total: count,
+        limit,
+        offset,
+        logs: rows.map(r => {
+          // Lógica robusta: Si ya es un objeto, lo usamos; si es string, lo parseamos.
+          let parsed: { changeSummary: string; previousSnapshot: any; newSnapshot: any };
+          
+          try {
+            parsed = typeof r.details === 'string' 
+              ? JSON.parse(r.details) 
+              : r.details;
+          } catch (e) {
+            parsed = { 
+              changeSummary: 'Error al procesar detalles', 
+              previousSnapshot: {}, 
+              newSnapshot: {} 
+            };
+          }
+
+          return {
+            id:                 r.id,
+            parameterVersionId: r.entity_id,
+            adminUserId:         r.user_id,
+            action:             r.action,
+            ipAddress:           r.ip_address,
+            changedAt:           r.created_at,
+            changeSummary:       parsed?.changeSummary || 'Sin resumen',
+            previousSnapshot:    parsed?.previousSnapshot || {},
+            newSnapshot:         parsed?.newSnapshot || {},
+          };
+        }),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // ── GET /api/admin/stats ────────────────────────────────────────────────
 
 /**
  * GET /api/admin/stats
  * Retorna estadísticas generales de administración.
  */
-router.get('/stats', (_req: Request, res: Response): void => {
+router.get('/stats', (_req: AuthenticatedRequest, res: Response): void => {
   // TODO: Implementar conteos reales desde los repositorios en la HU del Dashboard Admin.
   res.json({
     success: true,
@@ -41,7 +105,7 @@ router.get('/stats', (_req: Request, res: Response): void => {
  * Retorna la versión de parámetros actualmente vigente con todas sus reglas.
  * Si no existe versión activa, retorna 404.
  */
-router.get('/parameters/active', async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.get('/parameters/active', async (_req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const version = await paramRepo.findActive();
     if (!version) {
@@ -59,7 +123,7 @@ router.get('/parameters/active', async (_req: Request, res: Response, next: Next
  * GET /api/admin/parameters
  * Lista todas las versiones de parámetros (resumen: id, vigencia, notas, isActive).
  */
-router.get('/parameters', async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.get('/parameters', async (_req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const versions = await paramRepo.findAll();
     res.json({ success: true, data: versions });
@@ -74,9 +138,9 @@ router.get('/parameters', async (_req: Request, res: Response, next: NextFunctio
  * GET /api/admin/parameters/:id
  * Retorna una versión específica de parámetros con todas sus reglas.
  */
-router.get('/parameters/:id', async (req: Request<{ id: string }>, res: Response, next: NextFunction): Promise<void> => {
+router.get('/parameters/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { id } = req.params;
+    const id = req.params['id'] as string;
     const version = await paramRepo.findById(id);
     if (!version) {
       return next(new NotFoundError(`Versión de parámetros con id '${id}' no encontrada`));
@@ -109,9 +173,9 @@ router.get('/parameters/:id', async (req: Request<{ id: string }>, res: Response
  *  - Las tasas de interés deben ser mayores que cero para con_interes.
  *  - No puede existir superposición de vigencias con otras versiones.
  */
-router.put('/parameters/:id', async (req: Request<{ id: string }>, res: Response, next: NextFunction): Promise<void> => {
+router.put('/parameters/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const body = req.body as {
       validFrom?: string;
       validTo?: string | null;
@@ -202,15 +266,16 @@ router.put('/parameters/:id', async (req: Request<{ id: string }>, res: Response
       }
     }
 
+    // ── Cargar versión actual: sirve para overlap check Y snapshot de auditoría ──
+    const previous = await paramRepo.findById(id);
+    if (!previous) {
+      return next(new NotFoundError(`Versión de parámetros con id '${id}' no encontrada`));
+    }
+
     // ── Verificación de superposición de vigencias ───────────
     if (body.validFrom !== undefined || body.validTo !== undefined) {
-      // Para verificar el solapamiento necesitamos saber los valores actuales de la versión
-      const current = await paramRepo.findById(id);
-      if (!current) {
-        return next(new NotFoundError(`Versión de parámetros con id '${id}' no encontrada`));
-      }
-      const fromToCheck = body.validFrom ?? current.validFrom;
-      const toToCheck = body.validTo !== undefined ? body.validTo : current.validTo;
+      const fromToCheck = body.validFrom ?? previous.validFrom;
+      const toToCheck   = body.validTo !== undefined ? body.validTo : previous.validTo;
 
       const overlaps = await paramRepo.hasOverlap(fromToCheck, toToCheck, id);
       if (overlaps) {
@@ -255,9 +320,48 @@ router.put('/parameters/:id', async (req: Request<{ id: string }>, res: Response
       return next(new NotFoundError(`Versión de parámetros con id '${id}' no encontrada`));
     }
 
+    // ── Persistir registro de auditoría ─────────────────────────────────
+    const adminUserId = String(req.user?.['userId'] ?? 'unknown');
+    const adminEmail  = String(req.user?.['email']  ?? 'unknown');
+
+    const changedFields: string[] = [];
+    if (updateData.validFrom       !== undefined) changedFields.push('validFrom');
+    if (updateData.validTo         !== undefined) changedFields.push('validTo');
+    if (updateData.notes           !== undefined) changedFields.push('notes');
+    if (updateData.interestRates   !== undefined) changedFields.push('interestRates');
+    if (updateData.modalityRules   !== undefined) changedFields.push('modalityRules');
+    if (updateData.initialPaymentRules !== undefined) changedFields.push('initialPaymentRules');
+
+    const ipAddress = req.ip ?? req.socket.remoteAddress ?? null;
+
+    try {
+      await AuditLogModel.create({
+        action:     'UPDATE_PARAMETER_VERSION',
+        entity:     'PARAMETER_VERSION',
+        entity_id:  id,
+        actor_type: 'ADMIN',
+        user_id:    adminUserId !== 'unknown' ? adminUserId : null,
+        ip_address: ipAddress ?? null,
+        details: JSON.stringify({
+          adminEmail,
+          changeSummary:    `Campos modificados: ${changedFields.join(', ')}`,
+          previousSnapshot: previous,
+          newSnapshot:      updated,
+        }),
+      });
+    } catch (auditError) {
+      console.error('No se pudo persistir el audit log del parámetro', {
+        error:              auditError,
+        parameterVersionId: id,
+        adminUserId,
+        adminEmail,
+        changedFields,
+      });
+    }
+
     res.json({
       success: true,
-      message: 'Parámetros actualizados correctamente',
+      message: 'Parámetros actualizados correctamente. El cambio ha quedado registrado y aplicará a simulaciones futuras.',
       data: updated,
     });
   } catch (error) {

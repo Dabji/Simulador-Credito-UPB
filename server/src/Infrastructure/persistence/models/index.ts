@@ -6,3 +6,4 @@ export { ModalityRuleModel } from './ModalityRuleModel';
 export { InitialPaymentRuleModel } from './InitialPaymentRuleModel';
 export { SimulationModel } from './SimulationModel';
 export { AmortizationRowModel } from './AmortizationRowModel';
+export { AuditLogModel } from './AuditLogModel';
