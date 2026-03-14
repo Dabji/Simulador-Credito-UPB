@@ -14,7 +14,7 @@ const SALT_ROUNDS = 10;
 export class RegisterUserUseCase {
   constructor(private readonly userRepository: IUserRepository) {}
 
-  async execute(input: RegisterUserInput): Promise<void> {
+  async execute(input: RegisterUserInput): Promise<string> {
     const existingByEmail = await this.userRepository.findByEmail(input.email);
     if (existingByEmail) {
       throw new ConflictError('El correo electrónico ya está registrado');
@@ -42,5 +42,6 @@ export class RegisterUserUseCase {
     });
 
     await this.userRepository.save(user);
+    return user.id;
   }
 }

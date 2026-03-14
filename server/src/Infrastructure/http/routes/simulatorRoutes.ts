@@ -14,6 +14,7 @@ import { SequelizeParameterVersionRepository } from '../../persistence/repositor
 import type { SimulationInput } from '../../../Application/dtos/SimulationInput';
 import { logger } from '../../logger';
 import type { AuthenticatedRequest } from '../middlewares/authGuard';
+import { auditLog, extractIp } from '../../../Application/services/AuditService';
 
 const router = Router();
 
@@ -70,6 +71,23 @@ router.post('/save', async (req: AuthenticatedRequest, res: Response, next: Next
     const result = await saveUseCase.execute(input, userId);
 
     logger.info('Simulación guardada en BD', { id: result.id, userId });
+
+    await auditLog({
+      action:     'SIMULATION_SAVED',
+      entity:     'SIMULATION',
+      entity_id:  result.id,
+      actor_type: 'STUDENT',
+      user_id:    userId,
+      ip_address: extractIp(req),
+      details:    {
+        simulation_id:  result.id,
+        education_level: input.educationLevel,
+        interest_mode:   input.interestMode,
+        tuition_gross:   input.tuitionGross,
+        payments:        input.numberOfPayments,
+      },
+    });
+
     res.json({
       id: result.id,
       savedAt: result.savedAt,

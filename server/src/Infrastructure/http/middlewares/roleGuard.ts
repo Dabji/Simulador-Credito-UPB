@@ -9,6 +9,7 @@ import type { AuthenticatedRequest } from './authGuard';
 import { ForbiddenError, UnauthorizedError } from '../../../Core/errors';
 import { UserRole } from '../../../Core/entities/User';
 import { UserModel } from '../../persistence/models/UserModel';
+import { auditLog, extractIp } from '../../../Application/services/AuditService';
 
 /**
  * Factory que retorna un middleware de Express asíncrono.
@@ -37,6 +38,22 @@ export function roleGuard(...allowedRoles: UserRole[]) {
       const userRole = user.role as UserRole | undefined;
 
       if (!userRole || !allowedRoles.includes(userRole)) {
+        void auditLog({
+          action:     'ACCESS_DENIED',
+          entity:     'ROUTE',
+          entity_id:  req.originalUrl ?? req.path ?? 'unknown',
+          actor_type: userRole === 'ADMIN' ? 'ADMIN' : userRole === 'STUDENT' ? 'STUDENT' : 'SYSTEM',
+          user_id:    userId ?? null,
+          ip_address: extractIp(req),
+          details:    {
+            reason:        'Rol insuficiente',
+            user_role:     userRole ?? 'none',
+            required_roles: allowedRoles,
+            method:        req.method,
+            path:          req.originalUrl ?? req.path,
+          },
+        });
+
         return next(
           new ForbiddenError(
             `Acceso denegado. Se requiere uno de los roles: ${allowedRoles.join(', ')}`,

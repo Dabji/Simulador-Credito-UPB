@@ -1,8 +1,7 @@
 // ============================================================
-// Unit Tests: Audit Log — HU-25
-// Verifica que el registro de auditoría se crea correctamente
-// al actualizar parámetros y que el endpoint GET /audit devuelve
-// los datos en el formato esperado.
+// Unit Tests: Audit Log — HU-25 (Transversal)
+// Verifica que los registros de auditoría se crean correctamente
+// en adminRoutes (PUT + GET /audit) usando el AuditService centralizado.
 // ============================================================
 
 // ── Mocks ────────────────────────────────────────────────────
@@ -10,8 +9,8 @@
 const mockFindById = jest.fn();
 const mockUpdateVersion = jest.fn();
 const mockHasOverlap = jest.fn();
-const mockAuditCreate = jest.fn();
 const mockAuditFindAndCountAll = jest.fn();
+const mockAuditLogFn = jest.fn().mockResolvedValue(undefined);
 
 jest.mock(
   '../../Infrastructure/persistence/repositories/SequelizeParameterVersionRepository',
@@ -28,7 +27,7 @@ jest.mock(
 
 jest.mock('../../Infrastructure/persistence/models/AuditLogModel', () => ({
   AuditLogModel: {
-    create: mockAuditCreate,
+    create: jest.fn().mockResolvedValue({}),
     findAndCountAll: mockAuditFindAndCountAll,
   },
 }));
@@ -41,9 +40,17 @@ jest.mock('../../Infrastructure/config/database', () => ({
   },
 }));
 
+jest.mock('../../Infrastructure/logger', () => ({
+  logger: { error: jest.fn(), warn: jest.fn(), info: jest.fn(), debug: jest.fn() },
+}));
+
+jest.mock('../services/AuditService', () => ({
+  auditLog:  mockAuditLogFn,
+  extractIp: jest.fn().mockReturnValue('127.0.0.1'),
+}));
+
 import { Router } from 'express';
 
-// Importar el router después de los mocks
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const adminRouter = require('../../Infrastructure/http/routes/adminRoutes').default as Router;
 
@@ -56,7 +63,6 @@ function buildApp(): express.Express {
   const app = express();
   app.use(express.json());
 
-  // Simular authGuard: inyectar req.user
   app.use((req: express.Request, _res: express.Response, next: express.NextFunction) => {
     (req as express.Request & { user: Record<string, unknown> }).user = {
       userId: 'test-admin-uuid',
@@ -86,22 +92,21 @@ const fakeVersion = {
 
 // ── Tests ─────────────────────────────────────────────────────
 
-describe('HU-25 — Audit Log', () => {
+describe('HU-25 — Audit Log (Transversal)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  // ── Criterio 2: escritura del audit log al actualizar parámetros ──
+  // ── PUT /parameters/:id — escritura de auditoría ──
 
   describe('PUT /api/admin/parameters/:id — crea registro de auditoría', () => {
-    it('crea audit log con campos correctos al actualizar interestRates', async () => {
+    it('llama a auditLog con campos correctos al actualizar interestRates', async () => {
       mockFindById.mockResolvedValue(fakeVersion);
       mockHasOverlap.mockResolvedValue(false);
       mockUpdateVersion.mockResolvedValue({
         ...fakeVersion,
         interestRates: [{ levelScope: 'PREGRADO', rateMonthly: 0.01 }],
       });
-      mockAuditCreate.mockResolvedValue({});
 
       const app = buildApp();
       const res = await request(app)
@@ -112,42 +117,57 @@ describe('HU-25 — Audit Log', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.message).toContain('registrado');
 
-      expect(mockAuditCreate).toHaveBeenCalledTimes(1);
-      const auditPayload = mockAuditCreate.mock.calls[0][0] as Record<string, unknown>;
-      expect(auditPayload.action).toBe('UPDATE_PARAMETER_VERSION');
-      expect(auditPayload.entity).toBe('PARAMETER_VERSION');
-      expect(auditPayload.entity_id).toBe(FAKE_VERSION_ID);
-      expect(auditPayload.actor_type).toBe('ADMIN');
-      expect(auditPayload.user_id).toBe('test-admin-uuid');
+      expect(mockAuditLogFn).toHaveBeenCalledTimes(1);
+      const entry = mockAuditLogFn.mock.calls[0][0] as Record<string, unknown>;
+      expect(entry.action).toBe('UPDATE_PARAMETER_VERSION');
+      expect(entry.entity).toBe('PARAMETER_VERSION');
+      expect(entry.entity_id).toBe(FAKE_VERSION_ID);
+      expect(entry.actor_type).toBe('ADMIN');
+      expect(entry.user_id).toBe('test-admin-uuid');
 
-      const details = JSON.parse(auditPayload.details as string) as {
-        adminEmail: string;
-        changeSummary: string;
-        previousSnapshot: unknown;
-        newSnapshot: unknown;
-      };
+      const details = entry.details as Record<string, unknown>;
       expect(details.adminEmail).toBe('admin@upb.edu.co');
-      expect(details.changeSummary).toContain('interestRates');
+      expect((details.changeSummary as string)).toContain('interestRates');
       expect(details.previousSnapshot).toBeDefined();
       expect(details.newSnapshot).toBeDefined();
     });
 
-    it('responde 200 aunque falle la inserción del audit log (no bloquea operación principal)', async () => {
+    it('registra múltiples campos modificados en changeSummary', async () => {
       mockFindById.mockResolvedValue(fakeVersion);
       mockHasOverlap.mockResolvedValue(false);
       mockUpdateVersion.mockResolvedValue({ ...fakeVersion, notes: 'Nuevo nota' });
-      mockAuditCreate.mockRejectedValue(new Error('DB connection lost'));
 
       const app = buildApp();
       const res = await request(app)
         .put(`/api/admin/parameters/${FAKE_VERSION_ID}`)
-        .send({ notes: 'Nuevo nota' });
+        .send({
+          notes: 'Nuevo nota',
+          interestRates: [{ levelScope: 'PREGRADO', rateMonthly: 0.01 }],
+        });
 
       expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
+      const entry = mockAuditLogFn.mock.calls[0][0] as Record<string, unknown>;
+      const details = entry.details as Record<string, unknown>;
+      expect(details.changeSummary).toContain('notes');
+      expect(details.changeSummary).toContain('interestRates');
     });
 
-    it('responde 404 si la versión no existe', async () => {
+    it('registra changeSummary "Sin cambios" cuando el body está vacío', async () => {
+      mockFindById.mockResolvedValue(fakeVersion);
+      mockHasOverlap.mockResolvedValue(false);
+      mockUpdateVersion.mockResolvedValue(fakeVersion);
+
+      const app = buildApp();
+      await request(app)
+        .put(`/api/admin/parameters/${FAKE_VERSION_ID}`)
+        .send({});
+
+      const entry = mockAuditLogFn.mock.calls[0][0] as Record<string, unknown>;
+      const details = entry.details as Record<string, unknown>;
+      expect(details.changeSummary).toBe('Sin cambios');
+    });
+
+    it('responde 404 si la versión no existe (sin llamar auditLog)', async () => {
       mockFindById.mockResolvedValue(null);
 
       const app = buildApp();
@@ -156,11 +176,11 @@ describe('HU-25 — Audit Log', () => {
         .send({ notes: 'Test' });
 
       expect(res.status).toBe(404);
-      expect(mockAuditCreate).not.toHaveBeenCalled();
+      expect(mockAuditLogFn).not.toHaveBeenCalled();
     });
   });
 
-  // ── Criterio 3: consulta del historial de auditoría ──
+  // ── GET /parameters/audit — consulta del historial ──
 
   describe('GET /api/admin/parameters/audit — retorna historial', () => {
     const fakeLog = {
@@ -180,7 +200,7 @@ describe('HU-25 — Audit Log', () => {
       }),
     };
 
-    it('devuelve lista de logs con estructura correcta', async () => {
+    it('devuelve lista de logs con estructura correcta incluyendo adminEmail', async () => {
       mockAuditFindAndCountAll.mockResolvedValue({ rows: [fakeLog], count: 1 });
 
       const app = buildApp();
@@ -194,6 +214,7 @@ describe('HU-25 — Audit Log', () => {
       const log = res.body.data.logs[0] as Record<string, unknown>;
       expect(log.action).toBe('UPDATE_PARAMETER_VERSION');
       expect(log.parameterVersionId).toBe(FAKE_VERSION_ID);
+      expect(log.adminEmail).toBe('admin@upb.edu.co');
       expect(log.changeSummary).toContain('interestRates');
       expect(log.previousSnapshot).toBeDefined();
       expect(log.newSnapshot).toBeDefined();

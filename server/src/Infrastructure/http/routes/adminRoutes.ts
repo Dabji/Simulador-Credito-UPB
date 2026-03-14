@@ -11,6 +11,7 @@ import { BadRequestError, NotFoundError } from '../../../Core/errors';
 import type { UpdateParameterVersionData } from '../../../Core/repositories/IParameterVersionRepository';
 import { AuditLogModel } from '../../persistence/models/AuditLogModel';
 import type { AuthenticatedRequest } from '../middlewares/authGuard';
+import { auditLog, extractIp } from '../../../Application/services/AuditService';
 
 const router = Router();
 const paramRepo = new SequelizeParameterVersionRepository();
@@ -50,7 +51,7 @@ router.get('/parameters/audit', async (req: AuthenticatedRequest, res: Response,
         offset,
         logs: rows.map(r => {
           // Lógica robusta: Si ya es un objeto, lo usamos; si es string, lo parseamos.
-          let parsed: { changeSummary: string; previousSnapshot: any; newSnapshot: any };
+          let parsed: { changeSummary: string; previousSnapshot: any; newSnapshot: any; adminEmail?: string };
           
           try {
             parsed = typeof r.details === 'string' 
@@ -67,13 +68,14 @@ router.get('/parameters/audit', async (req: AuthenticatedRequest, res: Response,
           return {
             id:                 r.id,
             parameterVersionId: r.entity_id,
-            adminUserId:         r.user_id,
+            adminUserId:        r.user_id,
+            adminEmail:         parsed?.adminEmail ?? undefined,
             action:             r.action,
-            ipAddress:           r.ip_address,
-            changedAt:           r.created_at,
-            changeSummary:       parsed?.changeSummary || 'Sin resumen',
-            previousSnapshot:    parsed?.previousSnapshot || {},
-            newSnapshot:         parsed?.newSnapshot || {},
+            ipAddress:          r.ip_address,
+            changedAt:          r.created_at,
+            changeSummary:      parsed?.changeSummary || 'Sin resumen',
+            previousSnapshot:   parsed?.previousSnapshot || {},
+            newSnapshot:        parsed?.newSnapshot || {},
           };
         }),
       },
@@ -320,7 +322,7 @@ router.put('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
       return next(new NotFoundError(`Versión de parámetros con id '${id}' no encontrada`));
     }
 
-    // ── Persistir registro de auditoría ─────────────────────────────────
+    // ── Persistir registro de auditoría ─────────────────────────
     const adminUserId = String(req.user?.['userId'] ?? 'unknown');
     const adminEmail  = String(req.user?.['email']  ?? 'unknown');
 
@@ -332,32 +334,24 @@ router.put('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
     if (updateData.modalityRules   !== undefined) changedFields.push('modalityRules');
     if (updateData.initialPaymentRules !== undefined) changedFields.push('initialPaymentRules');
 
-    const ipAddress = req.ip ?? req.socket.remoteAddress ?? null;
+    const changeSummary = changedFields.length > 0
+      ? `Campos modificados: ${changedFields.join(', ')}`
+      : 'Sin cambios';
 
-    try {
-      await AuditLogModel.create({
-        action:     'UPDATE_PARAMETER_VERSION',
-        entity:     'PARAMETER_VERSION',
-        entity_id:  id,
-        actor_type: 'ADMIN',
-        user_id:    adminUserId !== 'unknown' ? adminUserId : null,
-        ip_address: ipAddress ?? null,
-        details: JSON.stringify({
-          adminEmail,
-          changeSummary:    `Campos modificados: ${changedFields.join(', ')}`,
-          previousSnapshot: previous,
-          newSnapshot:      updated,
-        }),
-      });
-    } catch (auditError) {
-      console.error('No se pudo persistir el audit log del parámetro', {
-        error:              auditError,
-        parameterVersionId: id,
-        adminUserId,
+    await auditLog({
+      action:     'UPDATE_PARAMETER_VERSION',
+      entity:     'PARAMETER_VERSION',
+      entity_id:  id,
+      actor_type: 'ADMIN',
+      user_id:    adminUserId !== 'unknown' ? adminUserId : null,
+      ip_address: extractIp(req),
+      details:    {
         adminEmail,
-        changedFields,
-      });
-    }
+        changeSummary,
+        previousSnapshot: previous,
+        newSnapshot:      updated,
+      },
+    });
 
     res.json({
       success: true,

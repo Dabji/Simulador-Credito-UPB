@@ -19,6 +19,7 @@ import { ListMySimulationsUseCase } from '../../../Application/use-cases/ListMyS
 import { UpdateMyProfileSchema } from '../../../Application/dtos/UpdateMyProfileInput';
 import { BadRequestError, UnauthorizedError } from '../../../Core/errors';
 import { UserRole } from '../../../Core/entities/User';
+import { auditLog, extractIp } from '../../../Application/services/AuditService';
 
 const router = Router();
 
@@ -28,6 +29,31 @@ const simulationRepo = new SequelizeSimulationRepository();
 const getMyProfileUseCase      = new GetMyProfileUseCase(userRepo);
 const updateMyProfileUseCase   = new UpdateMyProfileUseCase(userRepo);
 const listMySimulationsUseCase = new ListMySimulationsUseCase(simulationRepo);
+
+const PII_FIELDS = new Set<string>([
+  'identification', 'identificacion', 'document_number', 'documento',
+  'phone', 'telefono', 'mobile', 'celular',
+]);
+
+function maskPii(field: string, value: unknown): unknown {
+  if (!PII_FIELDS.has(field) || value == null) return value;
+  const s = String(value);
+  return s.length <= 4 ? '*'.repeat(s.length) : s.slice(0, 2) + '***' + s.slice(-2);
+}
+
+function auditSubset(
+  source: Record<string, unknown> | null | undefined,
+  fields: string[],
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (!source) return out;
+  for (const f of fields) {
+    if (Object.prototype.hasOwnProperty.call(source, f)) {
+      out[f] = maskPii(f, source[f]);
+    }
+  }
+  return out;
+}
 
 // Todos los endpoints exigen token válido + rol STUDENT
 router.use(authGuard, roleGuard(UserRole.STUDENT));
@@ -63,7 +89,24 @@ router.patch('/me', async (req: AuthenticatedRequest, res: Response, next: NextF
       throw new BadRequestError(messages);
     }
 
+    const profileBefore = await getMyProfileUseCase.execute(userId);
     const updated = await updateMyProfileUseCase.execute(userId, parsed.data);
+
+    const changedFields = Object.keys(parsed.data);
+    await auditLog({
+      action:     'PROFILE_UPDATED',
+      entity:     'USER',
+      entity_id:  userId,
+      actor_type: 'STUDENT',
+      user_id:    userId,
+      ip_address: extractIp(req),
+      details:    {
+        old_value:      auditSubset(profileBefore as unknown as Record<string, unknown> | null, changedFields),
+        new_value:      auditSubset(updated as unknown as Record<string, unknown> | null, changedFields),
+        changed_fields: changedFields,
+      },
+    });
+
     res.json({ user: updated, message: 'Datos actualizados correctamente.' });
   } catch (error) {
     next(error);
