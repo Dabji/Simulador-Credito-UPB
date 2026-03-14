@@ -36,7 +36,7 @@ jest.mock(
   '../../Infrastructure/persistence/repositories/SequelizeUserRepository',
   () => ({
     SequelizeUserRepository: jest.fn().mockImplementation(() => ({
-      findAll: jest.fn().mockResolvedValue([]),
+      findAll: jest.fn().mockResolvedValue({ rows: [], count: 0 }),
       findById: jest.fn().mockResolvedValue(null),
       update: jest.fn().mockResolvedValue(null),
     })),
@@ -142,25 +142,27 @@ describe('HU-25 — Audit Log (Transversal)', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.message).toContain('registrado');
 
-      // 1 UPDATE_PARAMETER_VERSION (await) + 1 PARAMETER_RULE_UPDATED (fire-and-forget)
-      expect(mockAuditLogFn).toHaveBeenCalledTimes(2);
+      // Verificamos por action, sin depender de conteo fijo ni orden
+      const auditEntries = mockAuditLogFn.mock.calls.map(
+        (call: unknown[]) => call[0] as Record<string, unknown>,
+      );
 
-      const mainEntry = mockAuditLogFn.mock.calls[0][0] as Record<string, unknown>;
-      expect(mainEntry.action).toBe('UPDATE_PARAMETER_VERSION');
-      expect(mainEntry.entity).toBe('PARAMETER_VERSION');
-      expect(mainEntry.entity_id).toBe(FAKE_VERSION_ID);
-      expect(mainEntry.actor_type).toBe('ADMIN');
-      expect(mainEntry.user_id).toBe('test-admin-uuid');
+      const mainEntry = auditEntries.find(e => e.action === 'UPDATE_PARAMETER_VERSION');
+      expect(mainEntry).toBeDefined();
+      expect(mainEntry!.entity).toBe('PARAMETER_VERSION');
+      expect(mainEntry!.entity_id).toBe(FAKE_VERSION_ID);
+      expect(mainEntry!.actor_type).toBe('ADMIN');
+      expect(mainEntry!.user_id).toBe('test-admin-uuid');
 
-      const details = mainEntry.details as Record<string, unknown>;
+      const details = mainEntry!.details as Record<string, unknown>;
       expect(details.adminEmail).toBe('admin@upb.edu.co');
       expect((details.changeSummary as string)).toContain('interestRates');
       expect(details.previousSnapshot).toBeDefined();
       expect(details.newSnapshot).toBeDefined();
 
-      const ruleEntry = mockAuditLogFn.mock.calls[1][0] as Record<string, unknown>;
-      expect(ruleEntry.action).toBe('PARAMETER_RULE_UPDATED');
-      expect((ruleEntry.details as Record<string, unknown>).ruleType).toBe('interestRates');
+      const ruleEntry = auditEntries.find(e => e.action === 'PARAMETER_RULE_UPDATED');
+      expect(ruleEntry).toBeDefined();
+      expect((ruleEntry!.details as Record<string, unknown>).ruleType).toBe('interestRates');
     });
 
     it('registra múltiples campos modificados en changeSummary + PARAMETER_RULE_UPDATED', async () => {
@@ -177,12 +179,20 @@ describe('HU-25 — Audit Log (Transversal)', () => {
         });
 
       expect(res.status).toBe(200);
-      // 1 UPDATE_PARAMETER_VERSION + 1 PARAMETER_RULE_UPDATED for interestRates
-      expect(mockAuditLogFn).toHaveBeenCalledTimes(2);
-      const entry = mockAuditLogFn.mock.calls[0][0] as Record<string, unknown>;
-      const details = entry.details as Record<string, unknown>;
+
+      const auditEntries = mockAuditLogFn.mock.calls.map(
+        (call: unknown[]) => call[0] as Record<string, unknown>,
+      );
+
+      const mainEntry = auditEntries.find(e => e.action === 'UPDATE_PARAMETER_VERSION');
+      expect(mainEntry).toBeDefined();
+      const details = mainEntry!.details as Record<string, unknown>;
       expect(details.changeSummary).toContain('notes');
       expect(details.changeSummary).toContain('interestRates');
+
+      const ruleEntry = auditEntries.find(e => e.action === 'PARAMETER_RULE_UPDATED');
+      expect(ruleEntry).toBeDefined();
+      expect((ruleEntry!.details as Record<string, unknown>).ruleType).toBe('interestRates');
     });
 
     it('registra changeSummary "Sin cambios" cuando el body está vacío', async () => {

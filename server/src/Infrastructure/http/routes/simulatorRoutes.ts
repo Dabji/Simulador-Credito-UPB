@@ -11,7 +11,6 @@ import { PreviewSimulationUseCase } from '../../../Application/use-cases/Preview
 import { SaveSimulationUseCase } from '../../../Application/use-cases/SaveSimulationUseCase';
 import { SequelizeSimulationRepository } from '../../persistence/repositories/SequelizeSimulationRepository';
 import { SequelizeParameterVersionRepository } from '../../persistence/repositories/SequelizeParameterVersionRepository';
-import { SimulationModel } from '../../persistence/models/SimulationModel';
 import type { SimulationInput } from '../../../Application/dtos/SimulationInput';
 import { logger } from '../../logger';
 import type { AuthenticatedRequest } from '../middlewares/authGuard';
@@ -133,18 +132,14 @@ router.delete('/:id', async (req: AuthenticatedRequest, res: Response, next: Nex
     }
 
     const simId = req.params['id'] as string;
-    const reason = (req.body as { reason?: string })?.reason ?? 'Eliminado por el usuario';
+    const rawReason = (req.body as { reason?: string })?.reason ?? 'Eliminado por el usuario';
+    const reason = rawReason.length > 255 ? rawReason.slice(0, 255) : rawReason;
 
-    const sim = await SimulationModel.findOne({ where: { id: simId, user_id: userId, deleted_at: null } });
-    if (!sim) {
+    const deleted = await simulationRepo.softDelete(simId, userId, reason);
+    if (!deleted) {
       res.status(404).json({ error: 'Simulación no encontrada.' });
       return;
     }
-
-    await SimulationModel.update(
-      { deleted_at: new Date(), deleted_by: userId, delete_reason: reason },
-      { where: { id: simId } },
-    );
 
     await auditLog({
       action:     'SIMULATION_DELETED',
@@ -195,7 +190,7 @@ router.get('/:id/export', async (req: AuthenticatedRequest, res: Response, next:
       details:    {
         simulation_id: simId,
         format,
-        education_level: simulation.summary.interestMode,
+        interest_mode:   simulation.summary.interestMode,
         total_paid:      simulation.summary.totalPaid,
       },
     });

@@ -412,18 +412,27 @@ router.put('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
 
 /**
  * GET /api/admin/users
- * Lista todos los usuarios registrados.
+ * Lista usuarios registrados con paginación (?limit=50&offset=0).
  */
-router.get('/users', async (_req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+router.get('/users', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const users = await userRepo.findAll();
+    let limit  = Math.max(1, parseInt(req.query['limit']  as string, 10) || 50);
+    let offset = Math.max(0, parseInt(req.query['offset'] as string, 10) || 0);
+    if (limit > 100) limit = 100;
+
+    const { rows: users, count: total } = await userRepo.findAll({ limit, offset });
     res.json({
       success: true,
-      data: users.map(u => {
-        const { password: _, ...safe } = u.toJSON();
-        void _;
-        return safe;
-      }),
+      data: {
+        total,
+        limit,
+        offset,
+        users: users.map(u => {
+          const { password: _, ...safe } = u.toJSON();
+          void _;
+          return safe;
+        }),
+      },
     });
   } catch (error) {
     next(error);
@@ -464,6 +473,12 @@ router.patch('/users/:id', async (req: AuthenticatedRequest, res: Response, next
       isActive?: boolean;
       role?: string;
     };
+
+    // Validar role si viene en el body
+    const VALID_ROLES = ['ADMIN', 'STUDENT'];
+    if (body.role !== undefined && !VALID_ROLES.includes(body.role)) {
+      return next(new BadRequestError(`Rol inválido: ${body.role}. Valores permitidos: ${VALID_ROLES.join(', ')}`));
+    }
 
     const existing = await userRepo.findById(targetId);
     if (!existing) return next(new NotFoundError('Usuario no encontrado'));
@@ -506,8 +521,9 @@ router.patch('/users/:id', async (req: AuthenticatedRequest, res: Response, next
       });
     }
 
-    // Audit: role change
-    if (body.role !== undefined && body.role !== existingJson.role) {
+    // Audit: role change (compare against persisted role to avoid inconsistent logs)
+    const savedJson = saved.toJSON();
+    if (savedJson.role !== existingJson.role) {
       await auditLog({
         action:     'ADMIN_USER_ROLE_CHANGED',
         entity:     'USER',
@@ -520,7 +536,7 @@ router.patch('/users/:id', async (req: AuthenticatedRequest, res: Response, next
           targetUserId: targetId,
           targetEmail:  existingJson.email,
           previousRole: existingJson.role,
-          newRole:      body.role,
+          newRole:      savedJson.role,
         },
       });
     }
