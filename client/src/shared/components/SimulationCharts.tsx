@@ -9,6 +9,7 @@
 ───────────────────────────────────────────────────────────────── */
 
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import type { AmortizationRowDTO } from '../services/api';
 
 /* ── Tipos ──────────────────────────────────────────────────── */
@@ -34,11 +35,33 @@ const PURPLE = '#A85BFF';
 const GREEN  = '#C0D901';
 const GRAY50 = '#F9FAFB';
 
+/* Iconos SVG inline que heredan color del botón (púrpura → blanco al activar) */
+const IconDonut = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <circle cx="8" cy="8" r="6" />
+    <circle cx="8" cy="8" r="2.8" />
+  </svg>
+);
+const IconLine = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="2,12 6,7 10,9 14,4" />
+    <circle cx="6"  cy="7" r="1.2" fill="currentColor" stroke="none" />
+    <circle cx="10" cy="9" r="1.2" fill="currentColor" stroke="none" />
+  </svg>
+);
+const IconBar = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+    <rect x="2"  y="8"  width="3" height="6" rx="1" />
+    <rect x="6.5" y="4" width="3" height="10" rx="1" />
+    <rect x="11" y="6" width="3" height="8" rx="1" />
+  </svg>
+);
+
 /* Opciones del selector */
-const CHART_OPTIONS: { key: ChartType; label: string; icon: string }[] = [
-  { key: 'donut', label: 'Capital vs Intereses', icon: '◉' },
-  { key: 'line',  label: 'Evolución del Saldo',  icon: '📈' },
-  { key: 'bar',   label: 'Capital vs Interés',   icon: '📊' },
+const CHART_OPTIONS: { key: ChartType; label: string; Icon: () => ReactNode }[] = [
+  { key: 'donut', label: 'Capital vs Intereses', Icon: IconDonut },
+  { key: 'line',  label: 'Evolución del Saldo',  Icon: IconLine  },
+  { key: 'bar',   label: 'Capital vs Interés',   Icon: IconBar   },
 ];
 
 /* ── Tooltip reutilizable ──────────────────────────────────── */
@@ -70,7 +93,7 @@ function DonutChart({ totalCapital, totalInterest }: { totalCapital: number; tot
   const capPct = total > 0 ? Math.round((totalCapital / total) * 100) : 100;
   const intPct = 100 - capPct;
 
-  const R = 60;
+  const R = 88;
   const C = 2 * Math.PI * R;
   const capArc = C * (capPct / 100);
   const intArc = C * (intPct / 100);
@@ -82,17 +105,17 @@ function DonutChart({ totalCapital, totalInterest }: { totalCapital: number; tot
   return (
     <div className="flex flex-col items-center gap-4">
       <svg
-        width="220"
-        height="220"
-        viewBox="0 0 220 220"
+        width="300"
+        height="300"
+        viewBox="0 0 300 300"
         role="img"
         aria-label={`Capital: ${capPct}%, Intereses: ${intPct}%`}
         className="transition-transform duration-300 hover:scale-105"
       >
         {/* Arco Capital */}
         <circle
-          cx="110" cy="110" r={R} fill="none"
-          stroke={PURPLE} strokeWidth="38"
+          cx="150" cy="150" r={R} fill="none"
+          stroke={PURPLE} strokeWidth="48"
           strokeDasharray={`${capArc} ${intArc}`}
           strokeDashoffset={C / 4}
           className="transition-all duration-500 cursor-pointer"
@@ -106,8 +129,8 @@ function DonutChart({ totalCapital, totalInterest }: { totalCapital: number; tot
         {/* Arco Intereses */}
         {intPct > 0 && (
           <circle
-            cx="110" cy="110" r={R} fill="none"
-            stroke={GREEN} strokeWidth="38"
+            cx="150" cy="150" r={R} fill="none"
+            stroke={GREEN} strokeWidth="48"
             strokeDasharray={`${intArc} ${capArc}`}
             strokeDashoffset={C / 4 - capArc}
             className="transition-all duration-500 cursor-pointer"
@@ -120,9 +143,9 @@ function DonutChart({ totalCapital, totalInterest }: { totalCapital: number; tot
           />
         )}
         {/* Centro */}
-        <circle cx="110" cy="110" r="44" fill="white" />
-        <text x="110" y="106" textAnchor="middle" fontSize="11" fill="#6B7280">Capital</text>
-        <text x="110" y="122" textAnchor="middle" fontSize="13" fontWeight="bold" fill={PURPLE}>
+        <circle cx="150" cy="150" r="62" fill="white" />
+        <text x="150" y="145" textAnchor="middle" fontSize="13" fill="#6B7280">Capital</text>
+        <text x="150" y="163" textAnchor="middle" fontSize="16" fontWeight="bold" fill={PURPLE}>
           {capPct}%
         </text>
       </svg>
@@ -155,9 +178,9 @@ function LineChart({ schedule }: { schedule: AmortizationRowDTO[] }) {
 
   const fmtCOP = (v: number) => new Intl.NumberFormat('es-CO').format(v) + ' COP';
 
-  const W = 900;
-  const H = 480;
-  const PAD = { top: 32, right: 32, bottom: 56, left: 80 };
+  const W = 700;
+  const H = 320;
+  const PAD = { top: 20, right: 45, bottom: 50, left: 65 };
   const plotW = W - PAD.left - PAD.right;
   const plotH = H - PAD.top - PAD.bottom;
 
@@ -183,17 +206,17 @@ function LineChart({ schedule }: { schedule: AmortizationRowDTO[] }) {
 
   return (
     <div className="flex flex-col items-center">
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full max-w-5xl">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
         {/* Grid horizontal */}
         {yTicks.map((t, i) => (
           <g key={i}>
-            <line x1={PAD.left} y1={t.y} x2={W - PAD.right} y2={t.y} stroke="#E5E7EB" strokeWidth="1" />
-            <text x={PAD.left - 10} y={t.y + 5} textAnchor="end" fontSize="14" fill="#9CA3AF">{t.label}</text>
+            <line x1={PAD.left} y1={t.y} x2={W - PAD.right} y2={t.y} stroke="#E5E7EB" strokeWidth="0.7" />
+            <text x={PAD.left - 6} y={t.y + 4} textAnchor="end" fontSize="11" fill="#9CA3AF">{t.label}</text>
           </g>
         ))}
 
         {/* Línea de datos */}
-        <path d={linePath} fill="none" stroke={PURPLE} strokeWidth="3.5" strokeLinejoin="round" strokeLinecap="round" />
+        <path d={linePath} fill="none" stroke={PURPLE} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
 
         {/* Área debajo */}
         <path
@@ -206,8 +229,8 @@ function LineChart({ schedule }: { schedule: AmortizationRowDTO[] }) {
         {points.map((p, i) => (
           <circle
             key={i}
-            cx={p.x} cy={p.y} r="9"
-            fill="white" stroke={PURPLE} strokeWidth="3"
+            cx={p.x} cy={p.y} r="5"
+            fill="white" stroke={PURPLE} strokeWidth="2"
             className="cursor-pointer transition-all duration-200"
             style={{ filter: 'drop-shadow(0 1px 3px rgba(168,91,255,0.3))' }}
             onMouseMove={(e) => setTooltip({
@@ -224,7 +247,7 @@ function LineChart({ schedule }: { schedule: AmortizationRowDTO[] }) {
 
         {/* Eje X: etiquetas de cuota */}
         {points.map((p, i) => (
-          <text key={i} x={p.x} y={H - 12} textAnchor="middle" fontSize="15" fontWeight="600" fill="#6B7280">
+          <text key={i} x={p.x} y={H - 12} textAnchor="middle" fontSize="12" fontWeight="500" fill="#6B7280">
             Cuota {p.row.period}
           </text>
         ))}
@@ -246,16 +269,16 @@ function BarChart({ schedule }: { schedule: AmortizationRowDTO[] }) {
 
   const fmtCOP = (v: number) => new Intl.NumberFormat('es-CO').format(v) + ' COP';
 
-  const W = 900;
-  const H = 480;
-  const PAD = { top: 32, right: 32, bottom: 56, left: 80 };
+  const W = 700;
+  const H = 320;
+  const PAD = { top: 20, right: 45, bottom: 50, left: 65 };
   const plotW = W - PAD.left - PAD.right;
   const plotH = H - PAD.top - PAD.bottom;
 
   const maxPayment = Math.max(...schedule.map(r => r.payment));
   const groupW = plotW / schedule.length;
-  const barW = Math.min(groupW * 0.40, 56);
-  const gap = 3;
+  const barW = Math.min(groupW * 0.36, 30);
+  const gap = 4;
 
   // Eje Y
   const yTicks = Array.from({ length: 5 }, (_, i) => {
@@ -268,12 +291,12 @@ function BarChart({ schedule }: { schedule: AmortizationRowDTO[] }) {
 
   return (
     <div className="flex flex-col items-center">
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full max-w-5xl">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
         {/* Grid */}
         {yTicks.map((t, i) => (
           <g key={i}>
-            <line x1={PAD.left} y1={t.y} x2={W - PAD.right} y2={t.y} stroke="#E5E7EB" strokeWidth="1" />
-            <text x={PAD.left - 10} y={t.y + 5} textAnchor="end" fontSize="14" fill="#9CA3AF">{t.label}</text>
+            <line x1={PAD.left} y1={t.y} x2={W - PAD.right} y2={t.y} stroke="#E5E7EB" strokeWidth="0.7" />
+            <text x={PAD.left - 6} y={t.y + 4} textAnchor="end" fontSize="11" fill="#9CA3AF">{t.label}</text>
           </g>
         ))}
 
@@ -318,7 +341,7 @@ function BarChart({ schedule }: { schedule: AmortizationRowDTO[] }) {
                 onMouseLeave={() => setTooltip(t => ({ ...t, visible: false }))}
               />
               {/* Etiqueta cuota */}
-              <text x={cx} y={H - 12} textAnchor="middle" fontSize="15" fontWeight="600" fill="#6B7280">
+              <text x={cx} y={H - 12} textAnchor="middle" fontSize="12" fontWeight="500" fill="#6B7280">
                 Cuota {row.period}
               </text>
             </g>
@@ -352,7 +375,7 @@ export function SimulationCharts({ schedule, totalCapital, totalInterest }: Simu
     <div className="mb-8">
       {/* Selector de gráficas — horizontal, morado suave */}
       <div className="flex flex-wrap items-center justify-center gap-2 mb-5">
-        {CHART_OPTIONS.map(({ key, label, icon }) => (
+        {CHART_OPTIONS.map(({ key, label, Icon }) => (
           <button
             key={key}
             type="button"
@@ -371,7 +394,7 @@ export function SimulationCharts({ schedule, totalCapital, totalInterest }: Simu
               : { backgroundColor: '#F3E8FF', border: '1px solid #DDD6FE' }
             }
           >
-            <span className="text-base">{icon}</span>
+            <Icon />
             {label}
           </button>
         ))}
@@ -379,13 +402,13 @@ export function SimulationCharts({ schedule, totalCapital, totalInterest }: Simu
 
       {/* Contenedor de la gráfica activa */}
       <div
-        className="rounded-2xl p-5 transition-all duration-300"
+        className="rounded-2xl px-6 py-8 transition-all duration-300"
         style={{ backgroundColor: GRAY50, border: '1px solid #EBEBF0' }}
       >
-        <h3 className="text-sm font-bold text-gray-800 mb-4 text-center">
+        <h3 className="text-base font-bold text-gray-800 mb-6 text-center tracking-tight">
           {CHART_OPTIONS.find(o => o.key === activeChart)?.label}
         </h3>
-        <div className="flex items-center justify-center min-h-[220px]">
+        <div className="w-full">
           {activeChart === 'donut' && (
             <DonutChart totalCapital={totalCapital} totalInterest={totalInterest} />
           )}

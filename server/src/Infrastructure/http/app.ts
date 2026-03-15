@@ -58,7 +58,7 @@ export function createApp(): express.Application {
   app.use('/api/simulator', simulatorPublicRoutes);
 
   // Parámetros activos — público (student + guest necesitan config dinámica)
-  app.use('/api/parameters', parameterPublicRoutes);
+  app.use('/api/parameters', simulatorLimiter, parameterPublicRoutes);
 
   // ── Rutas Protegidas ──────────────────────────────────────
   // Rutas protegidas por rol (HU-07)

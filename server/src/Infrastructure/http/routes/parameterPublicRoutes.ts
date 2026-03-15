@@ -28,8 +28,8 @@ router.get('/active', async (_req: Request, res: Response): Promise<void> => {
 
     res.json({ success: true, data: active });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Error interno del servidor';
-    res.status(500).json({ error: message });
+    console.error('Error fetching active parameters:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 
