@@ -32,10 +32,35 @@ jest.mock('../../Infrastructure/persistence/models/AuditLogModel', () => ({
   },
 }));
 
+jest.mock(
+  '../../Infrastructure/persistence/repositories/SequelizeUserRepository',
+  () => ({
+    SequelizeUserRepository: jest.fn().mockImplementation(() => ({
+      findAll: jest.fn().mockResolvedValue({ rows: [], count: 0 }),
+      findById: jest.fn().mockResolvedValue(null),
+      update: jest.fn().mockResolvedValue(null),
+    })),
+  }),
+);
+
+jest.mock('../../Infrastructure/persistence/models/UserModel', () => ({
+  UserModel: {
+    init: jest.fn(),
+    findByPk: jest.fn(),
+    findAll: jest.fn(),
+    findOne: jest.fn(),
+    update: jest.fn(),
+    create: jest.fn(),
+    destroy: jest.fn(),
+  },
+}));
+
 jest.mock('../../Infrastructure/config/database', () => ({
   Database: {
     getInstance: jest.fn().mockReturnValue({
-      getSequelize: jest.fn().mockReturnValue({}),
+      getSequelize: jest.fn().mockReturnValue({
+        define: jest.fn().mockReturnValue({}),
+      }),
     }),
   },
 }));
@@ -117,22 +142,30 @@ describe('HU-25 — Audit Log (Transversal)', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.message).toContain('registrado');
 
-      expect(mockAuditLogFn).toHaveBeenCalledTimes(1);
-      const entry = mockAuditLogFn.mock.calls[0][0] as Record<string, unknown>;
-      expect(entry.action).toBe('UPDATE_PARAMETER_VERSION');
-      expect(entry.entity).toBe('PARAMETER_VERSION');
-      expect(entry.entity_id).toBe(FAKE_VERSION_ID);
-      expect(entry.actor_type).toBe('ADMIN');
-      expect(entry.user_id).toBe('test-admin-uuid');
+      // Verificamos por action, sin depender de conteo fijo ni orden
+      const auditEntries = mockAuditLogFn.mock.calls.map(
+        (call: unknown[]) => call[0] as Record<string, unknown>,
+      );
 
-      const details = entry.details as Record<string, unknown>;
+      const mainEntry = auditEntries.find(e => e.action === 'UPDATE_PARAMETER_VERSION');
+      expect(mainEntry).toBeDefined();
+      expect(mainEntry!.entity).toBe('PARAMETER_VERSION');
+      expect(mainEntry!.entity_id).toBe(FAKE_VERSION_ID);
+      expect(mainEntry!.actor_type).toBe('ADMIN');
+      expect(mainEntry!.user_id).toBe('test-admin-uuid');
+
+      const details = mainEntry!.details as Record<string, unknown>;
       expect(details.adminEmail).toBe('admin@upb.edu.co');
       expect((details.changeSummary as string)).toContain('interestRates');
       expect(details.previousSnapshot).toBeDefined();
       expect(details.newSnapshot).toBeDefined();
+
+      const ruleEntry = auditEntries.find(e => e.action === 'PARAMETER_RULE_UPDATED');
+      expect(ruleEntry).toBeDefined();
+      expect((ruleEntry!.details as Record<string, unknown>).ruleType).toBe('interestRates');
     });
 
-    it('registra múltiples campos modificados en changeSummary', async () => {
+    it('registra múltiples campos modificados en changeSummary + PARAMETER_RULE_UPDATED', async () => {
       mockFindById.mockResolvedValue(fakeVersion);
       mockHasOverlap.mockResolvedValue(false);
       mockUpdateVersion.mockResolvedValue({ ...fakeVersion, notes: 'Nuevo nota' });
@@ -146,10 +179,20 @@ describe('HU-25 — Audit Log (Transversal)', () => {
         });
 
       expect(res.status).toBe(200);
-      const entry = mockAuditLogFn.mock.calls[0][0] as Record<string, unknown>;
-      const details = entry.details as Record<string, unknown>;
+
+      const auditEntries = mockAuditLogFn.mock.calls.map(
+        (call: unknown[]) => call[0] as Record<string, unknown>,
+      );
+
+      const mainEntry = auditEntries.find(e => e.action === 'UPDATE_PARAMETER_VERSION');
+      expect(mainEntry).toBeDefined();
+      const details = mainEntry!.details as Record<string, unknown>;
       expect(details.changeSummary).toContain('notes');
       expect(details.changeSummary).toContain('interestRates');
+
+      const ruleEntry = auditEntries.find(e => e.action === 'PARAMETER_RULE_UPDATED');
+      expect(ruleEntry).toBeDefined();
+      expect((ruleEntry!.details as Record<string, unknown>).ruleType).toBe('interestRates');
     });
 
     it('registra changeSummary "Sin cambios" cuando el body está vacío', async () => {

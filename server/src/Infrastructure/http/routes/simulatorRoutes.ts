@@ -119,4 +119,90 @@ router.get('/history', async (req: AuthenticatedRequest, res: Response, next: Ne
   }
 });
 
+/**
+ * DELETE /api/simulator/:id
+ * Soft-delete de una simulación del usuario autenticado.
+ */
+router.delete('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.user?.userId as string | undefined;
+    if (!userId) {
+      res.status(401).json({ error: 'Usuario no autenticado.' });
+      return;
+    }
+
+    const simId = req.params['id'] as string;
+    const rawReason = (req.body as { reason?: string })?.reason ?? 'Eliminado por el usuario';
+    const reason = rawReason.length > 255 ? rawReason.slice(0, 255) : rawReason;
+
+    const deleted = await simulationRepo.softDelete(simId, userId, reason);
+    if (!deleted) {
+      res.status(404).json({ error: 'Simulación no encontrada.' });
+      return;
+    }
+
+    await auditLog({
+      action:     'SIMULATION_DELETED',
+      entity:     'SIMULATION',
+      entity_id:  simId,
+      actor_type: 'STUDENT',
+      user_id:    userId,
+      ip_address: extractIp(req),
+      details:    { simulation_id: simId, reason, origin: 'STUDENT' },
+    });
+
+    logger.info('Simulación eliminada (soft-delete)', { id: simId, userId });
+    res.json({ success: true, message: 'Simulación eliminada correctamente.' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/simulator/:id/export
+ * Exporta los datos de una simulación en formato JSON.
+ * Registra SIMULATION_EXPORTED en auditoría.
+ */
+router.get('/:id/export', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.user?.userId as string | undefined;
+    if (!userId) {
+      res.status(401).json({ error: 'Usuario no autenticado.' });
+      return;
+    }
+
+    const simId = req.params['id'] as string;
+    const format = (req.query['format'] as string) ?? 'json';
+
+    const simulation = await simulationRepo.findById(simId);
+    if (!simulation || simulation.userId !== userId) {
+      res.status(404).json({ error: 'Simulación no encontrada.' });
+      return;
+    }
+
+    await auditLog({
+      action:     'SIMULATION_EXPORTED',
+      entity:     'SIMULATION',
+      entity_id:  simId,
+      actor_type: 'STUDENT',
+      user_id:    userId,
+      ip_address: extractIp(req),
+      details:    {
+        simulation_id: simId,
+        format,
+        interest_mode:   simulation.summary.interestMode,
+        total_paid:      simulation.summary.totalPaid,
+      },
+    });
+
+    logger.info('Simulación exportada', { id: simId, userId, format });
+
+    res.setHeader('Content-Disposition', `attachment; filename="simulacion-${simId}.json"`);
+    res.setHeader('Content-Type', 'application/json');
+    res.json({ success: true, data: simulation.summary });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

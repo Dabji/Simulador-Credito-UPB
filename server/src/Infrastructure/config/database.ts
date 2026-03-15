@@ -49,6 +49,7 @@ export class Database {
       username: env.DB_USER,
       password: env.DB_PASSWORD,
       logging: env.NODE_ENV === 'development' ? console.log : false,
+      timezone: '-05:00', // America/Bogota (UTC-5)
       dialectOptions,
       pool: {
         max: 10,

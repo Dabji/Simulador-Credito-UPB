@@ -51,7 +51,29 @@ export async function auditLog(entry: AuditEntry): Promise<void> {
 
 /**
  * Extrae la IP del request de Express de forma segura.
+ * - Respeta x-forwarded-for (primer valor) cuando se está detrás de un proxy.
+ * - Conserva ::1 tal cual (loopback IPv6 local).
+ * - Elimina el prefijo ::ffff: de direcciones IPv4-mapped IPv6
+ *   (p. ej. ::ffff:192.168.1.10 → 192.168.1.10).
  */
-export function extractIp(req: { ip?: string; socket?: { remoteAddress?: string } }): string | null {
-  return req.ip ?? req.socket?.remoteAddress ?? null;
+export function extractIp(req: {
+  ip?: string;
+  headers?: Record<string, string | string[] | undefined>;
+  socket?: { remoteAddress?: string };
+}): string | null {
+  const forwarded = req.headers?.['x-forwarded-for'];
+  const forwardedValue = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+  const raw =
+    (typeof forwardedValue === 'string' ? forwardedValue.split(',')[0]?.trim() : undefined)
+    ?? req.ip
+    ?? req.socket?.remoteAddress
+    ?? null;
+
+  if (!raw) return null;
+
+  // Quitar prefijo IPv4-mapped IPv6 (e.g. ::ffff:192.168.1.10 → 192.168.1.10)
+  // pero conservar ::1 tal cual (loopback IPv6 local)
+  if (raw.startsWith('::ffff:')) return raw.slice(7);
+
+  return raw;
 }

@@ -11,7 +11,7 @@ export interface IUserRepository {
   findByEmail(email: string): Promise<User | null>;
   findByIdentification(identificationNumber: string): Promise<User | null>;
   findByDocument(documentNumber: string): Promise<User | null>;
-  findAll(): Promise<User[]>;
+  findAll(options?: { limit?: number; offset?: number }): Promise<{ rows: User[]; count: number }>;
   save(user: User): Promise<User>;
   update(user: User): Promise<User>;
   updateLastLogin(userId: string): Promise<void>;

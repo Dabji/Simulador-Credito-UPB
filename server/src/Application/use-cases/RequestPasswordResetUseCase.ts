@@ -10,6 +10,7 @@ import { PasswordResetTokenModel } from '../../Infrastructure/persistence/models
 import type { ForgotPasswordInput } from '../dtos/ForgotPasswordInput';
 import { EmailService } from '../../Infrastructure/email/EmailService';
 import { logger, logDev } from '../../Infrastructure/logger';
+import { auditLog } from '../services/AuditService';
 
 const TOKEN_EXPIRY_HOURS = 1;
 
@@ -72,6 +73,16 @@ export class RequestPasswordResetUseCase {
     // Enviar correo electrónico con el enlace de recuperación
     try {
       await this.emailService.sendPasswordResetEmail(input.email, tokenPlain);
+
+      void auditLog({
+        action:     'PASSWORD_RESET_EMAIL_SENT',
+        entity:     'USER',
+        entity_id:  user.id,
+        actor_type: 'SYSTEM',
+        user_id:    user.id,
+        ip_address: context?.ip ?? null,
+        details:    { email: input.email },
+      });
     } catch (emailErr) {
       logger.error('Error al enviar correo de recuperación', {
         email: input.email,

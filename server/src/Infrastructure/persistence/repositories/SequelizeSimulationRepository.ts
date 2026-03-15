@@ -130,6 +130,14 @@ export class SequelizeSimulationRepository implements ISimulationRepository {
     }));
   }
 
+  async softDelete(id: string, userId: string, reason: string): Promise<boolean> {
+    const [affectedRows] = await SimulationModel.update(
+      { deleted_at: new Date(), deleted_by: userId, delete_reason: reason },
+      { where: { id, user_id: userId, deleted_at: null } },
+    );
+    return affectedRows > 0;
+  }
+
   private toPersistedSimulation(
     sim: SimulationModel,
     rows: AmortizationRowModel[],

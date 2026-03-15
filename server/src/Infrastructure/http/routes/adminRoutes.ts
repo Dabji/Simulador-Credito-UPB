@@ -1,12 +1,14 @@
 // ============================================================
 // Express Routes: Admin — Parámetros Financieros (RF-10, RF-23, RF-24)
-// Gestión administrativa de versiones de parámetros y tasas de interés.
+// y Gestión de Usuarios (HU-82).
 // Todos los endpoints bajo /api/admin → protegidos por authGuard + roleGuard(ADMIN).
 // ============================================================
 
 import { Router } from 'express';
 import type { Response, NextFunction } from 'express';
 import { SequelizeParameterVersionRepository } from '../../persistence/repositories/SequelizeParameterVersionRepository';
+import { SequelizeUserRepository } from '../../persistence/repositories/SequelizeUserRepository';
+import { User, UserRole } from '../../../Core/entities/User';
 import { BadRequestError, NotFoundError } from '../../../Core/errors';
 import type { UpdateParameterVersionData } from '../../../Core/repositories/IParameterVersionRepository';
 import { AuditLogModel } from '../../persistence/models/AuditLogModel';
@@ -15,6 +17,7 @@ import { auditLog, extractIp } from '../../../Application/services/AuditService'
 
 const router = Router();
 const paramRepo = new SequelizeParameterVersionRepository();
+const userRepo  = new SequelizeUserRepository();
 
 // ── Helpers de validación ────────────────────────────────────────────────
 
@@ -338,13 +341,16 @@ router.put('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
       ? `Campos modificados: ${changedFields.join(', ')}`
       : 'Sin cambios';
 
+    const ipAddress = extractIp(req);
+    const auditUserId = adminUserId !== 'unknown' ? adminUserId : null;
+
     await auditLog({
       action:     'UPDATE_PARAMETER_VERSION',
       entity:     'PARAMETER_VERSION',
       entity_id:  id,
       actor_type: 'ADMIN',
-      user_id:    adminUserId !== 'unknown' ? adminUserId : null,
-      ip_address: extractIp(req),
+      user_id:    auditUserId,
+      ip_address: ipAddress,
       details:    {
         adminEmail,
         changeSummary,
@@ -353,11 +359,211 @@ router.put('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
       },
     });
 
+    // Granular PARAMETER_RULE_UPDATED per rule type
+    const ruleTypes = ['interestRates', 'modalityRules', 'initialPaymentRules'] as const;
+    for (const ruleType of ruleTypes) {
+      if (updateData[ruleType] !== undefined) {
+        void auditLog({
+          action:     'PARAMETER_RULE_UPDATED',
+          entity:     'PARAMETER_VERSION',
+          entity_id:  id,
+          actor_type: 'ADMIN',
+          user_id:    auditUserId,
+          ip_address: ipAddress,
+          details:    {
+            adminEmail,
+            ruleType,
+            previousValue: (previous as unknown as Record<string, unknown>)[ruleType],
+            newValue:      (updated  as unknown as Record<string, unknown>)[ruleType],
+          },
+        });
+      }
+    }
+
+    // Detect if this version became the active one after the update
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date());
+    const isNowActive = updated.validFrom <= today && (updated.validTo === null || updated.validTo >= today);
+    const wasActive   = previous.validFrom <= today && (previous.validTo === null || previous.validTo >= today);
+    if (isNowActive && !wasActive) {
+      void auditLog({
+        action:     'PARAMETER_VERSION_ACTIVATED',
+        entity:     'PARAMETER_VERSION',
+        entity_id:  id,
+        actor_type: 'ADMIN',
+        user_id:    auditUserId,
+        ip_address: ipAddress,
+        details:    { adminEmail, validFrom: updated.validFrom, validTo: updated.validTo },
+      });
+    }
+
     res.json({
       success: true,
       message: 'Parámetros actualizados correctamente. El cambio ha quedado registrado y aplicará a simulaciones futuras.',
       data: updated,
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// HU-82: Gestión administrativa de usuarios
+// ══════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/admin/users
+ * Lista usuarios registrados con paginación (?limit=50&offset=0).
+ */
+router.get('/users', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    let limit  = Math.max(1, parseInt(req.query['limit']  as string, 10) || 50);
+    let offset = Math.max(0, parseInt(req.query['offset'] as string, 10) || 0);
+    if (limit > 100) limit = 100;
+
+    const { rows: users, count: total } = await userRepo.findAll({ limit, offset });
+    res.json({
+      success: true,
+      data: {
+        total,
+        limit,
+        offset,
+        users: users.map(u => {
+          const { password: _, ...safe } = u.toJSON();
+          void _;
+          return safe;
+        }),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/admin/users/:id
+ * Detalle de un usuario específico.
+ */
+router.get('/users/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const user = await userRepo.findById(req.params['id'] as string);
+    if (!user) return next(new NotFoundError('Usuario no encontrado'));
+    const { password: _, ...safe } = user.toJSON();
+    void _;
+    res.json({ success: true, data: safe });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * PATCH /api/admin/users/:id
+ * HU-82: Actualiza información de un usuario (nombre, teléfono, estado, rol).
+ * Genera audit logs diferenciados:
+ *   - ADMIN_USER_STATUS_CHANGED cuando cambia is_active
+ *   - ADMIN_USER_ROLE_CHANGED  cuando cambia role
+ *   - ADMIN_USER_UPDATED       para cualquier otro cambio de datos
+ */
+router.patch('/users/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const targetId = req.params['id'] as string;
+    const body = req.body as {
+      firstName?: string;
+      lastName?: string;
+      phone?: string;
+      isActive?: boolean;
+      role?: string;
+    };
+
+    // Validar role si viene en el body
+    const VALID_ROLES = ['ADMIN', 'STUDENT'];
+    if (body.role !== undefined && !VALID_ROLES.includes(body.role)) {
+      return next(new BadRequestError(`Rol inválido: ${body.role}. Valores permitidos: ${VALID_ROLES.join(', ')}`));
+    }
+
+    const existing = await userRepo.findById(targetId);
+    if (!existing) return next(new NotFoundError('Usuario no encontrado'));
+
+    const adminUserId = String(req.user?.['userId'] ?? 'unknown');
+    const adminEmail  = String(req.user?.['email']  ?? 'unknown');
+    const ipAddress   = extractIp(req);
+    const auditUserId = adminUserId !== 'unknown' ? adminUserId : null;
+
+    // Build updated user
+    const existingJson = existing.toJSON();
+    const updatedUser = User.reconstitute({
+      ...existingJson,
+      firstName: body.firstName ?? existingJson.firstName,
+      lastName:  body.lastName  ?? existingJson.lastName,
+      phone:     body.phone     ?? existingJson.phone,
+      isActive:  body.isActive  ?? existingJson.isActive,
+      role:      (body.role === 'ADMIN' ? UserRole.ADMIN : body.role === 'STUDENT' ? UserRole.STUDENT : existingJson.role),
+      updatedAt: new Date(),
+    });
+
+    const saved = await userRepo.update(updatedUser);
+
+    // Audit: status change
+    if (body.isActive !== undefined && body.isActive !== existingJson.isActive) {
+      await auditLog({
+        action:     'ADMIN_USER_STATUS_CHANGED',
+        entity:     'USER',
+        entity_id:  targetId,
+        actor_type: 'ADMIN',
+        user_id:    auditUserId,
+        ip_address: ipAddress,
+        details:    {
+          adminEmail,
+          targetUserId: targetId,
+          targetEmail:  existingJson.email,
+          previousStatus: existingJson.isActive,
+          newStatus:      body.isActive,
+        },
+      });
+    }
+
+    // Audit: role change (compare against persisted role to avoid inconsistent logs)
+    const savedJson = saved.toJSON();
+    if (savedJson.role !== existingJson.role) {
+      await auditLog({
+        action:     'ADMIN_USER_ROLE_CHANGED',
+        entity:     'USER',
+        entity_id:  targetId,
+        actor_type: 'ADMIN',
+        user_id:    auditUserId,
+        ip_address: ipAddress,
+        details:    {
+          adminEmail,
+          targetUserId: targetId,
+          targetEmail:  existingJson.email,
+          previousRole: existingJson.role,
+          newRole:      savedJson.role,
+        },
+      });
+    }
+
+    // Audit: general data update (only if non-status/role fields changed)
+    const dataFields = ['firstName', 'lastName', 'phone'] as const;
+    const changedData = dataFields.filter(f => body[f] !== undefined && body[f] !== (existingJson as unknown as Record<string, unknown>)[f]);
+    if (changedData.length > 0) {
+      await auditLog({
+        action:     'ADMIN_USER_UPDATED',
+        entity:     'USER',
+        entity_id:  targetId,
+        actor_type: 'ADMIN',
+        user_id:    auditUserId,
+        ip_address: ipAddress,
+        details:    {
+          adminEmail,
+          targetUserId: targetId,
+          targetEmail:  existingJson.email,
+          changedFields: changedData,
+        },
+      });
+    }
+
+    const { password: _, ...safeResult } = saved.toJSON();
+    void _;
+    res.json({ success: true, data: safeResult, message: 'Usuario actualizado correctamente.' });
   } catch (error) {
     next(error);
   }

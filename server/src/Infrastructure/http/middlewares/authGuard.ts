@@ -34,21 +34,25 @@ export function authGuard(
   }
 
   const token = authHeader.slice(7);
-  const payload = tokenService.verify(token);
+  const result = tokenService.verifyDetailed(token);
 
-  if (!payload) {
+  if (!result.valid) {
+    const isExpired = result.reason === 'expired';
     void auditLog({
-      action:     'TOKEN_REJECTED',
+      action:     isExpired ? 'SESSION_EXPIRED' : 'TOKEN_REJECTED',
       entity:     'SESSION',
       entity_id:  'N/A',
       actor_type: 'SYSTEM',
       user_id:    null,
       ip_address: extractIp(req),
-      details:    { reason: 'Token inválido o expirado', path: req.originalUrl ?? req.path },
+      details:    {
+        reason: isExpired ? 'Token expirado' : 'Token inválido',
+        path:   req.originalUrl ?? req.path,
+      },
     });
-    return next(new UnauthorizedError('Token inválido o expirado'));
+    return next(new UnauthorizedError(isExpired ? 'La sesión ha expirado' : 'Token inválido o expirado'));
   }
 
-  req.user = payload;
+  req.user = result.payload;
   next();
 }

@@ -12,7 +12,7 @@ import { ForgotPasswordSchema } from '../../../Application/dtos/ForgotPasswordIn
 import { ResetPasswordSchema } from '../../../Application/dtos/ResetPasswordInput';
 import { RequestPasswordResetUseCase } from '../../../Application/use-cases/RequestPasswordResetUseCase';
 import { ResetPasswordUseCase } from '../../../Application/use-cases/ResetPasswordUseCase';
-import { AppError, BadRequestError, NotFoundError, UnauthorizedError, ValidationError } from '../../../Core/errors';
+import { AppError, BadRequestError, ConflictError, NotFoundError, UnauthorizedError, ValidationError } from '../../../Core/errors';
 import { authGuard } from '../middlewares/authGuard';
 import type { AuthenticatedRequest } from '../middlewares/authGuard';
 import { SequelizeUserRepository } from '../../persistence/repositories/SequelizeUserRepository';
@@ -131,6 +131,17 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
 
     res.status(201).json({ message: 'Usuario registrado exitosamente' });
   } catch (error) {
+    if (error instanceof ConflictError) {
+      void auditLog({
+        action:     'USER_REGISTER_FAILED_DUPLICATE_EMAIL',
+        entity:     'USER',
+        entity_id:  'N/A',
+        actor_type: 'SYSTEM',
+        user_id:    null,
+        ip_address: extractIp(req),
+        details:    { email: req.body?.email ?? 'unknown', reason: error.message },
+      });
+    }
     next(error);
   }
 });
@@ -199,6 +210,28 @@ router.post('/reset-password', async (req: Request, res: Response, next: NextFun
 
     res.json({ message: 'Contraseña actualizada exitosamente' });
   } catch (error) {
+    const resetReason = (error as { resetTokenReason?: string }).resetTokenReason;
+    if (resetReason === 'INVALID') {
+      void auditLog({
+        action:     'PASSWORD_RESET_TOKEN_INVALID',
+        entity:     'USER',
+        entity_id:  'N/A',
+        actor_type: 'SYSTEM',
+        user_id:    null,
+        ip_address: extractIp(req),
+        details:    { reason: 'Token de recuperación inválido' },
+      });
+    } else if (resetReason === 'EXPIRED') {
+      void auditLog({
+        action:     'PASSWORD_RESET_TOKEN_EXPIRED',
+        entity:     'USER',
+        entity_id:  'N/A',
+        actor_type: 'SYSTEM',
+        user_id:    null,
+        ip_address: extractIp(req),
+        details:    { reason: 'Token de recuperación expirado' },
+      });
+    }
     next(error);
   }
 });
