@@ -14,6 +14,7 @@ import type {
   SimulationSummaryItem,
 } from '../../../Core/repositories/ISimulationRepository';
 import type { AmortizationRowDTO } from '../../../Application/dtos/SimulationSummary';
+import { auditLog } from '../../../Application/services/AuditService';
 
 export class SequelizeSimulationRepository implements ISimulationRepository {
 
@@ -130,11 +131,26 @@ export class SequelizeSimulationRepository implements ISimulationRepository {
     }));
   }
 
-  async softDelete(id: string, userId: string, reason: string): Promise<boolean> {
+  async softDelete(id: string, deletedBy: string | null, reason: string): Promise<boolean> {
+    // Solo ADMIN (deletedBy = uuid) o SYSTEM (deletedBy = null) pueden eliminar.
+    // La auditoría para ADMIN se registra en la ruta (con ip_address).
+    // La auditoría para SYSTEM se registra aquí (purga automática, sin HTTP).
     const [affectedRows] = await SimulationModel.update(
-      { deleted_at: new Date(), deleted_by: userId, delete_reason: reason },
-      { where: { id, user_id: userId, deleted_at: null } },
+      { deleted_at: new Date(), deleted_by: deletedBy, delete_reason: reason },
+      { where: { id, deleted_at: null } },
     );
+
+    if (affectedRows > 0 && deletedBy === null) {
+      void auditLog({
+        action:     'SIMULATION_DELETED',
+        entity:     'SIMULATION',
+        entity_id:  id,
+        actor_type: 'SYSTEM',
+        user_id:    null,
+        details:    { simulation_id: id, reason },
+      });
+    }
+
     return affectedRows > 0;
   }
 

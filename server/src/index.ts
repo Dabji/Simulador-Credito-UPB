@@ -8,6 +8,7 @@ import { createApp } from './Infrastructure/http/app';
 import { Database } from './Infrastructure/config/database';
 import { env } from './Infrastructure/config/env';
 import { logger } from './Infrastructure/logger';
+import { startPurgeScheduler } from './Infrastructure/scheduler/SimulationPurgeJob';
 
 async function bootstrap(): Promise<void> {
   try {
@@ -17,7 +18,10 @@ async function bootstrap(): Promise<void> {
       await db.connect();
       logger.info('Conexión a MySQL establecida correctamente');
 
-      // 2. Sincronizar modelos (en producción usar migraciones)
+      // 2. Iniciar scheduler de purga automática (90 días)
+      startPurgeScheduler();
+
+      // 3. Sincronizar modelos (en producción usar migraciones)
       if (env.NODE_ENV === 'development') {
         await db.sync(false);
         logger.info('Modelos sincronizados (modo desarrollo)');

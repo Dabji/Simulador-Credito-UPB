@@ -8,6 +8,7 @@ import { Router } from 'express';
 import type { Response, NextFunction } from 'express';
 import { SequelizeParameterVersionRepository } from '../../persistence/repositories/SequelizeParameterVersionRepository';
 import { SequelizeUserRepository } from '../../persistence/repositories/SequelizeUserRepository';
+import { SequelizeSimulationRepository } from '../../persistence/repositories/SequelizeSimulationRepository';
 import { User, UserRole } from '../../../Core/entities/User';
 import { BadRequestError, NotFoundError } from '../../../Core/errors';
 import type { UpdateParameterVersionData } from '../../../Core/repositories/IParameterVersionRepository';
@@ -16,8 +17,9 @@ import type { AuthenticatedRequest } from '../middlewares/authGuard';
 import { auditLog, extractIp } from '../../../Application/services/AuditService';
 
 const router = Router();
-const paramRepo = new SequelizeParameterVersionRepository();
-const userRepo  = new SequelizeUserRepository();
+const paramRepo      = new SequelizeParameterVersionRepository();
+const userRepo       = new SequelizeUserRepository();
+const simulationRepo = new SequelizeSimulationRepository();
 
 // ── Helpers de validación ────────────────────────────────────────────────
 
@@ -564,6 +566,61 @@ router.patch('/users/:id', async (req: AuthenticatedRequest, res: Response, next
     const { password: _, ...safeResult } = saved.toJSON();
     void _;
     res.json({ success: true, data: safeResult, message: 'Usuario actualizado correctamente.' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// Eliminación administrativa de simulaciones
+// ══════════════════════════════════════════════════════════════
+
+/**
+ * DELETE /api/admin/simulations/:id
+ * Soft-delete administrativo de una simulación.
+ * Solo accesible por ADMIN (protegido por roleGuard).
+ * Registra SIMULATION_DELETED en auditoría con ip_address del admin.
+ */
+router.delete('/simulations/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const adminUserId = req.user?.['userId'] as string | undefined;
+    if (!adminUserId) {
+      res.status(401).json({ error: 'Usuario no autenticado.' });
+      return;
+    }
+
+    const simId = req.params['id'] as string;
+    const body = req.body as { reason?: unknown };
+    const defaultReason = 'Eliminado por administrador';
+    let reason: string;
+    if (body.reason === undefined || body.reason === null) {
+      reason = defaultReason;
+    } else if (typeof body.reason !== 'string') {
+      res.status(400).json({ error: 'El campo "reason" debe ser un string.' });
+      return;
+    } else {
+      const trimmed = body.reason.trim();
+      reason = trimmed.length === 0 ? defaultReason : trimmed;
+      if (reason.length > 255) reason = reason.slice(0, 255);
+    }
+
+    const deleted = await simulationRepo.softDelete(simId, adminUserId, reason);
+    if (!deleted) {
+      res.status(404).json({ error: 'Simulación no encontrada o ya eliminada.' });
+      return;
+    }
+
+    await auditLog({
+      action:     'SIMULATION_DELETED',
+      entity:     'SIMULATION',
+      entity_id:  simId,
+      actor_type: 'ADMIN',
+      user_id:    adminUserId,
+      ip_address: extractIp(req),
+      details:    { simulation_id: simId, reason },
+    });
+
+    res.json({ success: true, message: 'Simulación eliminada correctamente.' });
   } catch (error) {
     next(error);
   }
