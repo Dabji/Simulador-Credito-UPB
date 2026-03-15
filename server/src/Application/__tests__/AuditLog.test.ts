@@ -11,6 +11,7 @@ const mockUpdateVersion = jest.fn();
 const mockHasOverlap = jest.fn();
 const mockAuditFindAndCountAll = jest.fn();
 const mockAuditLogFn = jest.fn().mockResolvedValue(undefined);
+const mockSoftDelete = jest.fn().mockResolvedValue(true);
 
 jest.mock(
   '../../Infrastructure/persistence/repositories/SequelizeParameterVersionRepository',
@@ -47,7 +48,7 @@ jest.mock(
   '../../Infrastructure/persistence/repositories/SequelizeSimulationRepository',
   () => ({
     SequelizeSimulationRepository: jest.fn().mockImplementation(() => ({
-      softDelete: jest.fn().mockResolvedValue(true),
+      softDelete: mockSoftDelete,
       findByUserId: jest.fn().mockResolvedValue([]),
       findById: jest.fn().mockResolvedValue(null),
       findSummariesByUserId: jest.fn().mockResolvedValue([]),
@@ -316,6 +317,73 @@ describe('HU-25 — Audit Log (Transversal)', () => {
       expect(res.status).toBe(200);
       const log = res.body.data.logs[0] as Record<string, unknown>;
       expect(log.changeSummary).toBe('Error al procesar detalles');
+    });
+  });
+
+  // ── DELETE /admin/simulations/:id — borrado administrativo ──
+
+  describe('DELETE /api/admin/simulations/:id — soft-delete administrativo', () => {
+    const SIM_ID = 'sim-uuid-to-delete';
+
+    it('responde 200 y registra auditoría SIMULATION_DELETED con ip_address', async () => {
+      mockSoftDelete.mockResolvedValue(true);
+
+      const app = buildApp();
+      const res = await request(app)
+        .delete(`/api/admin/simulations/${SIM_ID}`)
+        .send({ reason: 'Motivo de prueba' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.message).toContain('eliminada');
+
+      expect(mockSoftDelete).toHaveBeenCalledWith(SIM_ID, 'test-admin-uuid', 'Motivo de prueba');
+
+      const auditEntry = mockAuditLogFn.mock.calls.find(
+        (call: unknown[]) => (call[0] as Record<string, unknown>).action === 'SIMULATION_DELETED',
+      );
+      expect(auditEntry).toBeDefined();
+      const entry = auditEntry![0] as Record<string, unknown>;
+      expect(entry.entity).toBe('SIMULATION');
+      expect(entry.entity_id).toBe(SIM_ID);
+      expect(entry.actor_type).toBe('ADMIN');
+      expect(entry.user_id).toBe('test-admin-uuid');
+      expect(entry.ip_address).toBeDefined();
+    });
+
+    it('responde 404 cuando softDelete devuelve false', async () => {
+      mockSoftDelete.mockResolvedValue(false);
+
+      const app = buildApp();
+      const res = await request(app)
+        .delete(`/api/admin/simulations/${SIM_ID}`)
+        .send({ reason: 'No existe' });
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toContain('no encontrada');
+      expect(mockAuditLogFn).not.toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'SIMULATION_DELETED' }),
+      );
+    });
+
+    it('usa reason por defecto cuando no se envía', async () => {
+      mockSoftDelete.mockResolvedValue(true);
+
+      const app = buildApp();
+      await request(app).delete(`/api/admin/simulations/${SIM_ID}`).send({});
+
+      expect(mockSoftDelete).toHaveBeenCalledWith(SIM_ID, 'test-admin-uuid', 'Eliminado por administrador');
+    });
+
+    it('responde 400 si reason no es string', async () => {
+      const app = buildApp();
+      const res = await request(app)
+        .delete(`/api/admin/simulations/${SIM_ID}`)
+        .send({ reason: 12345 });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('string');
+      expect(mockSoftDelete).not.toHaveBeenCalled();
     });
   });
 });

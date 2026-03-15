@@ -579,7 +579,7 @@ router.patch('/users/:id', async (req: AuthenticatedRequest, res: Response, next
  * DELETE /api/admin/simulations/:id
  * Soft-delete administrativo de una simulación.
  * Solo accesible por ADMIN (protegido por roleGuard).
- * La auditoría (SIMULATION_DELETED) se registra dentro del repositorio.
+ * Registra SIMULATION_DELETED en auditoría con ip_address del admin.
  */
 router.delete('/simulations/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -590,14 +590,35 @@ router.delete('/simulations/:id', async (req: AuthenticatedRequest, res: Respons
     }
 
     const simId = req.params['id'] as string;
-    const rawReason = (req.body as { reason?: string })?.reason ?? 'Eliminado por administrador';
-    const reason = rawReason.length > 255 ? rawReason.slice(0, 255) : rawReason;
+    const body = req.body as { reason?: unknown };
+    const defaultReason = 'Eliminado por administrador';
+    let reason: string;
+    if (body.reason === undefined || body.reason === null) {
+      reason = defaultReason;
+    } else if (typeof body.reason !== 'string') {
+      res.status(400).json({ error: 'El campo "reason" debe ser un string.' });
+      return;
+    } else {
+      const trimmed = body.reason.trim();
+      reason = trimmed.length === 0 ? defaultReason : trimmed;
+      if (reason.length > 255) reason = reason.slice(0, 255);
+    }
 
     const deleted = await simulationRepo.softDelete(simId, adminUserId, reason);
     if (!deleted) {
       res.status(404).json({ error: 'Simulación no encontrada o ya eliminada.' });
       return;
     }
+
+    await auditLog({
+      action:     'SIMULATION_DELETED',
+      entity:     'SIMULATION',
+      entity_id:  simId,
+      actor_type: 'ADMIN',
+      user_id:    adminUserId,
+      ip_address: extractIp(req),
+      details:    { simulation_id: simId, reason },
+    });
 
     res.json({ success: true, message: 'Simulación eliminada correctamente.' });
   } catch (error) {

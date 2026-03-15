@@ -14,32 +14,32 @@
 // ============================================================
 
 import { SimulationModel } from '../persistence/models/SimulationModel';
+import { SequelizeSimulationRepository } from '../persistence/repositories/SequelizeSimulationRepository';
 import { logger } from '../logger';
-import { auditLog } from '../../Application/services/AuditService';
 import { Op, literal } from 'sequelize';
 
 const RETENTION_DAYS = 90;
 const INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 horas
 const PURGE_REASON = 'PURGA_AUTOMATICA_RETENCION_90_DIAS';
 
+const simulationRepo = new SequelizeSimulationRepository();
 let intervalRef: ReturnType<typeof setInterval> | null = null;
 
 /**
  * Ejecuta la purga de simulaciones que superan el período de retención.
- * Soft-delete: establece deleted_at y delete_reason sin eliminar datos.
- * Registra auditoría con actor_type = 'SYSTEM' para cada simulación purgada.
+ * Reutiliza softDelete(id, null, reason) del repositorio, que:
+ *   - Aplica soft-delete con deleted_at: null en el WHERE (race-condition safe).
+ *   - Registra auditoría SIMULATION_DELETED con actor_type = 'SYSTEM'.
  */
 export async function purgeExpiredSimulations(): Promise<number> {
   try {
-    const expiredCondition = {
-      deleted_at: null,
-      saved_at: { [Op.lte]: literal(`NOW() - INTERVAL ${RETENTION_DAYS} DAY`) },
-    };
-
-    // Obtener IDs antes de actualizar (para auditoría individual)
+    // Obtener IDs de simulaciones expiradas (aún no eliminadas)
     const expired = await SimulationModel.findAll({
       attributes: ['id'],
-      where: expiredCondition,
+      where: {
+        deleted_at: null,
+        saved_at: { [Op.lte]: literal(`NOW() - INTERVAL ${RETENTION_DAYS} DAY`) },
+      },
     });
 
     if (expired.length === 0) {
@@ -47,33 +47,16 @@ export async function purgeExpiredSimulations(): Promise<number> {
       return 0;
     }
 
-    const expiredIds = expired.map(s => s.id);
-
-    const [affectedRows] = await SimulationModel.update(
-      {
-        deleted_at: new Date(),
-        deleted_by: null,
-        delete_reason: PURGE_REASON,
-      },
-      { where: { id: { [Op.in]: expiredIds } } },
-    );
+    let affectedRows = 0;
+    for (const sim of expired) {
+      const deleted = await simulationRepo.softDelete(sim.id, null, PURGE_REASON);
+      if (deleted) affectedRows++;
+    }
 
     logger.info(`Purga automática: ${affectedRows} simulación(es) archivada(s) por superar ${RETENTION_DAYS} días`, {
       affectedRows,
       retentionDays: RETENTION_DAYS,
     });
-
-    // Registrar auditoría para cada simulación purgada
-    for (const simId of expiredIds) {
-      void auditLog({
-        action:     'SIMULATION_DELETED',
-        entity:     'SIMULATION',
-        entity_id:  simId,
-        actor_type: 'SYSTEM',
-        user_id:    null,
-        details:    { simulation_id: simId, reason: PURGE_REASON },
-      });
-    }
 
     return affectedRows;
   } catch (error) {
