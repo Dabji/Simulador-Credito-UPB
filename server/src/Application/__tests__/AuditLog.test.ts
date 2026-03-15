@@ -43,6 +43,19 @@ jest.mock(
   }),
 );
 
+jest.mock(
+  '../../Infrastructure/persistence/repositories/SequelizeSimulationRepository',
+  () => ({
+    SequelizeSimulationRepository: jest.fn().mockImplementation(() => ({
+      softDelete: jest.fn().mockResolvedValue(true),
+      findByUserId: jest.fn().mockResolvedValue([]),
+      findById: jest.fn().mockResolvedValue(null),
+      findSummariesByUserId: jest.fn().mockResolvedValue([]),
+      save: jest.fn().mockResolvedValue({ id: 'mock-id', savedAt: new Date() }),
+    })),
+  }),
+);
+
 jest.mock('../../Infrastructure/persistence/models/UserModel', () => ({
   UserModel: {
     init: jest.fn(),

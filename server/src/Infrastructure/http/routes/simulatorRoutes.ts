@@ -80,7 +80,7 @@ router.post('/save', async (req: AuthenticatedRequest, res: Response, next: Next
       user_id:    userId,
       ip_address: extractIp(req),
       details:    {
-        simulation_id:  result.id,
+        simulation_id:   result.id,
         education_level: input.educationLevel,
         interest_mode:   input.interestMode,
         tuition_gross:   input.tuitionGross,
@@ -114,45 +114,6 @@ router.get('/history', async (req: AuthenticatedRequest, res: Response, next: Ne
 
     const simulations = await simulationRepo.findByUserId(userId);
     res.json({ simulations });
-  } catch (error) {
-    next(error);
-  }
-});
-
-/**
- * DELETE /api/simulator/:id
- * Soft-delete de una simulación del usuario autenticado.
- */
-router.delete('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const userId = req.user?.userId as string | undefined;
-    if (!userId) {
-      res.status(401).json({ error: 'Usuario no autenticado.' });
-      return;
-    }
-
-    const simId = req.params['id'] as string;
-    const rawReason = (req.body as { reason?: string })?.reason ?? 'Eliminado por el usuario';
-    const reason = rawReason.length > 255 ? rawReason.slice(0, 255) : rawReason;
-
-    const deleted = await simulationRepo.softDelete(simId, userId, reason);
-    if (!deleted) {
-      res.status(404).json({ error: 'Simulación no encontrada.' });
-      return;
-    }
-
-    await auditLog({
-      action:     'SIMULATION_DELETED',
-      entity:     'SIMULATION',
-      entity_id:  simId,
-      actor_type: 'STUDENT',
-      user_id:    userId,
-      ip_address: extractIp(req),
-      details:    { simulation_id: simId, reason, origin: 'STUDENT' },
-    });
-
-    logger.info('Simulación eliminada (soft-delete)', { id: simId, userId });
-    res.json({ success: true, message: 'Simulación eliminada correctamente.' });
   } catch (error) {
     next(error);
   }

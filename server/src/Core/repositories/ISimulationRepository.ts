@@ -60,6 +60,7 @@ export interface ISimulationRepository {
   /** Lista resúmenes ligeros de simulaciones del usuario (sin filas de amortización), orden desc, límite 20 */
   findSummariesByUserId(userId: string, limit?: number): Promise<SimulationSummaryItem[]>;
 
-  /** Soft-delete: marca la simulación como eliminada sin borrar datos */
-  softDelete(id: string, userId: string, reason: string): Promise<boolean>;
+  /** Soft-delete: marca la simulación como eliminada sin borrar datos.
+   *  deletedBy = null → SYSTEM (purga automática), string → ADMIN o STUDENT */
+  softDelete(id: string, deletedBy: string | null, reason: string): Promise<boolean>;
 }
