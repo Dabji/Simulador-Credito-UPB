@@ -138,11 +138,11 @@ function buildFormFromVersion(v: AdminParameterVersion): ParameterFormState {
     rateOptions: [
       {
         pregradoRate: pregrado ? rateToPercent(pregrado.rateMonthly) : '',
-        pregradoValidFrom: '',
+        pregradoValidFrom: v.validFrom,
         posgradoRate: posgrado ? rateToPercent(posgrado.rateMonthly) : '',
-        posgradoValidFrom: '',
+        posgradoValidFrom: v.validFrom,
         upbTecRate:   upbTec   ? rateToPercent(upbTec.rateMonthly)   : '',
-        upbTecValidFrom: '',
+        upbTecValidFrom: v.validFrom,
       },
       { ...emptyRateSet },
     ],
@@ -307,10 +307,10 @@ export function AdminParametersPage() {
     const pregCon = parseFloat(form.minInitialPct.pregradoConInteres);
     const tecSin  = parseFloat(form.minInitialPct.upbTecSinInteres);
     const tecCon  = parseFloat(form.minInitialPct.upbTecConInteres);
-    if (isNaN(pregSin) || pregSin <= 0 || pregSin > 100) return 'Cuota inicial mínima Pregrado sin intereses inválida (1-100)';
-    if (isNaN(pregCon) || pregCon <= 0 || pregCon > 100) return 'Cuota inicial mínima Pregrado con intereses inválida (1-100)';
-    if (isNaN(tecSin)  || tecSin  <= 0 || tecSin  > 100) return 'Cuota inicial mínima UPB TEC sin intereses inválida (1-100)';
-    if (isNaN(tecCon)  || tecCon  <= 0 || tecCon  > 100) return 'Cuota inicial mínima UPB TEC con intereses inválida (1-100)';
+    if (isNaN(pregSin) || pregSin < 0 || pregSin > 100) return 'Cuota inicial mínima Pregrado sin intereses inválida (0-100)';
+    if (isNaN(pregCon) || pregCon < 0 || pregCon > 100) return 'Cuota inicial mínima Pregrado con intereses inválida (0-100)';
+    if (isNaN(tecSin)  || tecSin  < 0 || tecSin  > 100) return 'Cuota inicial mínima UPB TEC sin intereses inválida (0-100)';
+    if (isNaN(tecCon)  || tecCon  < 0 || tecCon  > 100) return 'Cuota inicial mínima UPB TEC con intereses inválida (0-100)';
 
     return null;
   }
@@ -695,10 +695,13 @@ export function AdminParametersPage() {
           <button
             type="button"
             onClick={() => navigate('/admin/main')}
-            className="inline-flex items-center gap-1.5 self-start sm:self-auto text-sm font-semibold text-[#6b21a8] hover:text-[#581c87] transition-colors focus:outline-none"
+            className="group inline-flex items-center gap-1.5 self-start sm:self-auto text-sm font-semibold text-[#6b21a8] hover:text-[#581c87] transition-all duration-200 focus:outline-none relative"
           >
-            <ArrowLeft size={16} />
-            Volver al menú
+            <ArrowLeft size={16} className="transition-transform duration-200 group-hover:-translate-x-1" />
+            <span className="relative">
+              Volver al menú
+              <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-[#6b21a8] rounded-full transition-all duration-200 group-hover:w-full" />
+            </span>
           </button>
         </div>
 
