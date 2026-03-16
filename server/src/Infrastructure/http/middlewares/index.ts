@@ -4,3 +4,4 @@ export { authGuard } from './authGuard';
 export type { AuthenticatedRequest } from './authGuard';
 export { roleGuard } from './roleGuard';
 export { authLimiter, simulatorLimiter } from './rateLimitGuard';
+export { validateRequest } from './validateRequest';

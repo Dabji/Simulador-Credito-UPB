@@ -17,6 +17,7 @@
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "express-rate-limit": "^8.3.1",
+    "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "mysql2": "^3.17.3",
     "nodemailer": "^8.0.2",
@@ -24,6 +25,7 @@
     "sequelize": "^6.37.7",
     "swagger-ui-express": "^5.0.1",
     "winston": "^3.19.0",
+    "xss-clean": "^0.1.4",
     "zod": "^4.3.6"
   },
   "devDependencies": {

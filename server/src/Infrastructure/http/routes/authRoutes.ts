@@ -4,15 +4,17 @@
 
 import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
+import type { z } from 'zod';
 import { AuthenticateUserUseCase } from '../../../Application/use-cases/AuthenticateUserUseCase';
 import { RegisterUserUseCase } from '../../../Application/use-cases/RegisterUserUseCase';
-import { RegisterUserSchema } from '../../../Application/dtos/RegisterUserInput';
-import { LoginUserSchema } from '../../../Application/dtos/LoginUserInput';
-import { ForgotPasswordSchema } from '../../../Application/dtos/ForgotPasswordInput';
-import { ResetPasswordSchema } from '../../../Application/dtos/ResetPasswordInput';
+import { RegisterUserSchema, RegisterUserInputSchema } from '../../../Application/dtos/RegisterUserInput';
+import { LoginUserSchema, LoginUserInputSchema } from '../../../Application/dtos/LoginUserInput';
+import { ForgotPasswordSchema, ForgotPasswordInputSchema } from '../../../Application/dtos/ForgotPasswordInput';
+import { ResetPasswordSchema, ResetPasswordInputSchema } from '../../../Application/dtos/ResetPasswordInput';
+import { validateRequest } from '../middlewares/validateRequest';
 import { RequestPasswordResetUseCase } from '../../../Application/use-cases/RequestPasswordResetUseCase';
 import { ResetPasswordUseCase } from '../../../Application/use-cases/ResetPasswordUseCase';
-import { AppError, BadRequestError, ConflictError, NotFoundError, UnauthorizedError, ValidationError } from '../../../Core/errors';
+import { AppError, ConflictError, NotFoundError, UnauthorizedError } from '../../../Core/errors';
 import { authGuard } from '../middlewares/authGuard';
 import type { AuthenticatedRequest } from '../middlewares/authGuard';
 import { SequelizeUserRepository } from '../../persistence/repositories/SequelizeUserRepository';
@@ -39,30 +41,25 @@ const resetPasswordUseCase = new ResetPasswordUseCase(userRepository);
  * POST /api/auth/login
  * Autenticación dual: STUDENT (BD + bcrypt) / ADMIN (LDAP)
  */
-router.post('/login', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.post('/login', validateRequest(LoginUserInputSchema), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const parsed = LoginUserSchema.safeParse(req.body);
+    const data = req.body as z.infer<typeof LoginUserSchema>;
 
-    if (!parsed.success) {
-      const messages = parsed.error.issues.map((i) => i.message).join(', ');
-      throw new BadRequestError(messages);
-    }
-
-    const result = await authenticateUseCase.execute(parsed.data);
+    const result = await authenticateUseCase.execute(data);
 
     logger.info('Usuario autenticado exitosamente', {
-      email: parsed.data.email,
-      role: parsed.data.role,
+      email: data.email,
+      role: data.role,
     });
 
     await auditLog({
       action:     'LOGIN_SUCCESS',
       entity:     'SESSION',
       entity_id:  result.user.id,
-      actor_type: parsed.data.role === 'ADMIN' ? 'ADMIN' : 'STUDENT',
+      actor_type: data.role === 'ADMIN' ? 'ADMIN' : 'STUDENT',
       user_id:    result.user.id,
       ip_address: extractIp(req),
-      details:    { email: parsed.data.email, role: parsed.data.role },
+      details:    { email: data.email, role: data.role },
     });
 
     res.json({
@@ -100,24 +97,13 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction): P
  * POST /api/auth/register
  * Registro de nuevo usuario (HU-01)
  */
-router.post('/register', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.post('/register', validateRequest(RegisterUserInputSchema), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const parsed = RegisterUserSchema.safeParse(req.body);
+    const data = req.body as z.infer<typeof RegisterUserSchema>;
 
-    if (!parsed.success) {
-      // Construir errores agrupados por campo (HU-02)
-      const fieldErrors: Record<string, string[]> = {};
-      for (const issue of parsed.error.issues) {
-        const field = issue.path.join('.') || '_form';
-        if (!fieldErrors[field]) fieldErrors[field] = [];
-        fieldErrors[field].push(issue.message);
-      }
-      throw new ValidationError('Los datos de registro no son válidos', fieldErrors);
-    }
+    const newUserId = await registerUseCase.execute(data);
 
-    const newUserId = await registerUseCase.execute(parsed.data);
-
-    logger.info('Usuario registrado exitosamente', { email: parsed.data.email });
+    logger.info('Usuario registrado exitosamente', { email: data.email });
 
     await auditLog({
       action:     'USER_REGISTERED',
@@ -126,7 +112,7 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
       actor_type: 'SYSTEM',
       user_id:    newUserId,
       ip_address: extractIp(req),
-      details:    { email: parsed.data.email },
+      details:    { email: data.email },
     });
 
     res.status(201).json({ message: 'Usuario registrado exitosamente' });
@@ -150,16 +136,11 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
  * POST /api/auth/forgot-password
  * Solicita un token de recuperación de contraseña
  */
-router.post('/forgot-password', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.post('/forgot-password', validateRequest(ForgotPasswordInputSchema), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const parsed = ForgotPasswordSchema.safeParse(req.body);
+    const data = req.body as z.infer<typeof ForgotPasswordSchema>;
 
-    if (!parsed.success) {
-      const messages = parsed.error.issues.map((i) => i.message).join(', ');
-      throw new BadRequestError(messages);
-    }
-
-    await requestPasswordResetUseCase.execute(parsed.data, {
+    await requestPasswordResetUseCase.execute(data, {
       ip: req.ip,
       userAgent: typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : undefined,
     });
@@ -171,7 +152,7 @@ router.post('/forgot-password', async (req: Request, res: Response, next: NextFu
       actor_type: 'SYSTEM',
       user_id:    null,
       ip_address: extractIp(req),
-      details:    { email: parsed.data.email },
+      details:    { email: data.email },
     });
 
     // Siempre retornar éxito (no revelar si el email existe)
@@ -185,16 +166,11 @@ router.post('/forgot-password', async (req: Request, res: Response, next: NextFu
  * POST /api/auth/reset-password
  * Restablece la contraseña usando el token
  */
-router.post('/reset-password', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.post('/reset-password', validateRequest(ResetPasswordInputSchema), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const parsed = ResetPasswordSchema.safeParse(req.body);
+    const data = req.body as z.infer<typeof ResetPasswordSchema>;
 
-    if (!parsed.success) {
-      const messages = parsed.error.issues.map((i) => i.message).join(', ');
-      throw new BadRequestError(messages);
-    }
-
-    await resetPasswordUseCase.execute(parsed.data);
+    await resetPasswordUseCase.execute(data);
 
     logger.info('Contraseña restablecida exitosamente');
 

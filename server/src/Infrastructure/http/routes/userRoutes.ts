@@ -16,8 +16,10 @@ import { SequelizeSimulationRepository } from '../../persistence/repositories/Se
 import { GetMyProfileUseCase } from '../../../Application/use-cases/GetMyProfileUseCase';
 import { UpdateMyProfileUseCase } from '../../../Application/use-cases/UpdateMyProfileUseCase';
 import { ListMySimulationsUseCase } from '../../../Application/use-cases/ListMySimulationsUseCase';
-import { UpdateMyProfileSchema } from '../../../Application/dtos/UpdateMyProfileInput';
-import { BadRequestError, UnauthorizedError } from '../../../Core/errors';
+import { UpdateMyProfileSchema, UpdateMyProfileInputSchema } from '../../../Application/dtos/UpdateMyProfileInput';
+import type { z } from 'zod';
+import { UnauthorizedError } from '../../../Core/errors';
+import { validateRequest } from '../middlewares/validateRequest';
 import { UserRole } from '../../../Core/entities/User';
 import { auditLog, extractIp } from '../../../Application/services/AuditService';
 
@@ -78,21 +80,17 @@ router.get('/me', async (req: AuthenticatedRequest, res: Response, next: NextFun
  * PATCH /api/users/me
  * HU-81: Actualiza campos permitidos del perfil (solo el usuario en sesión).
  */
-router.patch('/me', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+router.patch('/me', validateRequest(UpdateMyProfileInputSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user?.userId as string | undefined;
     if (!userId) throw new UnauthorizedError('No se pudo identificar al usuario.');
 
-    const parsed = UpdateMyProfileSchema.safeParse(req.body);
-    if (!parsed.success) {
-      const messages = parsed.error.issues.map((i) => i.message).join(', ');
-      throw new BadRequestError(messages);
-    }
+    const data = req.body as z.infer<typeof UpdateMyProfileSchema>;
 
     const profileBefore = await getMyProfileUseCase.execute(userId);
-    const updated = await updateMyProfileUseCase.execute(userId, parsed.data);
+    const updated = await updateMyProfileUseCase.execute(userId, data);
 
-    const changedFields = Object.keys(parsed.data);
+    const changedFields = Object.keys(data);
     await auditLog({
       action:     'PROFILE_UPDATED',
       entity:     'USER',

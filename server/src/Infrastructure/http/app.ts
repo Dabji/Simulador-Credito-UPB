@@ -6,6 +6,8 @@
 
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import xss from 'xss-clean';
 import swaggerUi from 'swagger-ui-express';
 import { authRoutes, simulatorRoutes, adminRoutes, userRoutes } from './routes';
 import simulatorPublicRoutes from './routes/simulatorPublicRoutes';
@@ -27,9 +29,11 @@ export function createApp(): express.Application {
 
   // ── Middlewares Globales ───────────────────────────────────
   app.set('trust proxy', 1);
+  app.use(helmet());
   app.use(cors());
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
+  app.use(xss());
 
   // Evitar que el navegador cachee respuestas autenticadas (HU-05).
   // Esto impide que al presionar "atrás" después de cerrar sesión
