@@ -8,8 +8,8 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
-import { simulateCredit } from '../services/api';
-import type { SimulationSummaryDTO, SimulationInputDTO } from '../services/api';
+import { simulateCredit, getSimulatorConfig } from '../services/api';
+import type { SimulationSummaryDTO, SimulationInputDTO, AdminParameterVersion } from '../services/api';
 
 /* ── Helpers de formateo (sin over-ingeniería) ──────────────────
    parseDigits   : extrae solo dígitos de un string
@@ -121,21 +121,16 @@ function isMonthPast(month: number, year: number): boolean {
     (year === now.getFullYear() && month < now.getMonth() + 1);
 }
 
-/** Cuotas máximas desde el mes elegido hasta el fin del periodo:
- *  - con_interes  → máximo absoluto 6
- *  - sin_interes  → máximo absoluto 3
- *  Siempre limitado por cuántos meses quedan en el periodo. */
-function maxInstallmentsFor(
+/** Meses restantes en el periodo desde el mes elegido.
+ *  El tope por modalidad se aplica externamente desde parámetros activos (capByMode). */
+function remainingMonthsInPeriod(
   period: string,
   firstPaymentMonth: number,
-  interestMode: string,
 ): number {
   const months  = getMonthsForPeriod(period);
   const idx     = months.indexOf(firstPaymentMonth);
   if (idx === -1) return 0;
-  const remaining = months.length - idx;           // cuotas disponibles en el periodo
-  const cap       = interestMode === 'sin_interes' ? 3 : 6;  // tope por modalidad
-  return Math.min(remaining, cap);
+  return months.length - idx;
 }
 
 /* Ventana móvil de 2 años: año actual + siguiente.
@@ -193,6 +188,59 @@ const LABEL_CLASS  = 'block text-sm font-semibold text-gray-700 mb-1.5';
 const HELPER_CLASS = 'mt-1.5 text-xs leading-relaxed';
 const HELPER_COLOR = { color: '#4A5565' } as const;
 
+/* ── Helpers para extraer valores dinámicos de los parámetros activos ──
+   Reemplazan los valores hardcode (tasa 0.9%, min 20%, max 3/6) por lo
+   que el admin haya configurado en /admin/parameters. */
+
+/** Mapa de educationLevel del formulario → levelScope de la BD */
+const LEVEL_SCOPE_MAP: Record<string, string> = {
+  pregrado: 'PREGRADO',
+  posgrado: 'POSGRADO',
+  upbTech:  'UPB_TEC',
+};
+
+/** Tasa para mostrar en la UI (ej. 0.009 → "0.9") */
+function getActiveRateDisplay(params: AdminParameterVersion | null): string {
+  if (!params) return '0.9';
+  // Usar tasa de PREGRADO como referencia (misma para todos actualmente)
+  const entry = params.interestRates.find(r => r.levelScope === 'PREGRADO');
+  const rate = entry?.rateMonthly ?? 0.009;
+  return (rate * 100).toFixed(1).replace(/\.0$/, '');
+}
+
+/** Cuota inicial mínima (%) según nivel y modalidad desde params activos */
+function getMinInitialPct(
+  params: AdminParameterVersion | null,
+  educationLevel: string,
+  interestMode: string,
+): number {
+  if (!params) return educationLevel === 'upbTech' ? 15 : 20; // fallback
+  const scope = LEVEL_SCOPE_MAP[educationLevel];
+  if (!scope) return 20;
+  // Usar modalidad efectiva para la regla
+  const dbModality = interestMode === 'con_interes' ? 'CON_INTERES' : 'SIN_INTERES';
+  const rule = params.modalityRules.find(
+    r => r.level === scope && r.modality === dbModality,
+  );
+  return rule ? Math.round(rule.minInitialPct * 100) : (educationLevel === 'upbTech' ? 15 : 20);
+}
+
+/** Máximo de cuotas totales por modalidad desde params activos */
+function getMaxPaymentsByMode(
+  params: AdminParameterVersion | null,
+  educationLevel: string,
+  interestMode: string,
+): number {
+  if (!params) return interestMode === 'sin_interes' ? 3 : 6; // fallback
+  const scope = LEVEL_SCOPE_MAP[educationLevel];
+  if (!scope) return interestMode === 'sin_interes' ? 3 : 6;
+  const dbModality = interestMode === 'con_interes' ? 'CON_INTERES' : 'SIN_INTERES';
+  const rule = params.modalityRules.find(
+    r => r.level === scope && r.modality === dbModality,
+  );
+  return rule?.maxTotalPayments ?? (interestMode === 'sin_interes' ? 3 : 6);
+}
+
 interface SimulationFormProps {
   onResult: (summary: SimulationSummaryDTO, input: SimulationInputDTO) => void;
   mode?: 'student' | 'guest';
@@ -235,6 +283,22 @@ export function SimulationForm({ onResult, mode = 'student' }: SimulationFormPro
   const [fields, setFields]     = useState<FormFields>(readDraft);
   const [loading, setLoading]         = useState(false);
   const [apiError, setApiError]       = useState<string | null>(null);
+
+  /* ── Parámetros activos desde BD (tasa, cuota mínima, límites) ── */
+  const [activeParams, setActiveParams] = useState<AdminParameterVersion | null>(null);
+  const [paramsLoading, setParamsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadConfig() {
+      const res = await getSimulatorConfig();
+      if (cancelled) return;
+      if (res.data?.data) setActiveParams(res.data.data);
+      setParamsLoading(false);
+    }
+    void loadConfig();
+    return () => { cancelled = true; };
+  }, []);
   /* Mensaje post-submit: informa que la modalidad fue forzada a sin_interes (#59) */
   const [submitForcedMsg, setSubmitForcedMsg] = useState<string | null>(null);
   /* Diálogo de confirmación emergente — usado para Limpiar formulario */
@@ -298,20 +362,22 @@ export function SimulationForm({ onResult, mode = 'student' }: SimulationFormPro
         const pct    = parseFloat(parsePctInput(next.downPaymentPercent)) || 0;
         next.downPaymentValue = newNet > 0 && pct > 0 ? String(Math.round(newNet * pct / 100)) : '';
       }
-      /* #58 — Al seleccionar upbTech, forzar cuota inicial a 15%
+      /* #58 — Al seleccionar upbTech, forzar cuota inicial al mínimo paramétrico
          #57 — Beca no aplica en upbTech: base de cálculo es la matrícula bruta */
       if (key === 'educationLevel' && value === 'upbTech') {
-        next.downPaymentPercent = '15';
+        const minPctTech = getMinInitialPct(activeParams, 'upbTech', next.interestMode || 'sin_interes');
+        next.downPaymentPercent = String(minPctTech);
         const tuition = parseFloat(parseCOPInput(next.tuitionValue)) || 0;
-        next.downPaymentValue = tuition > 0 ? String(Math.round(tuition * 0.15)) : '';
+        next.downPaymentValue = tuition > 0 ? String(Math.round(tuition * minPctTech / 100)) : '';
       }
-      /* #58 — Al cambiar de upbTech a otro nivel, restaurar mínimo 20% si estaba en 15 */
+      /* #58 — Al cambiar de upbTech a otro nivel, restaurar mínimo paramétrico */
       if (key === 'educationLevel' && value !== 'upbTech' && prev.educationLevel === 'upbTech') {
-        next.downPaymentPercent = '20';
+        const minPctNew = getMinInitialPct(activeParams, value, next.interestMode || 'sin_interes');
+        next.downPaymentPercent = String(minPctNew);
         const tuition    = parseFloat(parseCOPInput(next.tuitionValue)) || 0;
         const scholarship = parseFloat(parsePctInput(next.scholarshipPercent)) || 0;
         const netT       = tuition * (1 - scholarship / 100);
-        next.downPaymentValue = netT > 0 ? String(Math.round(netT * 0.2)) : '';
+        next.downPaymentValue = netT > 0 ? String(Math.round(netT * minPctNew / 100)) : '';
       }
       /* Al cambiar periodo, limpiar mes y cuotas dependientes */
       if (key === 'academicPeriod') { next.firstPaymentMonth = ''; next.numberOfPayments = ''; }
@@ -374,9 +440,12 @@ export function SimulationForm({ onResult, mode = 'student' }: SimulationFormPro
     }
   };
 
-  /* Porcentaje mínimo de cuota inicial según nivel de formación:
-     UPB Tech → 15%   |   Pregrado / Posgrado → 20% */
-  const minDownPct = fields.educationLevel === 'upbTech' ? 15 : 20;
+  /* Porcentaje mínimo de cuota inicial — dinámico desde parámetros activos */
+  const minDownPct = getMinInitialPct(
+    activeParams,
+    fields.educationLevel || 'pregrado',
+    fields.interestMode || 'sin_interes',
+  );
 
   /* Error inline para cuota inicial — se muestra en tiempo real */
   const downPctNum    = parseFloat(parsePctInput(fields.downPaymentPercent)) || 0;
@@ -392,12 +461,19 @@ export function SimulationForm({ onResult, mode = 'student' }: SimulationFormPro
     [fields.academicPeriod],
   );
 
-  /* Máximo de cuotas según periodo, mes elegido Y modalidad:
-     con_interes → tope 6  |  sin_interes → tope 3 */
+  /* Máximo de cuotas — dinámico desde parámetros activos y periodo/mes */
+  const capByMode = getMaxPaymentsByMode(
+    activeParams,
+    fields.educationLevel || 'pregrado',
+    fields.interestMode || 'sin_interes',
+  );
   const firstPayMonth = parseInt(fields.firstPaymentMonth, 10);
   const maxCuotas = (!fields.academicPeriod || !firstPayMonth)
-    ? (fields.interestMode === 'sin_interes' ? 3 : 6)
-    : maxInstallmentsFor(fields.academicPeriod, firstPayMonth, fields.interestMode);
+    ? capByMode
+    : Math.min(
+        remainingMonthsInPeriod(fields.academicPeriod, firstPayMonth),
+        capByMode,
+      );
 
   /* Limpiar formulario — pide confirmación antes de borrar */
   const handleReset = () => {
@@ -434,8 +510,8 @@ export function SimulationForm({ onResult, mode = 'student' }: SimulationFormPro
     const rawScholarship  = parsePctInput(fields.scholarshipPercent);
 
     if (!rawTuition)             return 'Ingresa el valor de matrícula.';
-    /* Mínimo dinámico: 15% UPB Tech, 20% Pregrado/Posgrado */
-    const minPct = fields.educationLevel === 'upbTech' ? 15 : 20;
+    /* Mínimo dinámico desde parámetros activos */
+    const minPct = minDownPct;
     if (parseFloat(rawDownPct) < minPct)
       return `La cuota inicial debe ser mínimo del ${minPct}% para este nivel de formación.`;
     if (!rawDownVal)             return 'Ingresa el valor de cuota inicial.';
@@ -449,10 +525,9 @@ export function SimulationForm({ onResult, mode = 'student' }: SimulationFormPro
       return 'El mes de la primera cuota ya pasó. Selecciona un mes válido.';
     const nPayments = parseInt(fields.numberOfPayments, 10);
     if (!nPayments || nPayments < 1) return 'Ingresa el número de cuotas (mínimo 1).';
-    /* Bloquear si supera el tope de la modalidad */
-    const maxPay = maxInstallmentsFor(fields.academicPeriod, fpm, fields.interestMode);
-    if (nPayments > maxPay)
-      return `El número de cuotas supera el máximo permitido (${maxPay}) para esta modalidad y mes.`;
+    /* Bloquear si supera el tope (periodo + modalidad dinámica) */
+    if (nPayments > maxCuotas)
+      return `El número de cuotas supera el máximo permitido (${maxCuotas}) para esta modalidad y mes.`;
 
     /* Los 3 niveles del select coinciden 1:1 con los valores del backend */
     return {
@@ -754,7 +829,7 @@ export function SimulationForm({ onResult, mode = 'student' }: SimulationFormPro
                 onChange={(e: ChangeEvent<HTMLInputElement>) => handleInterestMode(e.target.value)}
                 className="w-4 h-4 text-purple-600 focus:ring-purple-500"
               />
-              Con intereses (0.9% mensual M.V.)
+              Con intereses ({getActiveRateDisplay(activeParams)}% mensual M.V.)
             </label>
           </div>
         </fieldset>
@@ -931,11 +1006,11 @@ export function SimulationForm({ onResult, mode = 'student' }: SimulationFormPro
       <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || paramsLoading}
           className="w-full sm:w-auto px-10 py-3 rounded-full text-white font-bold text-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 hover:brightness-110 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
           style={{ backgroundColor: '#A85BFF', boxShadow: '0 4px 14px rgba(168,91,255,0.35)' }}
         >
-          {loading ? 'Calculando...' : 'Calcular Simulación'}
+          {paramsLoading ? 'Cargando parámetros...' : loading ? 'Calculando...' : 'Calcular Simulación'}
         </button>
         <button
           type="button"

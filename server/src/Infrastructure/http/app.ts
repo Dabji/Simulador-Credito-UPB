@@ -9,6 +9,7 @@ import cors from 'cors';
 import swaggerUi from 'swagger-ui-express';
 import { authRoutes, simulatorRoutes, adminRoutes, userRoutes } from './routes';
 import simulatorPublicRoutes from './routes/simulatorPublicRoutes';
+import parameterPublicRoutes from './routes/parameterPublicRoutes';
 import { errorHandler } from './middlewares/errorHandler';
 import { authGuard } from './middlewares/authGuard';
 import { roleGuard } from './middlewares/roleGuard';
@@ -55,6 +56,9 @@ export function createApp(): express.Application {
   // Solo `/preview` es público. Se monta ANTES del authGuard.
   app.use('/api/simulator/preview', simulatorLimiter);
   app.use('/api/simulator', simulatorPublicRoutes);
+
+  // Parámetros activos — público (student + guest necesitan config dinámica)
+  app.use('/api/parameters', simulatorLimiter, parameterPublicRoutes);
 
   // ── Rutas Protegidas ──────────────────────────────────────
   // Rutas protegidas por rol (HU-07)

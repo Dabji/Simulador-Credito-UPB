@@ -244,7 +244,7 @@ router.put('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
         if (!Number.isInteger(rule.maxTotalPayments) || rule.maxTotalPayments < 1 || rule.maxTotalPayments > 12) {
           return next(new BadRequestError('maxTotalPayments debe ser un entero entre 1 y 12'));
         }
-        if (!Number.isFinite(rule.minInitialPct) || rule.minInitialPct <= 0 || rule.minInitialPct > 1) {
+        if (!Number.isFinite(rule.minInitialPct) || rule.minInitialPct < 0 || rule.minInitialPct > 1) {
           return next(new BadRequestError('minInitialPct debe ser entre 0 y 1 (ej: 0.20 para 20%)'));
         }
       }
@@ -267,7 +267,7 @@ router.put('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
         if (!Number.isInteger(rule.extraInstallments) || rule.extraInstallments < 0) {
           return next(new BadRequestError('extraInstallments debe ser un entero mayor o igual a 0'));
         }
-        if (!Number.isFinite(rule.initialPctRequired) || rule.initialPctRequired <= 0 || rule.initialPctRequired > 1) {
+        if (!Number.isFinite(rule.initialPctRequired) || rule.initialPctRequired < 0 || rule.initialPctRequired > 1) {
           return next(new BadRequestError('initialPctRequired debe ser entre 0 y 1 (ej: 0.20 para 20%)'));
         }
       }

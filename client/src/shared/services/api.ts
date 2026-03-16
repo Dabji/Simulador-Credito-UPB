@@ -328,9 +328,15 @@ export interface UpdateParameterVersionPayload {
   }[];
 }
 
-/** GET /api/admin/parameters/active — versión vigente con todas sus reglas */
+/** GET /api/admin/parameters/active — versión vigente con todas sus reglas (requiere ADMIN) */
 export async function getActiveParameters(): Promise<ApiResponse<{ data: AdminParameterVersion }>> {
   return request<{ data: AdminParameterVersion }>('/admin/parameters/active');
+}
+
+/** GET /api/parameters/active — parámetros activos PÚBLICO (student + guest).
+ *  Usado por SimulationForm para reflejar tasa, cuota mínima, límites dinámicamente. */
+export async function getSimulatorConfig(): Promise<ApiResponse<{ data: AdminParameterVersion }>> {
+  return request<{ data: AdminParameterVersion }>('/parameters/active');
 }
 
 /** GET /api/admin/parameters — listado de todas las versiones (resumen) */

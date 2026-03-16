@@ -5,13 +5,13 @@
    Mantiene diseño visual idéntico al prototipo original.
 ───────────────────────────────────────────────────────────────── */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { ChangeEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { SummaryCard } from './SummaryCard';
-import { DonutChartPlaceholder } from './DonutChartPlaceholder';
-import { saveSimulation } from '../services/api';
-import type { SimulationSummaryDTO, SimulationInputDTO } from '../services/api';
+import { SimulationCharts } from './SimulationCharts';
+import { saveSimulation, getSimulatorConfig } from '../services/api';
+import type { SimulationSummaryDTO, SimulationInputDTO, AdminParameterVersion } from '../services/api';
 
 /* ── Tipo compartido para el diálogo de confirmación modal ──────────────
    Mismo patrón que en SimulationForm para consistencia visual.
@@ -32,11 +32,22 @@ const DIALOG_CLOSED: ConfirmDialogState = {
   onConfirm: () => undefined,
 };
 
-/* Formatea un número como COP sin decimales */
+/* Formatea un número como COP sin signo $ ambiguo.
+   Ejemplo: 1400000 → "1.400.000 COP" */
 function cop(value: number): string {
-  return new Intl.NumberFormat('es-CO', {
-    style: 'currency', currency: 'COP', minimumFractionDigits: 0,
+  const formatted = new Intl.NumberFormat('es-CO', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(value);
+  return `${formatted} COP`;
+}
+
+/** Tasa para mostrar en la UI (ej. 0.009 → "0.9") */
+function rateDisplay(params: AdminParameterVersion | null): string {
+  if (!params) return '0.9';
+  const entry = params.interestRates.find(r => r.levelScope === 'PREGRADO');
+  const rate = entry?.rateMonthly ?? 0.009;
+  return (rate * 100).toFixed(1).replace(/\.0$/, '');
 }
 
 /* Formatea fecha ISO "YYYY-MM-DD" a "Agosto 2026" (mes + año, sin día) */
@@ -59,6 +70,21 @@ export function SimulationResultsPreview({ summary, input, onNewSimulation, mode
   const [saving, setSaving]             = useState(false);
   /* Diálogo de confirmación — reutilizable para Guardar y Nueva simulación */
   const [dialog, setDialog]             = useState<ConfirmDialogState>(DIALOG_CLOSED);
+
+  /* Parámetros activos para mostrar tasa dinámica en resumen */
+  const [activeParams, setActiveParams] = useState<AdminParameterVersion | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      const res = await getSimulatorConfig();
+      if (!cancelled && res.data?.data) setActiveParams(res.data.data);
+    }
+    void load();
+    return () => { cancelled = true; };
+  }, []);
+
+  /* Capital total = totalPaid - initialPayment - totalInterest */
+  const totalCapital = summary.totalPaid - summary.initialPayment - summary.totalInterest;
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -129,7 +155,7 @@ export function SimulationResultsPreview({ summary, input, onNewSimulation, mode
           <SummaryCard label="Valor matrícula"  value={cop(summary.tuitionGross)} />
           <SummaryCard label="Cuota inicial"    value={`${cop(summary.initialPayment)} (${summary.initialPaymentPct}%)`} />
           <SummaryCard label="Total financiado" value={cop(summary.financedValue)} color="purple" />
-          <SummaryCard label="Modalidad"        value={summary.interestMode === 'con_interes' ? 'Con intereses (0.9% M.V.)' : 'Sin intereses (0%)'} />
+          <SummaryCard label="Modalidad"        value={summary.interestMode === 'con_interes' ? `Con intereses (${rateDisplay(activeParams)}% M.V.)` : 'Sin intereses (0%)'} />
         </div>
 
         {/* Fila 2 de cards de resumen — datos reales */}
@@ -140,19 +166,12 @@ export function SimulationResultsPreview({ summary, input, onNewSimulation, mode
           <SummaryCard label="Total intereses"      value={cop(summary.totalInterest)} color="red" />
         </div>
 
-        {/* Gráfico de distribución Capital vs Intereses */}
-        <div className="mb-8 bg-gray-50 rounded-2xl p-5">
-          <h3 className="text-sm font-bold text-gray-800 mb-4 text-center">
-            Distribución Capital vs Intereses
-          </h3>
-          <div className="flex items-center justify-center">
-            <DonutChartPlaceholder
-              capitalPct={summary.totalPaid > 0
-                ? 100 - Math.round((summary.totalInterest / summary.totalPaid) * 100)
-                : 100}
-            />
-          </div>
-        </div>
+        {/* HU-33 — Gráficas interactivas con selector (3 opciones) */}
+        <SimulationCharts
+          schedule={summary.schedule}
+          totalCapital={totalCapital > 0 ? totalCapital : summary.financedValue}
+          totalInterest={summary.totalInterest}
+        />
 
         {/* #58 — Cuota inicial como pago separado, fuera de la tabla */}
         <div
