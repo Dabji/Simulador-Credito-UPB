@@ -55,4 +55,9 @@ export const RegisterUserSchema = z.object({
   }),
 });
 
+/** Esquema a nivel de request para el middleware validateRequest (HU-53) */
+export const RegisterUserInputSchema = z.object({
+  body: RegisterUserSchema,
+});
+
 export type RegisterUserInput = z.infer<typeof RegisterUserSchema>;

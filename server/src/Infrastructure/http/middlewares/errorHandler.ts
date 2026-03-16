@@ -9,6 +9,7 @@
 // ============================================================
 
 import type { Request, Response, NextFunction } from 'express';
+import { ZodError } from 'zod';
 import { AppError, ValidationError } from '../../../Core/errors';
 import { logger } from '../../logger';
 import { env } from '../../config/env';
@@ -68,6 +69,40 @@ export function errorHandler(
   res: Response,
   _next: NextFunction,
 ): void {
+  // ── Error de validación Zod (HU-53) ─────────────────────
+  if (err instanceof ZodError) {
+    const fieldErrors: Record<string, string[]> = {};
+    for (const issue of err.issues) {
+      const rawPath = issue.path ?? [];
+      const normalizedPath =
+        rawPath.length > 0 && ['body', 'query', 'params'].includes(String(rawPath[0]))
+          ? rawPath.slice(1)
+          : rawPath;
+      const field = normalizedPath.join('.') || '_form';
+      if (!fieldErrors[field]) fieldErrors[field] = [];
+      fieldErrors[field].push(issue.message);
+    }
+
+    logger.warn('Validación Zod fallida', {
+      method: req.method,
+      path: req.originalUrl,
+      fieldErrors,
+    });
+
+    const response: ErrorResponse = {
+      success: false,
+      error: {
+        message: 'Los datos enviados no son válidos.',
+        statusCode: 400,
+        errorCode: 'VALIDATION_ERROR',
+        fieldErrors,
+      },
+    };
+
+    res.status(400).json(response);
+    return;
+  }
+
   // ── Error operacional (controlado / de negocio) ─────────
   if (err instanceof AppError && err.isOperational) {
     logger.warn(err.message, {
