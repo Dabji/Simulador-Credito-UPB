@@ -8,6 +8,16 @@
 import type { Request, Response, NextFunction } from 'express';
 import type { ZodType } from 'zod';
 
+/** Forma esperada del resultado de parseo a nivel de request. */
+type RequestShape = {
+  body?: unknown;
+  query?: unknown;
+  params?: unknown;
+};
+
+/** Esquema Zod que valida un objeto con las claves body, query y/o params. */
+type RequestSchema = ZodType<RequestShape>;
+
 /**
  * Middleware factory que valida la request contra un esquema Zod.
  *
@@ -22,14 +32,14 @@ import type { ZodType } from 'zod';
  * router.post('/endpoint', validateRequest(MySchema), handler);
  * ```
  */
-export function validateRequest(schema: ZodType) {
+export function validateRequest(schema: RequestSchema) {
   return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
     try {
       const result = await schema.parseAsync({
         body: req.body,
         query: req.query,
         params: req.params,
-      }) as { body?: unknown; query?: unknown; params?: unknown };
+      });
 
       // Mutar la request con los datos validados/transformados por Zod
       if (result.body !== undefined) req.body = result.body;

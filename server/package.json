@@ -25,7 +25,7 @@
     "sequelize": "^6.37.7",
     "swagger-ui-express": "^5.0.1",
     "winston": "^3.19.0",
-    "xss-clean": "^0.1.4",
+    "xss": "^1.0.15",
     "zod": "^4.3.6"
   },
   "devDependencies": {

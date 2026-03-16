@@ -4,6 +4,7 @@
 
 import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
+import { ZodError } from 'zod';
 import type { z } from 'zod';
 import { AuthenticateUserUseCase } from '../../../Application/use-cases/AuthenticateUserUseCase';
 import { RegisterUserUseCase } from '../../../Application/use-cases/RegisterUserUseCase';
@@ -38,10 +39,45 @@ const requestPasswordResetUseCase = new RequestPasswordResetUseCase(userReposito
 const resetPasswordUseCase = new ResetPasswordUseCase(userRepository);
 
 /**
+ * Middleware que valida el payload de login con Zod y,
+ * si la validación falla, registra un evento de auditoría
+ * LOGIN_FAILED antes de delegar el error al errorHandler.
+ */
+const validateLoginRequestWithAudit = async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const middleware = validateRequest(LoginUserInputSchema);
+    await new Promise<void>((resolve, reject) => {
+      middleware(req, _res, (err?: unknown) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+    next();
+  } catch (error) {
+    if (error instanceof ZodError) {
+      void auditLog({
+        action:     'LOGIN_FAILED',
+        entity:     'SESSION',
+        entity_id:  'N/A',
+        actor_type: 'SYSTEM',
+        user_id:    null,
+        ip_address: extractIp(req),
+        details:    {
+          email:  req.body?.email ?? 'unknown',
+          role:   req.body?.role  ?? 'unknown',
+          reason: 'Datos de login inválidos',
+        },
+      });
+    }
+    next(error as Error);
+  }
+};
+
+/**
  * POST /api/auth/login
  * Autenticación dual: STUDENT (BD + bcrypt) / ADMIN (LDAP)
  */
-router.post('/login', validateRequest(LoginUserInputSchema), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.post('/login', validateLoginRequestWithAudit, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const data = req.body as z.infer<typeof LoginUserSchema>;
 

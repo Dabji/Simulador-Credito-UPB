@@ -73,7 +73,12 @@ export function errorHandler(
   if (err instanceof ZodError) {
     const fieldErrors: Record<string, string[]> = {};
     for (const issue of err.issues) {
-      const field = issue.path.join('.') || '_form';
+      const rawPath = issue.path ?? [];
+      const normalizedPath =
+        rawPath.length > 0 && ['body', 'query', 'params'].includes(String(rawPath[0]))
+          ? rawPath.slice(1)
+          : rawPath;
+      const field = normalizedPath.join('.') || '_form';
       if (!fieldErrors[field]) fieldErrors[field] = [];
       fieldErrors[field].push(issue.message);
     }
