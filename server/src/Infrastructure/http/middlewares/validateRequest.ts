@@ -41,10 +41,12 @@ export function validateRequest(schema: RequestSchema) {
         params: req.params,
       });
 
-      // Mutar la request con los datos validados/transformados por Zod
+      // Mutar la request con los datos validados/transformados por Zod.
+      // En Express 5, req.query y req.params son getters de solo lectura,
+      // por lo que se mutan in-place en lugar de reasignar.
       if (result.body !== undefined) req.body = result.body;
-      if (result.query !== undefined) req.query = result.query as typeof req.query;
-      if (result.params !== undefined) req.params = result.params as typeof req.params;
+      if (result.query !== undefined) Object.assign(req.query, result.query);
+      if (result.params !== undefined) Object.assign(req.params, result.params);
 
       next();
     } catch (error) {

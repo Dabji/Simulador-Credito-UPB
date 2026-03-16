@@ -38,14 +38,25 @@ function sanitize(value: unknown): unknown {
 }
 
 /**
+ * Sanitiza in-place las propiedades string de un objeto.
+ * Necesario para req.query y req.params en Express 5, donde
+ * las propiedades son getters de solo lectura y no se pueden reasignar.
+ */
+function sanitizeInPlace(obj: Record<string, unknown>): void {
+  for (const key of Object.keys(obj)) {
+    obj[key] = sanitize(obj[key]);
+  }
+}
+
+/**
  * Middleware factory que sanitiza req.body, req.query y req.params
  * contra inyecciones XSS usando la librería `xss`.
  */
 export function xssMiddleware() {
   return (req: Request, _res: Response, next: NextFunction): void => {
     if (req.body) req.body = sanitize(req.body);
-    if (req.query) req.query = sanitize(req.query) as typeof req.query;
-    if (req.params) req.params = sanitize(req.params) as typeof req.params;
+    if (req.query) sanitizeInPlace(req.query as Record<string, unknown>);
+    if (req.params) sanitizeInPlace(req.params as Record<string, unknown>);
     next();
   };
 }
