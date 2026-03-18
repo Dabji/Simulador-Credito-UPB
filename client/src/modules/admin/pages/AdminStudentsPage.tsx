@@ -8,12 +8,11 @@ import {
   type AdminUserFilterField,
 } from '@/shared/services/api';
 
-type FilterOption = AdminUserFilterField | 'all';
+type FilterOption = AdminUserFilterField;
 
 /* ── Tipos ─────────────────────────────────────────────────── */
 
 const FILTER_LABELS: Record<FilterOption, string> = {
-  all:                 'Todos',
   identificationNumber: 'Número de Documento',
   documentType:        'Tipo de Documento',
   fullName:            'Nombre Completo',
@@ -67,8 +66,7 @@ export function AdminStudentsPage() {
       setLoading(true);
       setError(null);
       try {
-        const apiFilter: AdminUserFilterField | undefined = activeFilter === 'all' ? undefined : activeFilter;
-        const res = await adminListUsers({ q: query || undefined, filter: apiFilter, page: pg, pageSize: PAGE_SIZE });
+        const res = await adminListUsers({ q: query || undefined, filter: activeFilter, page: pg, pageSize: PAGE_SIZE });
         if (cancelled) return;
         setLoading(false);
         if (res.error) {

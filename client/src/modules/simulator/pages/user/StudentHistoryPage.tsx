@@ -296,7 +296,7 @@ export function StudentHistoryPage() {
                     'Modalidad',
                     'Período Académico',
                     'Valor Financiado',
-                    'Cuota Inicial (Fecha)',
+                    'Primera Cuota (Fecha)',
                     'Cuota Inicial (Valor)',
                     '# Cuotas',
                   ].map(h => (
@@ -420,7 +420,7 @@ export function StudentHistoryPage() {
             <button
               type="button"
               disabled={page <= 1 || loading}
-              onClick={() => setPage(p => Math.max(1, p - 1))}
+              onClick={() => { setPage(p => Math.max(1, p - 1)); setSelectedId(null); }}
               aria-label="Página anterior"
               className="
                 w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200
@@ -442,7 +442,7 @@ export function StudentHistoryPage() {
             <button
               type="button"
               disabled={page >= totalPages || loading}
-              onClick={() => setPage(p => p + 1)}
+              onClick={() => { setPage(p => p + 1); setSelectedId(null); }}
               aria-label="Página siguiente"
               className="
                 w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200

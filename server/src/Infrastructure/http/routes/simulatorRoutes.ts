@@ -115,10 +115,13 @@ router.get('/history', async (req: AuthenticatedRequest, res: Response, next: Ne
       return;
     }
 
-    const q        = typeof req.query['q']        === 'string' ? req.query['q'].trim()        : '';
-    const filter   = typeof req.query['filter']   === 'string' ? req.query['filter']          : 'all';
-    const page     = Math.max(1, parseInt(String(req.query['page']     ?? '1'), 10));
-    const pageSize = Math.min(50, Math.max(1, parseInt(String(req.query['pageSize'] ?? '10'), 10)));
+    const q      = typeof req.query['q']      === 'string' ? req.query['q'].trim() : '';
+    const filter  = typeof req.query['filter'] === 'string' ? req.query['filter']   : '';
+
+    const rawPage     = parseInt(String(req.query['page']     ?? ''), 10);
+    const rawPageSize = parseInt(String(req.query['pageSize'] ?? ''), 10);
+    const page     = Math.max(1, Number.isNaN(rawPage)     ? 1  : rawPage);
+    const pageSize = Math.min(50, Math.max(1, Number.isNaN(rawPageSize) ? 10 : rawPageSize));
     const offset   = (page - 1) * pageSize;
 
     // Obtener datos del usuario autenticado (nombre, email)
@@ -145,7 +148,12 @@ router.get('/history', async (req: AuthenticatedRequest, res: Response, next: Ne
           baseWhere['created_at'] = { [Op.like]: qLike };
           break;
         default:
-          // búsqueda general: periodo académico o modalidad
+          // búsqueda general: modalidad, periodo académico o fecha
+          baseWhere[Op.or as unknown as string] = [
+            { modality:         { [Op.like]: qLike } },
+            { academic_period:  { [Op.like]: qLike } },
+            { created_at:       { [Op.like]: qLike } },
+          ];
           break;
       }
     }
