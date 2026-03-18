@@ -1,10 +1,16 @@
 // DTO: UpdateUserByAdminInput (HU-82)
 // Campos que el admin puede actualizar en el perfil de otro usuario.
-// Role, password, email y createdAt NO son editables.
+// Role, password y createdAt NO son editables. Email SÍ es editable por el admin.
 
 import { z } from 'zod';
 
 export const UpdateUserByAdminSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .email('El correo electrónico no es válido.')
+    .max(100, 'El correo no puede superar 100 caracteres.')
+    .optional(),
   documentType: z
     .enum(['CC', 'TI'], { message: 'Tipo de documento inválido. Debe ser CC o TI.' })
     .optional(),

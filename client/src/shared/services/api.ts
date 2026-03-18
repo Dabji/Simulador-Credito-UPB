@@ -461,6 +461,7 @@ export interface AdminUserProfileDTO {
 }
 
 export interface AdminUpdateUserPayload {
+  email?: string;
   documentType?: 'CC' | 'TI';
   identificationNumber?: string;
   firstName?: string;

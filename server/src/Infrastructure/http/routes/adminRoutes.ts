@@ -19,7 +19,8 @@ import type { UserFilterField } from '../../../Application/use-cases/ListUsersBy
 import { GetUserByAdminUseCase } from '../../../Application/use-cases/GetUserByAdminUseCase';
 import { UpdateUserByAdminUseCase } from '../../../Application/use-cases/UpdateUserByAdminUseCase';
 import { ListUserSimulationsByAdminUseCase } from '../../../Application/use-cases/ListUserSimulationsByAdminUseCase';
-import { UpdateUserByAdminSchema } from '../../../Application/dtos/UpdateUserByAdminInput';
+import { UpdateUserByAdminSchema, UpdateUserByAdminInputSchema } from '../../../Application/dtos/UpdateUserByAdminInput';
+import { validateRequest } from '../middlewares/validateRequest';
 
 const router = Router();
 const paramRepo      = new SequelizeParameterVersionRepository();
@@ -463,6 +464,9 @@ router.get('/users', async (req: AuthenticatedRequest, res: Response, next: Next
 router.get('/users/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const profile = await getUserUseCase.execute(String(req.params['id'] ?? ''));
+    if (!profile || (profile as { role?: string }).role !== 'STUDENT') {
+      return next(new NotFoundError('Usuario no encontrado.'));
+    }
     res.json({ success: true, data: profile });
   } catch (error) {
     next(error);
@@ -473,49 +477,53 @@ router.get('/users/:id', async (req: AuthenticatedRequest, res: Response, next: 
  * PATCH /api/admin/users/:id
  * HU-82: Actualiza campos permitidos del perfil de un usuario.
  */
-router.patch('/users/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const adminId = req.user?.userId as string | undefined;
-    if (!adminId) throw new UnauthorizedError('No se pudo identificar al administrador.');
+router.patch(
+  '/users/:id',
+  validateRequest(UpdateUserByAdminInputSchema),
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const adminId = req.user?.userId as string | undefined;
+      if (!adminId) throw new UnauthorizedError('No se pudo identificar al administrador.');
 
-    const targetUserId = String(req.params['id'] ?? '');
+      const targetUserId = String(req.params['id'] ?? '');
+      const payload = req.body as ReturnType<typeof UpdateUserByAdminSchema.parse>;
 
-    const parsed = UpdateUserByAdminSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return next(new BadRequestError(parsed.error.issues.map((e: { message: string }) => e.message).join('; ')));
+      const before = await getUserUseCase.execute(targetUserId);
+      if (!before || (before as { role?: string }).role !== 'STUDENT') {
+        return next(new NotFoundError('Usuario no encontrado.'));
+      }
+
+      const updated = await updateUserUseCase.execute(targetUserId, payload);
+
+      const changedFields = Object.keys(payload);
+      await auditLog({
+        action:     'ADMIN_USER_UPDATED',
+        entity:     'USER',
+        entity_id:  targetUserId,
+        actor_type: 'ADMIN',
+        user_id:    adminId,
+        ip_address: extractIp(req),
+        details: {
+          admin_id:       adminId,
+          target_user_id: targetUserId,
+          changed_fields: changedFields,
+          old_values: changedFields.reduce<Record<string, unknown>>((acc, f) => {
+            acc[f] = (before as unknown as Record<string, unknown>)[f];
+            return acc;
+          }, {}),
+          new_values: changedFields.reduce<Record<string, unknown>>((acc, f) => {
+            acc[f] = (updated as unknown as Record<string, unknown>)[f];
+            return acc;
+          }, {}),
+        },
+      });
+
+      res.json({ success: true, data: updated, message: 'Datos del estudiante actualizados correctamente.' });
+    } catch (error) {
+      next(error);
     }
-
-    const before  = await getUserUseCase.execute(targetUserId);
-    const updated = await updateUserUseCase.execute(targetUserId, parsed.data);
-
-    const changedFields = Object.keys(parsed.data);
-    await auditLog({
-      action:     'ADMIN_USER_UPDATED',
-      entity:     'USER',
-      entity_id:  targetUserId,
-      actor_type: 'ADMIN',
-      user_id:    adminId,
-      ip_address: extractIp(req),
-      details: {
-        admin_id:       adminId,
-        target_user_id: targetUserId,
-        changed_fields: changedFields,
-        old_values: changedFields.reduce<Record<string, unknown>>((acc, f) => {
-          acc[f] = (before as unknown as Record<string, unknown>)[f];
-          return acc;
-        }, {}),
-        new_values: changedFields.reduce<Record<string, unknown>>((acc, f) => {
-          acc[f] = (updated as unknown as Record<string, unknown>)[f];
-          return acc;
-        }, {}),
-      },
-    });
-
-    res.json({ success: true, data: updated, message: 'Datos del estudiante actualizados correctamente.' });
-  } catch (error) {
-    next(error);
-  }
-});
+  },
+);
 
 /**
  * GET /api/admin/users/:id/simulations

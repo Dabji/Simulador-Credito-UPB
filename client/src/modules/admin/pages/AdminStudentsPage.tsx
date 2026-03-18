@@ -175,7 +175,7 @@ export function AdminStudentsPage() {
             <input
               type="text"
               value={query}
-              onChange={e => setQuery(e.target.value)}
+              onChange={e => { setQuery(e.target.value); setPage(1); setSelectedId(null); }}
               placeholder={`Buscar por ${FILTER_LABELS[activeFilter].toLowerCase()}…`}
               className="
                 w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800
@@ -273,7 +273,7 @@ export function AdminStudentsPage() {
             <table className="w-full text-sm min-w-[700px]">
               <thead>
                 <tr style={{ backgroundColor: '#F5F3FF' }}>
-                  {['N° Documento', 'Tipo Doc.', activeFilter === 'fullName' ? 'Nombre Completo' : 'Nombre Completo', 'Correo Electrónico', 'Número Celular', 'Fecha Registro'].map(h => (
+                  {['N° Documento', 'Tipo Doc.', 'Nombre Completo', 'Correo Electrónico', 'Número Celular', 'Fecha Registro'].map(h => (
                     <th
                       key={h}
                       className="px-4 py-3 text-left text-xs font-bold text-[#6b21a8] uppercase tracking-wide whitespace-nowrap"

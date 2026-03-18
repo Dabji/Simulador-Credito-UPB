@@ -43,6 +43,7 @@ interface FormState {
   lastName:             string;
   documentType:         'CC' | 'TI' | '';
   identificationNumber: string;
+  email:                string;
   phone:                string;
 }
 
@@ -51,6 +52,7 @@ interface FieldErrors {
   lastName?:             string;
   documentType?:         string;
   identificationNumber?: string;
+  email?:                string;
   phone?:                string;
 }
 
@@ -65,6 +67,8 @@ function validate(form: FormState): FieldErrors {
   if (!form.documentType)                 errs.documentType = 'Selecciona un tipo de documento.';
   if (form.identificationNumber.trim().length < 5)  errs.identificationNumber = 'Mínimo 5 caracteres.';
   if (form.identificationNumber.trim().length > 20) errs.identificationNumber = 'Máximo 20 caracteres.';
+  if (!form.email.trim())                 errs.email = 'El correo es obligatorio.';
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) errs.email = 'Correo electrónico inválido.';
   if (form.phone && !/^\+?[0-9]{7,15}$/.test(form.phone.trim())) {
     errs.phone = 'Formato inválido (7-15 dígitos, puede iniciar con +).';
   }
@@ -138,7 +142,7 @@ export function AdminStudentProfilePage() {
   /* Modo edición */
   const [editing,      setEditing]      = useState(false);
   const [form,         setForm]         = useState<FormState>({
-    firstName: '', lastName: '', documentType: '', identificationNumber: '', phone: '',
+    firstName: '', lastName: '', documentType: '', identificationNumber: '', email: '', phone: '',
   });
   const [fieldErrors,  setFieldErrors]  = useState<FieldErrors>({});
   const [saving,       setSaving]       = useState(false);
@@ -171,6 +175,7 @@ export function AdminStudentProfilePage() {
           lastName:             p.lastName,
           documentType:         p.documentType ?? '',
           identificationNumber: p.identificationNumber,
+          email:                p.email,
           phone:                p.phone ?? '',
         });
       }
@@ -196,6 +201,7 @@ export function AdminStudentProfilePage() {
       lastName:             profile.lastName,
       documentType:         profile.documentType ?? '',
       identificationNumber: profile.identificationNumber,
+      email:                profile.email,
       phone:                profile.phone ?? '',
     });
     setFieldErrors({});
@@ -224,6 +230,7 @@ export function AdminStudentProfilePage() {
       lastName:             form.lastName.trim()             || undefined,
       documentType:         (form.documentType as 'CC' | 'TI') || undefined,
       identificationNumber: form.identificationNumber.trim() || undefined,
+      email:                form.email.trim()                || undefined,
       phone:                form.phone.trim()                || undefined,
     };
 
@@ -243,6 +250,7 @@ export function AdminStudentProfilePage() {
         lastName:             updated.lastName,
         documentType:         updated.documentType ?? '',
         identificationNumber: updated.identificationNumber,
+        email:                updated.email,
         phone:                updated.phone ?? '',
       });
     }
@@ -421,8 +429,16 @@ export function AdminStudentProfilePage() {
                   onChange={handleChange}
                 />
 
-                {/* Email — solo lectura siempre */}
-                <ProfileField label="Correo Electrónico" value={profile.email} />
+                <ProfileField
+                  label="Correo Electrónico"
+                  value={profile.email}
+                  editable editing={editing}
+                  fieldKey="email"
+                  type="email"
+                  formValue={form.email}
+                  error={fieldErrors.email}
+                  onChange={handleChange}
+                />
 
                 <ProfileField
                   label="Número Celular"

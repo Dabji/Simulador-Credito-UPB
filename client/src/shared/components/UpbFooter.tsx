@@ -45,7 +45,7 @@ export function UpbFooter({ className }: UpbFooterProps) {
             <div>
               <p className="text-xs uppercase tracking-widest text-gray-500 mb-1">Bucaramanga</p>
               <p className="text-sm text-gray-300 font-medium">Línea telefónica</p>
-              <p className="text-sm">+57 607 6790202</p>
+              <p className="text-sm">+57 607 6796202</p>
             </div>
             <div>
               <p className="text-sm text-gray-300 font-medium">Correo electrónico</p>

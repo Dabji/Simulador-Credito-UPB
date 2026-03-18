@@ -7,7 +7,7 @@
 import type { IUserRepository } from '../../Core/repositories/IUserRepository';
 import type { UpdateUserByAdminInput } from '../dtos/UpdateUserByAdminInput';
 import type { AdminUserProfileOutput } from '../dtos/AdminUserProfileOutput';
-import { NotFoundError } from '../../Core/errors';
+import { ConflictError, NotFoundError } from '../../Core/errors';
 import { User } from '../../Core/entities/User';
 import type { DocumentType } from '../../Core/entities/User';
 
@@ -21,9 +21,26 @@ export class UpdateUserByAdminUseCase {
     const existing = await this.userRepo.findById(targetUserId);
     if (!existing) throw new NotFoundError('Usuario');
 
+    if (
+      data.identificationNumber &&
+      data.identificationNumber !== existing.identificationNumber
+    ) {
+      const conflict = await this.userRepo.findByIdentification(data.identificationNumber);
+      if (conflict && conflict.id !== existing.id) {
+        throw new ConflictError('Ya existe un usuario con ese número de documento.');
+      }
+    }
+
+    if (data.email && data.email !== existing.email) {
+      const emailConflict = await this.userRepo.findByEmail(data.email);
+      if (emailConflict && emailConflict.id !== existing.id) {
+        throw new ConflictError('Ya existe un usuario con ese correo electrónico.');
+      }
+    }
+
     const updated = User.reconstitute({
       id:                   existing.id,
-      email:                existing.email,               // email NO editable
+      email:                data.email ?? existing.email,
       firstName:            data.firstName            ?? existing.firstName,
       lastName:             data.lastName             ?? existing.lastName,
       documentType:         (data.documentType as DocumentType | undefined) ?? existing.documentType,
