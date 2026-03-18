@@ -6,9 +6,12 @@
 
 import { Router } from 'express';
 import type { Response, NextFunction } from 'express';
+import { Op } from 'sequelize';
 import { SequelizeParameterVersionRepository } from '../../persistence/repositories/SequelizeParameterVersionRepository';
 import { SequelizeUserRepository } from '../../persistence/repositories/SequelizeUserRepository';
 import { SequelizeSimulationRepository } from '../../persistence/repositories/SequelizeSimulationRepository';
+import { SimulationModel } from '../../persistence/models/SimulationModel';
+import { UserModel } from '../../persistence/models/UserModel';
 import { BadRequestError, NotFoundError, UnauthorizedError } from '../../../Core/errors';
 import type { UpdateParameterVersionData } from '../../../Core/repositories/IParameterVersionRepository';
 import { AuditLogModel } from '../../persistence/models/AuditLogModel';
@@ -539,7 +542,148 @@ router.get('/users/:id/simulations', async (req: AuthenticatedRequest, res: Resp
 });
 
 // ══════════════════════════════════════════════════════════════
-// Eliminación administrativa de simulaciones
+// HU-42: Gestión de simulaciones (ADMIN)
+// ══════════════════════════════════════════════════════════════
+
+type SimFilterField =
+  | 'createdAt'
+  | 'academicPeriod'
+  | 'interestMode'
+  | 'educationLevel'
+  | 'studentType'
+  | 'studentName'
+  | 'studentEmail';
+
+const VALID_SIM_FILTERS = new Set<SimFilterField>([
+  'createdAt', 'academicPeriod', 'interestMode',
+  'educationLevel', 'studentType', 'studentName', 'studentEmail',
+]);
+
+/**
+ * GET /api/admin/simulations
+ * HU-42: Lista paginada + filtrada de TODAS las simulaciones activas.
+ * Query params: q, filter, page, pageSize
+ */
+router.get('/simulations', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const q          = typeof req.query['q']      === 'string' ? req.query['q'].trim() : '';
+    const rawFilter  = typeof req.query['filter'] === 'string' ? req.query['filter']   : '';
+    const filter: SimFilterField | '' =
+      rawFilter && VALID_SIM_FILTERS.has(rawFilter as SimFilterField)
+        ? (rawFilter as SimFilterField)
+        : '';
+
+    const rawPage     = Number.parseInt(String(req.query['page']     ?? ''), 10);
+    const rawPageSize = Number.parseInt(String(req.query['pageSize'] ?? ''), 10);
+    const page     = Math.max(1, Number.isNaN(rawPage)     ? 1  : rawPage);
+    const pageSize = Math.min(50, Math.max(1, Number.isNaN(rawPageSize) ? 10 : rawPageSize));
+    const offset   = (page - 1) * pageSize;
+
+    // Condición base: no eliminadas
+    const baseWhere: Record<string, unknown> = { deleted_at: null };
+
+    if (q) {
+      const qLike = `%${q}%`;
+
+      // Filtros por nombre/correo: buscar userIds primero, luego añadir al where
+      if (filter === 'studentName' || filter === 'studentEmail') {
+        const userWhere = filter === 'studentName'
+          ? { [Op.or]: [
+              { first_name: { [Op.like]: qLike } },
+              { last_name:  { [Op.like]: qLike } },
+            ]}
+          : { email: { [Op.like]: qLike } };
+
+        const matchingUsers = await UserModel.findAll({
+          attributes: ['id'],
+          where: userWhere,
+        });
+        baseWhere['user_id'] = { [Op.in]: matchingUsers.map(u => u.id) };
+      } else {
+        switch (filter) {
+          case 'createdAt':
+            baseWhere['created_at'] = { [Op.like]: qLike };
+            break;
+          case 'academicPeriod':
+            baseWhere['academic_period'] = { [Op.like]: qLike };
+            break;
+          case 'interestMode':
+            baseWhere['modality'] = { [Op.like]: qLike };
+            break;
+          case 'educationLevel':
+            baseWhere['level'] = { [Op.like]: qLike };
+            break;
+          case 'studentType':
+            baseWhere['student_type'] = { [Op.like]: qLike };
+            break;
+          default:
+            baseWhere[Op.or as unknown as string] = [
+              { modality:        { [Op.like]: qLike } },
+              { academic_period: { [Op.like]: qLike } },
+              { level:           { [Op.like]: qLike } },
+              { student_type:    { [Op.like]: qLike } },
+            ];
+            break;
+        }
+      }
+    }
+
+    // Una única consulta con el where ya construido correctamente
+    const { count, rows } = await SimulationModel.findAndCountAll({
+      where: baseWhere,
+      attributes: [
+        'id', 'created_at', 'modality', 'level', 'student_type',
+        'financed_value', 'initial_payment_value', 'first_payment_date',
+        'total_payments', 'academic_period', 'user_id',
+      ],
+      order: [['created_at', 'DESC']],
+      limit: pageSize,
+      offset,
+    });
+
+    // Cargar datos de usuario para decorar cada fila
+    const userIds = [...new Set(rows.map(r => r.user_id))];
+    const users = await UserModel.findAll({
+      attributes: ['id', 'first_name', 'last_name', 'email'],
+      where: { id: { [Op.in]: userIds } },
+    });
+    const userMap = new Map(users.map(u => [u.id, u]));
+
+    const items = rows.map(sim => {
+      const u = userMap.get(sim.user_id);
+      return {
+        id:                  sim.id,
+        createdAt:           sim.created_at,
+        studentName:         u ? `${u.first_name} ${u.last_name}`.trim() : '',
+        studentEmail:        u?.email ?? '',
+        modality:            sim.modality,
+        educationLevel:      sim.level,
+        studentType:         sim.student_type,
+        financedValue:       Number(sim.financed_value),
+        initialPaymentValue: Number(sim.initial_payment_value),
+        firstPaymentDate:    sim.first_payment_date,
+        numberOfPayments:    sim.total_payments,
+        academicPeriod:      sim.academic_period ?? '',
+      };
+    });
+
+    res.json({
+      success: true,
+      data: {
+        items,
+        page,
+        pageSize,
+        total: count,
+        totalPages: Math.ceil(count / pageSize),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// HU-38: Eliminación administrativa de simulaciones
 // ══════════════════════════════════════════════════════════════
 
 /**

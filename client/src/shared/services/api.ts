@@ -522,6 +522,71 @@ export async function adminGetUserSimulations(
   return request<{ data: AdminUserSimulationItemDTO[] }>(`/admin/users/${id}/simulations`);
 }
 
+// ── HU-42: Gestión de simulaciones (ADMIN) ────────────────────────────────
+
+export type AdminSimFilterField =
+  | 'createdAt'
+  | 'academicPeriod'
+  | 'interestMode'
+  | 'educationLevel'
+  | 'studentType'
+  | 'studentName'
+  | 'studentEmail';
+
+export interface AdminSimulationItemDTO {
+  readonly id: string;
+  readonly createdAt: string;
+  readonly studentName: string;
+  readonly studentEmail: string;
+  readonly modality: 'SIN_INTERES' | 'CON_INTERES';
+  readonly educationLevel: 'PREGRADO' | 'POSGRADO' | 'UPB_TEC';
+  readonly studentType: 'NUEVO' | 'CONTINUO';
+  readonly financedValue: number;
+  readonly initialPaymentValue: number;
+  readonly firstPaymentDate: string;
+  readonly numberOfPayments: number;
+  readonly academicPeriod: string;
+}
+
+export interface AdminSimulationsResponseDTO {
+  readonly items: AdminSimulationItemDTO[];
+  readonly page: number;
+  readonly pageSize: number;
+  readonly total: number;
+  readonly totalPages: number;
+}
+
+export interface AdminListSimulationsParams {
+  q?: string;
+  filter?: AdminSimFilterField;
+  page?: number;
+  pageSize?: number;
+}
+
+/** GET /api/admin/simulations — Lista paginada de todas las simulaciones */
+export async function adminListSimulations(
+  params: AdminListSimulationsParams = {},
+): Promise<ApiResponse<{ data: AdminSimulationsResponseDTO }>> {
+  const qs = new URLSearchParams();
+  if (params.q)        qs.set('q',        params.q);
+  if (params.filter)   qs.set('filter',   params.filter);
+  if (params.page)     qs.set('page',     String(params.page));
+  if (params.pageSize) qs.set('pageSize', String(params.pageSize));
+  const query = qs.toString() ? `?${qs.toString()}` : '';
+  return request<{ data: AdminSimulationsResponseDTO }>(`/admin/simulations${query}`);
+}
+
+/** DELETE /api/admin/simulations/:id — Eliminar simulación (admin) */
+export async function adminDeleteSimulation(
+  id: string,
+  reason?: string,
+): Promise<ApiResponse<{ success: boolean; message: string }>> {
+  return request<{ success: boolean; message: string }>(
+    `/admin/simulations/${id}`,
+    { method: 'DELETE', body: JSON.stringify({ reason: reason ?? 'Eliminado por administrador' }) },
+  );
+}
+
 // ── HU-35: Historial de simulaciones del estudiante ───────────────────────
 
 export type StudentHistoryFilter =
