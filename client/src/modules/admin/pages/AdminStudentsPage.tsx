@@ -23,7 +23,7 @@ const FILTER_LABELS: Record<FilterOption, string> = {
 };
 
 const ALL_FILTERS: FilterOption[] = [
-  'all', 'identificationNumber', 'documentType', 'fullName', 'email', 'phone', 'createdAt',
+  'identificationNumber', 'documentType', 'fullName', 'email', 'phone', 'createdAt',
 ];
 
 const PAGE_SIZE = 10;
@@ -44,7 +44,7 @@ export function AdminStudentsPage() {
 
   /* Estado de búsqueda / filtro */
   const [query,         setQuery]         = useState('');
-  const [activeFilter,  setActiveFilter]  = useState<FilterOption>('all');
+  const [activeFilter,  setActiveFilter]  = useState<FilterOption>('identificationNumber');
   const [filterOpen,    setFilterOpen]    = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
 
@@ -225,9 +225,8 @@ export function AdminStudentsPage() {
               <p className="px-4 pt-3 pb-1.5 text-xs font-bold text-gray-400 uppercase tracking-wider">
                 Filtrar por
               </p>
-              {ALL_FILTERS.map((f, idx) => (
+              {ALL_FILTERS.map((f) => (
                 <div key={f}>
-                  {idx === 1 && <div className="my-1 border-t border-gray-100" />}
                   <button
                     type="button"
                     onClick={() => handleSelectFilter(f)}
