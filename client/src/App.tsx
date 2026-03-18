@@ -3,6 +3,8 @@ import { SimulatorPage } from './modules/simulator/pages/user/SimulatorPage';
 import { CreateSimulationPage } from './modules/simulator/pages/user/CreateSimulationPage';
 import { MainStudentPage } from './modules/simulator/pages/user/MainStudentPage';
 import { StudentHistoryPage } from './modules/simulator/pages/user/StudentHistoryPage';
+import { StudentHistoryDetailPage } from './modules/simulator/pages/user/StudentHistoryDetailPage';
+import { StudentHistoryExportPage } from './modules/simulator/pages/user/StudentHistoryExportPage';
 import { UserProfilePage } from './modules/simulator/pages/user/UserProfilePage';
 import { AdminDashboard } from './modules/admin/pages/AdminDashboard';
 import { AdminMainPage } from './modules/admin/pages/AdminMainPage';
@@ -44,6 +46,8 @@ export function App() {
           {/* ── Rutas del estudiante (HU-08) ── */}
           <Route path="/student/main" element={<ProtectedRoute requiredRole="STUDENT"><MainStudentPage /></ProtectedRoute>} />
           <Route path="/student/history" element={<ProtectedRoute requiredRole="STUDENT"><StudentHistoryPage /></ProtectedRoute>} />
+          <Route path="/student/history/:id" element={<ProtectedRoute requiredRole="STUDENT"><StudentHistoryDetailPage /></ProtectedRoute>} />
+          <Route path="/student/history/:id/export" element={<ProtectedRoute requiredRole="STUDENT"><StudentHistoryExportPage /></ProtectedRoute>} />
           <Route path="/student/profile" element={<ProtectedRoute requiredRole="STUDENT"><UserProfilePage /></ProtectedRoute>} />
 
           {/* Rutas protegidas — requieren sesión activa */}

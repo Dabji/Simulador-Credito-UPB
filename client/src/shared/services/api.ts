@@ -521,3 +521,51 @@ export async function adminGetUserSimulations(
 ): Promise<ApiResponse<{ data: AdminUserSimulationItemDTO[] }>> {
   return request<{ data: AdminUserSimulationItemDTO[] }>(`/admin/users/${id}/simulations`);
 }
+
+// ── HU-35: Historial de simulaciones del estudiante ───────────────────────
+
+export type StudentHistoryFilter =
+  | 'modality'
+  | 'academicPeriod'
+  | 'createdAt';
+
+export interface StudentHistoryItemDTO {
+  readonly id: string;
+  readonly createdAt: string;
+  readonly studentName: string;
+  readonly studentEmail: string;
+  readonly modality: 'SIN_INTERES' | 'CON_INTERES';
+  readonly financedValue: number;
+  readonly initialPaymentValue: number;
+  readonly firstPaymentDate: string;
+  readonly numberOfPayments: number;
+  readonly academicPeriod: string;
+}
+
+export interface StudentHistoryResponseDTO {
+  readonly items: StudentHistoryItemDTO[];
+  readonly page: number;
+  readonly pageSize: number;
+  readonly total: number;
+  readonly totalPages: number;
+}
+
+export interface GetMyHistoryParams {
+  q?: string;
+  filter?: StudentHistoryFilter;
+  page?: number;
+  pageSize?: number;
+}
+
+/** GET /api/simulator/history — Historial paginado del estudiante autenticado */
+export async function getMySimulationHistory(
+  params: GetMyHistoryParams = {},
+): Promise<ApiResponse<StudentHistoryResponseDTO>> {
+  const qs = new URLSearchParams();
+  if (params.q)        qs.set('q',        params.q);
+  if (params.filter) qs.set('filter', params.filter);
+  if (params.page)     qs.set('page',     String(params.page));
+  if (params.pageSize) qs.set('pageSize', String(params.pageSize));
+  const query = qs.toString() ? `?${qs.toString()}` : '';
+  return request<StudentHistoryResponseDTO>(`/simulator/history${query}`);
+}

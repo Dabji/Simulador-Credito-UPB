@@ -8,12 +8,11 @@ import {
   type AdminUserFilterField,
 } from '@/shared/services/api';
 
-type FilterOption = AdminUserFilterField | 'all';
+type FilterOption = AdminUserFilterField;
 
 /* ── Tipos ─────────────────────────────────────────────────── */
 
 const FILTER_LABELS: Record<FilterOption, string> = {
-  all:                 'Todos',
   identificationNumber: 'Número de Documento',
   documentType:        'Tipo de Documento',
   fullName:            'Nombre Completo',
@@ -23,7 +22,7 @@ const FILTER_LABELS: Record<FilterOption, string> = {
 };
 
 const ALL_FILTERS: FilterOption[] = [
-  'all', 'identificationNumber', 'documentType', 'fullName', 'email', 'phone', 'createdAt',
+  'identificationNumber', 'documentType', 'fullName', 'email', 'phone', 'createdAt',
 ];
 
 const PAGE_SIZE = 10;
@@ -44,7 +43,7 @@ export function AdminStudentsPage() {
 
   /* Estado de búsqueda / filtro */
   const [query,         setQuery]         = useState('');
-  const [activeFilter,  setActiveFilter]  = useState<FilterOption>('all');
+  const [activeFilter,  setActiveFilter]  = useState<FilterOption>('identificationNumber');
   const [filterOpen,    setFilterOpen]    = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
 
@@ -67,8 +66,7 @@ export function AdminStudentsPage() {
       setLoading(true);
       setError(null);
       try {
-        const apiFilter: AdminUserFilterField | undefined = activeFilter === 'all' ? undefined : activeFilter;
-        const res = await adminListUsers({ q: query || undefined, filter: apiFilter, page: pg, pageSize: PAGE_SIZE });
+        const res = await adminListUsers({ q: query || undefined, filter: activeFilter, page: pg, pageSize: PAGE_SIZE });
         if (cancelled) return;
         setLoading(false);
         if (res.error) {
@@ -225,9 +223,8 @@ export function AdminStudentsPage() {
               <p className="px-4 pt-3 pb-1.5 text-xs font-bold text-gray-400 uppercase tracking-wider">
                 Filtrar por
               </p>
-              {ALL_FILTERS.map((f, idx) => (
+              {ALL_FILTERS.map((f) => (
                 <div key={f}>
-                  {idx === 1 && <div className="my-1 border-t border-gray-100" />}
                   <button
                     type="button"
                     onClick={() => handleSelectFilter(f)}

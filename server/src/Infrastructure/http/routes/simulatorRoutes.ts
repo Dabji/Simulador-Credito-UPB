@@ -7,10 +7,13 @@
 
 import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
+import { Op } from 'sequelize';
 import { PreviewSimulationUseCase } from '../../../Application/use-cases/PreviewSimulationUseCase';
 import { SaveSimulationUseCase } from '../../../Application/use-cases/SaveSimulationUseCase';
 import { SequelizeSimulationRepository } from '../../persistence/repositories/SequelizeSimulationRepository';
 import { SequelizeParameterVersionRepository } from '../../persistence/repositories/SequelizeParameterVersionRepository';
+import { SimulationModel } from '../../persistence/models/SimulationModel';
+import { UserModel } from '../../persistence/models/UserModel';
 import type { SimulationInput } from '../../../Application/dtos/SimulationInput';
 import { logger } from '../../logger';
 import type { AuthenticatedRequest } from '../middlewares/authGuard';
@@ -101,19 +104,91 @@ router.post('/save', async (req: AuthenticatedRequest, res: Response, next: Next
 
 /**
  * GET /api/simulator/history
- * Retorna las simulaciones guardadas del usuario autenticado.
+ * HU-35: Lista paginada + filtrada de simulaciones del usuario autenticado.
+ * Query params: q (texto), filter (campo), page (número), pageSize (número)
  */
 router.get('/history', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user?.userId as string | undefined;
-
     if (!userId) {
       res.status(401).json({ error: 'Usuario no autenticado.' });
       return;
     }
 
-    const simulations = await simulationRepo.findByUserId(userId);
-    res.json({ simulations });
+    const q      = typeof req.query['q']      === 'string' ? req.query['q'].trim() : '';
+    const filter  = typeof req.query['filter'] === 'string' ? req.query['filter']   : '';
+
+    const rawPage     = parseInt(String(req.query['page']     ?? ''), 10);
+    const rawPageSize = parseInt(String(req.query['pageSize'] ?? ''), 10);
+    const page     = Math.max(1, Number.isNaN(rawPage)     ? 1  : rawPage);
+    const pageSize = Math.min(50, Math.max(1, Number.isNaN(rawPageSize) ? 10 : rawPageSize));
+    const offset   = (page - 1) * pageSize;
+
+    // Obtener datos del usuario autenticado (nombre, email)
+    const user = await UserModel.findByPk(userId, {
+      attributes: ['first_name', 'last_name', 'email'],
+    });
+    const studentName  = user ? `${user.first_name} ${user.last_name}`.trim() : '';
+    const studentEmail = user?.email ?? '';
+
+    // Condición base: solo del usuario, no eliminadas
+    const baseWhere: Record<string, unknown> = { user_id: userId, deleted_at: null };
+
+    // Condición de búsqueda por filtro
+    if (q) {
+      const qLike = `%${q}%`;
+      switch (filter) {
+        case 'modality':
+          baseWhere['modality'] = { [Op.like]: qLike };
+          break;
+        case 'academicPeriod':
+          baseWhere['academic_period'] = { [Op.like]: qLike };
+          break;
+        case 'createdAt':
+          baseWhere['created_at'] = { [Op.like]: qLike };
+          break;
+        default:
+          // búsqueda general: modalidad, periodo académico o fecha
+          baseWhere[Op.or as unknown as string] = [
+            { modality:         { [Op.like]: qLike } },
+            { academic_period:  { [Op.like]: qLike } },
+            { created_at:       { [Op.like]: qLike } },
+          ];
+          break;
+      }
+    }
+
+    const { count, rows } = await SimulationModel.findAndCountAll({
+      where: baseWhere,
+      attributes: [
+        'id', 'created_at', 'modality', 'financed_value',
+        'initial_payment_value', 'first_payment_date', 'total_payments', 'academic_period',
+      ],
+      order: [['created_at', 'DESC']],
+      limit: pageSize,
+      offset,
+    });
+
+    const items = rows.map((sim) => ({
+      id:                  sim.id,
+      createdAt:           sim.created_at,
+      studentName,
+      studentEmail,
+      modality:            sim.modality,
+      financedValue:       Number(sim.financed_value),
+      initialPaymentValue: Number(sim.initial_payment_value),
+      firstPaymentDate:    sim.first_payment_date,
+      numberOfPayments:    sim.total_payments,
+      academicPeriod:      sim.academic_period ?? '',
+    }));
+
+    res.json({
+      items,
+      page,
+      pageSize,
+      total: count,
+      totalPages: Math.ceil(count / pageSize),
+    });
   } catch (error) {
     next(error);
   }
