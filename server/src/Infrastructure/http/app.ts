@@ -68,7 +68,6 @@ export function createApp(): express.Application {
   // Rutas protegidas por rol (HU-07)
   app.use('/api/simulator', authGuard, simulatorRoutes);
   app.use('/api/admin', authGuard, roleGuard(UserRole.ADMIN), adminRoutes);
-
   // ── HU-81: Perfil del estudiante autenticado ──────────────
   app.use('/api/users', userRoutes);
 
