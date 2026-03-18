@@ -7,6 +7,7 @@ import { UserProfilePage } from './modules/simulator/pages/user/UserProfilePage'
 import { AdminDashboard } from './modules/admin/pages/AdminDashboard';
 import { AdminMainPage } from './modules/admin/pages/AdminMainPage';
 import { AdminStudentsPage } from './modules/admin/pages/AdminStudentsPage';
+import { AdminStudentProfilePage } from './modules/admin/pages/AdminStudentProfilePage';
 import { AdminParametersPage } from './modules/admin/pages/AdminParametersPage';
 import { AdminSimulationsPage } from './modules/admin/pages/AdminSimulationsPage';
 import { LoginPage } from './modules/auth/pages/LoginPage';
@@ -52,6 +53,7 @@ export function App() {
           <Route path="/admin" element={<Navigate to="/admin/main" replace />} />
           <Route path="/admin/main" element={<ProtectedRoute requiredRole="ADMIN"><AdminMainPage /></ProtectedRoute>} />
           <Route path="/admin/students" element={<ProtectedRoute requiredRole="ADMIN"><AdminStudentsPage /></ProtectedRoute>} />
+          <Route path="/admin/students/:id" element={<ProtectedRoute requiredRole="ADMIN"><AdminStudentProfilePage /></ProtectedRoute>} />
           <Route path="/admin/parameters" element={<ProtectedRoute requiredRole="ADMIN"><AdminParametersPage /></ProtectedRoute>} />
           <Route path="/admin/simulations" element={<ProtectedRoute requiredRole="ADMIN"><AdminSimulationsPage /></ProtectedRoute>} />
 

@@ -9,12 +9,17 @@ import type { Response, NextFunction } from 'express';
 import { SequelizeParameterVersionRepository } from '../../persistence/repositories/SequelizeParameterVersionRepository';
 import { SequelizeUserRepository } from '../../persistence/repositories/SequelizeUserRepository';
 import { SequelizeSimulationRepository } from '../../persistence/repositories/SequelizeSimulationRepository';
-import { User, UserRole } from '../../../Core/entities/User';
-import { BadRequestError, NotFoundError } from '../../../Core/errors';
+import { BadRequestError, NotFoundError, UnauthorizedError } from '../../../Core/errors';
 import type { UpdateParameterVersionData } from '../../../Core/repositories/IParameterVersionRepository';
 import { AuditLogModel } from '../../persistence/models/AuditLogModel';
 import type { AuthenticatedRequest } from '../middlewares/authGuard';
 import { auditLog, extractIp } from '../../../Application/services/AuditService';
+import { ListUsersByAdminUseCase } from '../../../Application/use-cases/ListUsersByAdminUseCase';
+import type { UserFilterField } from '../../../Application/use-cases/ListUsersByAdminUseCase';
+import { GetUserByAdminUseCase } from '../../../Application/use-cases/GetUserByAdminUseCase';
+import { UpdateUserByAdminUseCase } from '../../../Application/use-cases/UpdateUserByAdminUseCase';
+import { ListUserSimulationsByAdminUseCase } from '../../../Application/use-cases/ListUserSimulationsByAdminUseCase';
+import { UpdateUserByAdminSchema } from '../../../Application/dtos/UpdateUserByAdminInput';
 
 const router = Router();
 const paramRepo      = new SequelizeParameterVersionRepository();
@@ -412,30 +417,40 @@ router.put('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
 // HU-82: Gestión administrativa de usuarios
 // ══════════════════════════════════════════════════════════════
 
+const listUsersUseCase        = new ListUsersByAdminUseCase();
+const getUserUseCase          = new GetUserByAdminUseCase(userRepo);
+const updateUserUseCase       = new UpdateUserByAdminUseCase(userRepo);
+const listUserSimsUseCase     = new ListUserSimulationsByAdminUseCase(userRepo, simulationRepo);
+
+const VALID_FILTERS = new Set<UserFilterField>([
+  'identificationNumber', 'documentType', 'fullName', 'email', 'phone', 'createdAt',
+]);
+
 /**
  * GET /api/admin/users
- * Lista usuarios registrados con paginación (?limit=50&offset=0).
+ * HU-82: Lista estudiantes con búsqueda y paginación.
+ * Query: q (texto), filter (enum), page, pageSize
  */
 router.get('/users', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    let limit  = Math.max(1, parseInt(req.query['limit']  as string, 10) || 50);
-    let offset = Math.max(0, parseInt(req.query['offset'] as string, 10) || 0);
-    if (limit > 100) limit = 100;
+    const rawPage     = Number.parseInt(String(req.query['page']     ?? '1'),  10);
+    const rawPageSize = Number.parseInt(String(req.query['pageSize'] ?? '10'), 10);
+    const q           = typeof req.query['q']      === 'string' ? req.query['q']      : undefined;
+    const rawFilter   = typeof req.query['filter'] === 'string' ? req.query['filter'] : undefined;
 
-    const { rows: users, count: total } = await userRepo.findAll({ limit, offset });
-    res.json({
-      success: true,
-      data: {
-        total,
-        limit,
-        offset,
-        users: users.map(u => {
-          const { password: _, ...safe } = u.toJSON();
-          void _;
-          return safe;
-        }),
-      },
+    const filter: UserFilterField | undefined =
+      rawFilter && VALID_FILTERS.has(rawFilter as UserFilterField)
+        ? (rawFilter as UserFilterField)
+        : undefined;
+
+    const result = await listUsersUseCase.execute({
+      q,
+      filter,
+      page:     Number.isNaN(rawPage)     ? 1  : rawPage,
+      pageSize: Number.isNaN(rawPageSize) ? 10 : rawPageSize,
     });
+
+    res.json({ success: true, data: result });
   } catch (error) {
     next(error);
   }
@@ -443,15 +458,12 @@ router.get('/users', async (req: AuthenticatedRequest, res: Response, next: Next
 
 /**
  * GET /api/admin/users/:id
- * Detalle de un usuario específico.
+ * HU-82: Perfil completo de un usuario (sin password).
  */
 router.get('/users/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const user = await userRepo.findById(req.params['id'] as string);
-    if (!user) return next(new NotFoundError('Usuario no encontrado'));
-    const { password: _, ...safe } = user.toJSON();
-    void _;
-    res.json({ success: true, data: safe });
+    const profile = await getUserUseCase.execute(String(req.params['id'] ?? ''));
+    res.json({ success: true, data: profile });
   } catch (error) {
     next(error);
   }
@@ -459,113 +471,60 @@ router.get('/users/:id', async (req: AuthenticatedRequest, res: Response, next: 
 
 /**
  * PATCH /api/admin/users/:id
- * HU-82: Actualiza información de un usuario (nombre, teléfono, estado, rol).
- * Genera audit logs diferenciados:
- *   - ADMIN_USER_STATUS_CHANGED cuando cambia is_active
- *   - ADMIN_USER_ROLE_CHANGED  cuando cambia role
- *   - ADMIN_USER_UPDATED       para cualquier otro cambio de datos
+ * HU-82: Actualiza campos permitidos del perfil de un usuario.
  */
 router.patch('/users/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const targetId = req.params['id'] as string;
-    const body = req.body as {
-      firstName?: string;
-      lastName?: string;
-      phone?: string;
-      isActive?: boolean;
-      role?: string;
-    };
+    const adminId = req.user?.userId as string | undefined;
+    if (!adminId) throw new UnauthorizedError('No se pudo identificar al administrador.');
 
-    // Validar role si viene en el body
-    const VALID_ROLES = ['ADMIN', 'STUDENT'];
-    if (body.role !== undefined && !VALID_ROLES.includes(body.role)) {
-      return next(new BadRequestError(`Rol inválido: ${body.role}. Valores permitidos: ${VALID_ROLES.join(', ')}`));
+    const targetUserId = String(req.params['id'] ?? '');
+
+    const parsed = UpdateUserByAdminSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return next(new BadRequestError(parsed.error.issues.map((e: { message: string }) => e.message).join('; ')));
     }
 
-    const existing = await userRepo.findById(targetId);
-    if (!existing) return next(new NotFoundError('Usuario no encontrado'));
+    const before  = await getUserUseCase.execute(targetUserId);
+    const updated = await updateUserUseCase.execute(targetUserId, parsed.data);
 
-    const adminUserId = String(req.user?.['userId'] ?? 'unknown');
-    const adminEmail  = String(req.user?.['email']  ?? 'unknown');
-    const ipAddress   = extractIp(req);
-    const auditUserId = adminUserId !== 'unknown' ? adminUserId : null;
-
-    // Build updated user
-    const existingJson = existing.toJSON();
-    const updatedUser = User.reconstitute({
-      ...existingJson,
-      firstName: body.firstName ?? existingJson.firstName,
-      lastName:  body.lastName  ?? existingJson.lastName,
-      phone:     body.phone     ?? existingJson.phone,
-      isActive:  body.isActive  ?? existingJson.isActive,
-      role:      (body.role === 'ADMIN' ? UserRole.ADMIN : body.role === 'STUDENT' ? UserRole.STUDENT : existingJson.role),
-      updatedAt: new Date(),
+    const changedFields = Object.keys(parsed.data);
+    await auditLog({
+      action:     'ADMIN_USER_UPDATED',
+      entity:     'USER',
+      entity_id:  targetUserId,
+      actor_type: 'ADMIN',
+      user_id:    adminId,
+      ip_address: extractIp(req),
+      details: {
+        admin_id:       adminId,
+        target_user_id: targetUserId,
+        changed_fields: changedFields,
+        old_values: changedFields.reduce<Record<string, unknown>>((acc, f) => {
+          acc[f] = (before as unknown as Record<string, unknown>)[f];
+          return acc;
+        }, {}),
+        new_values: changedFields.reduce<Record<string, unknown>>((acc, f) => {
+          acc[f] = (updated as unknown as Record<string, unknown>)[f];
+          return acc;
+        }, {}),
+      },
     });
 
-    const saved = await userRepo.update(updatedUser);
+    res.json({ success: true, data: updated, message: 'Datos del estudiante actualizados correctamente.' });
+  } catch (error) {
+    next(error);
+  }
+});
 
-    // Audit: status change
-    if (body.isActive !== undefined && body.isActive !== existingJson.isActive) {
-      await auditLog({
-        action:     'ADMIN_USER_STATUS_CHANGED',
-        entity:     'USER',
-        entity_id:  targetId,
-        actor_type: 'ADMIN',
-        user_id:    auditUserId,
-        ip_address: ipAddress,
-        details:    {
-          adminEmail,
-          targetUserId: targetId,
-          targetEmail:  existingJson.email,
-          previousStatus: existingJson.isActive,
-          newStatus:      body.isActive,
-        },
-      });
-    }
-
-    // Audit: role change (compare against persisted role to avoid inconsistent logs)
-    const savedJson = saved.toJSON();
-    if (savedJson.role !== existingJson.role) {
-      await auditLog({
-        action:     'ADMIN_USER_ROLE_CHANGED',
-        entity:     'USER',
-        entity_id:  targetId,
-        actor_type: 'ADMIN',
-        user_id:    auditUserId,
-        ip_address: ipAddress,
-        details:    {
-          adminEmail,
-          targetUserId: targetId,
-          targetEmail:  existingJson.email,
-          previousRole: existingJson.role,
-          newRole:      savedJson.role,
-        },
-      });
-    }
-
-    // Audit: general data update (only if non-status/role fields changed)
-    const dataFields = ['firstName', 'lastName', 'phone'] as const;
-    const changedData = dataFields.filter(f => body[f] !== undefined && body[f] !== (existingJson as unknown as Record<string, unknown>)[f]);
-    if (changedData.length > 0) {
-      await auditLog({
-        action:     'ADMIN_USER_UPDATED',
-        entity:     'USER',
-        entity_id:  targetId,
-        actor_type: 'ADMIN',
-        user_id:    auditUserId,
-        ip_address: ipAddress,
-        details:    {
-          adminEmail,
-          targetUserId: targetId,
-          targetEmail:  existingJson.email,
-          changedFields: changedData,
-        },
-      });
-    }
-
-    const { password: _, ...safeResult } = saved.toJSON();
-    void _;
-    res.json({ success: true, data: safeResult, message: 'Usuario actualizado correctamente.' });
+/**
+ * GET /api/admin/users/:id/simulations
+ * HU-82: Lista simulaciones de un usuario (máx. 50, desc. por fecha).
+ */
+router.get('/users/:id/simulations', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const simulations = await listUserSimsUseCase.execute(String(req.params['id'] ?? ''));
+    res.json({ success: true, data: simulations });
   } catch (error) {
     next(error);
   }

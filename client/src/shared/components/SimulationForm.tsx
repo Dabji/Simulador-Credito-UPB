@@ -362,22 +362,14 @@ export function SimulationForm({ onResult, mode = 'student' }: SimulationFormPro
         const pct    = parseFloat(parsePctInput(next.downPaymentPercent)) || 0;
         next.downPaymentValue = newNet > 0 && pct > 0 ? String(Math.round(newNet * pct / 100)) : '';
       }
-      /* #58 — Al seleccionar upbTech, forzar cuota inicial al mínimo paramétrico
-         #57 — Beca no aplica en upbTech: base de cálculo es la matrícula bruta */
-      if (key === 'educationLevel' && value === 'upbTech') {
-        const minPctTech = getMinInitialPct(activeParams, 'upbTech', next.interestMode || 'sin_interes');
-        next.downPaymentPercent = String(minPctTech);
-        const tuition = parseFloat(parseCOPInput(next.tuitionValue)) || 0;
-        next.downPaymentValue = tuition > 0 ? String(Math.round(tuition * minPctTech / 100)) : '';
-      }
-      /* #58 — Al cambiar de upbTech a otro nivel, restaurar mínimo paramétrico */
-      if (key === 'educationLevel' && value !== 'upbTech' && prev.educationLevel === 'upbTech') {
-        const minPctNew = getMinInitialPct(activeParams, value, next.interestMode || 'sin_interes');
-        next.downPaymentPercent = String(minPctNew);
-        const tuition    = parseFloat(parseCOPInput(next.tuitionValue)) || 0;
-        const scholarship = parseFloat(parsePctInput(next.scholarshipPercent)) || 0;
-        const netT       = tuition * (1 - scholarship / 100);
-        next.downPaymentValue = netT > 0 ? String(Math.round(netT * minPctNew / 100)) : '';
+      /* Al cambiar nivel educativo → auto-rellenar cuota inicial al mínimo paramétrico */
+      if (key === 'educationLevel' && value) {
+        const minPctLevel = getMinInitialPct(activeParams, value, next.interestMode || 'sin_interes');
+        next.downPaymentPercent = String(minPctLevel);
+        const tuitionVal  = parseFloat(parseCOPInput(next.tuitionValue)) || 0;
+        const scholVal    = parseFloat(parsePctInput(next.scholarshipPercent)) || 0;
+        const netTVal     = value === 'upbTech' ? tuitionVal : tuitionVal * (1 - scholVal / 100);
+        next.downPaymentValue = netTVal > 0 ? String(Math.round(netTVal * minPctLevel / 100)) : '';
       }
       /* Al cambiar periodo, limpiar mes y cuotas dependientes */
       if (key === 'academicPeriod') { next.firstPaymentMonth = ''; next.numberOfPayments = ''; }
@@ -426,18 +418,32 @@ export function SimulationForm({ onResult, mode = 'student' }: SimulationFormPro
     }
   };
 
-  /* Cambio de interestMode: aplica regla #59 si se intenta con_interes con cuotas <= 3 */
+  /* Cambio de interestMode: aplica regla #59 si se intenta con_interes con cuotas <= 3.
+     También auto-actualiza el porcentaje mínimo de cuota inicial. */
   const handleInterestMode = (value: string) => {
     clearSubmitForced();
     const n = parseInt(fields.numberOfPayments || '0', 10);
+    const effectiveMode = (value === 'con_interes' && n >= 1 && n <= 3) ? 'sin_interes' : value;
     if (value === 'con_interes' && n >= 1 && n <= 3) {
       setForcedSinInteresMsg(forcedSinInteresText(n));
-      setFields((prev) => ({ ...prev, interestMode: 'sin_interes' }));
-      setApiError(null);
     } else {
       setForcedSinInteresMsg(null);
-      set('interestMode', value);
     }
+    const level = fields.educationLevel || 'pregrado';
+    const minPct = getMinInitialPct(activeParams, level, effectiveMode);
+    const tuition     = parseFloat(parseCOPInput(fields.tuitionValue)) || 0;
+    const scholarship = parseFloat(parsePctInput(fields.scholarshipPercent)) || 0;
+    const netT        = level === 'upbTech' ? tuition : tuition * (1 - scholarship / 100);
+    const currentPct  = parseFloat(parsePctInput(fields.downPaymentPercent)) || 0;
+    setFields((prev) => ({
+      ...prev,
+      interestMode: effectiveMode,
+      downPaymentPercent: currentPct < minPct ? String(minPct) : prev.downPaymentPercent,
+      downPaymentValue: currentPct < minPct && netT > 0
+        ? String(Math.round(netT * minPct / 100))
+        : prev.downPaymentValue,
+    }));
+    setApiError(null);
   };
 
   /* Porcentaje mínimo de cuota inicial — dinámico desde parámetros activos */

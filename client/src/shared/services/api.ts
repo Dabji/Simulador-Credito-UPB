@@ -414,3 +414,109 @@ export async function updateMyProfile(
 export async function getMySimulations(): Promise<ApiResponse<{ simulations: MySimulationItemDTO[] }>> {
   return request<{ simulations: MySimulationItemDTO[] }>('/users/me/simulations');
 }
+
+// ── HU-82: Gestión de usuarios (Admin) ───────────────────────────────────
+
+export type AdminUserFilterField =
+  | 'identificationNumber'
+  | 'documentType'
+  | 'fullName'
+  | 'email'
+  | 'phone'
+  | 'createdAt';
+
+export interface AdminUserListItemDTO {
+  readonly id: string;
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly fullName: string;
+  readonly documentType?: 'CC' | 'TI';
+  readonly identificationNumber: string;
+  readonly email: string;
+  readonly phone?: string;
+  readonly role: 'STUDENT' | 'ADMIN';
+  readonly createdAt: string;
+}
+
+export interface AdminUsersResponseDTO {
+  readonly items: AdminUserListItemDTO[];
+  readonly page: number;
+  readonly pageSize: number;
+  readonly total: number;
+  readonly totalPages: number;
+}
+
+export interface AdminUserProfileDTO {
+  readonly id: string;
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly fullName: string;
+  readonly documentType?: 'CC' | 'TI';
+  readonly identificationNumber: string;
+  readonly email: string;
+  readonly phone?: string;
+  readonly role: 'STUDENT' | 'ADMIN';
+  readonly isActive: boolean;
+  readonly createdAt: string;
+}
+
+export interface AdminUpdateUserPayload {
+  documentType?: 'CC' | 'TI';
+  identificationNumber?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+}
+
+export interface AdminUserSimulationItemDTO {
+  readonly id: string;
+  readonly academicPeriod: string;
+  readonly numberOfPayments: number;
+  readonly totalPaid: number;
+  readonly createdAt: string;
+}
+
+export interface AdminListUsersParams {
+  q?: string;
+  filter?: AdminUserFilterField;
+  page?: number;
+  pageSize?: number;
+}
+
+/** GET /api/admin/users — Listar estudiantes con búsqueda y paginación */
+export async function adminListUsers(
+  params: AdminListUsersParams = {},
+): Promise<ApiResponse<{ data: AdminUsersResponseDTO }>> {
+  const qs = new URLSearchParams();
+  if (params.q)        qs.set('q',        params.q);
+  if (params.filter)   qs.set('filter',   params.filter);
+  if (params.page)     qs.set('page',     String(params.page));
+  if (params.pageSize) qs.set('pageSize', String(params.pageSize));
+  const query = qs.toString() ? `?${qs.toString()}` : '';
+  return request<{ data: AdminUsersResponseDTO }>(`/admin/users${query}`);
+}
+
+/** GET /api/admin/users/:id — Perfil completo de un usuario */
+export async function adminGetUser(
+  id: string,
+): Promise<ApiResponse<{ data: AdminUserProfileDTO }>> {
+  return request<{ data: AdminUserProfileDTO }>(`/admin/users/${id}`);
+}
+
+/** PATCH /api/admin/users/:id — Actualizar datos personales de un usuario */
+export async function adminUpdateUser(
+  id: string,
+  payload: AdminUpdateUserPayload,
+): Promise<ApiResponse<{ data: AdminUserProfileDTO; message: string }>> {
+  return request<{ data: AdminUserProfileDTO; message: string }>(
+    `/admin/users/${id}`,
+    { method: 'PATCH', body: JSON.stringify(payload) },
+  );
+}
+
+/** GET /api/admin/users/:id/simulations — Simulaciones de un usuario */
+export async function adminGetUserSimulations(
+  id: string,
+): Promise<ApiResponse<{ data: AdminUserSimulationItemDTO[] }>> {
+  return request<{ data: AdminUserSimulationItemDTO[] }>(`/admin/users/${id}/simulations`);
+}

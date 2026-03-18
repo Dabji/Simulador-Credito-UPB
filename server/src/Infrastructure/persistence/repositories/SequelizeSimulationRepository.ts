@@ -43,6 +43,7 @@ export class SequelizeSimulationRepository implements ISimulationRepository {
           total_interest: data.totalInterest,
           total_paid: data.totalPaid,
           applied_rate_monthly: data.appliedRateMonthly,
+          academic_period: data.academicPeriod,
           student_observation: data.studentObservation,
           user_id: data.userId,
           parameter_version_id: data.parameterVersionId,
@@ -116,7 +117,7 @@ export class SequelizeSimulationRepository implements ISimulationRepository {
 
   async findSummariesByUserId(userId: string, limit = 20): Promise<SimulationSummaryItem[]> {
     const simulations = await SimulationModel.findAll({
-      attributes: ['id', 'total_payments', 'total_paid', 'created_at'],
+      attributes: ['id', 'academic_period', 'total_payments', 'total_paid', 'created_at'],
       where: { user_id: userId, deleted_at: null },
       order: [['created_at', 'DESC']],
       limit,

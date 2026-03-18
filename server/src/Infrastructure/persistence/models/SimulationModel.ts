@@ -167,7 +167,8 @@ SimulationModel.init(
       defaultValue: 0,
     },
     academic_period: {
-      type: DataTypes.VIRTUAL,
+      type: DataTypes.STRING(20),
+      allowNull: true,
     },
     student_observation: {
       type: DataTypes.STRING(255),
