@@ -584,34 +584,51 @@ router.get('/simulations', async (req: AuthenticatedRequest, res: Response, next
 
     if (q) {
       const qLike = `%${q}%`;
-      switch (filter) {
-        case 'createdAt':
-          baseWhere['created_at'] = { [Op.like]: qLike };
-          break;
-        case 'academicPeriod':
-          baseWhere['academic_period'] = { [Op.like]: qLike };
-          break;
-        case 'interestMode':
-          baseWhere['modality'] = { [Op.like]: qLike };
-          break;
-        case 'educationLevel':
-          baseWhere['level'] = { [Op.like]: qLike };
-          break;
-        case 'studentType':
-          baseWhere['student_type'] = { [Op.like]: qLike };
-          break;
-        default:
-          // búsqueda general: modality, academic_period, level, student_type
-          baseWhere[Op.or as unknown as string] = [
-            { modality:        { [Op.like]: qLike } },
-            { academic_period: { [Op.like]: qLike } },
-            { level:           { [Op.like]: qLike } },
-            { student_type:    { [Op.like]: qLike } },
-          ];
-          break;
+
+      // Filtros por nombre/correo: buscar userIds primero, luego añadir al where
+      if (filter === 'studentName' || filter === 'studentEmail') {
+        const userWhere = filter === 'studentName'
+          ? { [Op.or]: [
+              { first_name: { [Op.like]: qLike } },
+              { last_name:  { [Op.like]: qLike } },
+            ]}
+          : { email: { [Op.like]: qLike } };
+
+        const matchingUsers = await UserModel.findAll({
+          attributes: ['id'],
+          where: userWhere,
+        });
+        baseWhere['user_id'] = { [Op.in]: matchingUsers.map(u => u.id) };
+      } else {
+        switch (filter) {
+          case 'createdAt':
+            baseWhere['created_at'] = { [Op.like]: qLike };
+            break;
+          case 'academicPeriod':
+            baseWhere['academic_period'] = { [Op.like]: qLike };
+            break;
+          case 'interestMode':
+            baseWhere['modality'] = { [Op.like]: qLike };
+            break;
+          case 'educationLevel':
+            baseWhere['level'] = { [Op.like]: qLike };
+            break;
+          case 'studentType':
+            baseWhere['student_type'] = { [Op.like]: qLike };
+            break;
+          default:
+            baseWhere[Op.or as unknown as string] = [
+              { modality:        { [Op.like]: qLike } },
+              { academic_period: { [Op.like]: qLike } },
+              { level:           { [Op.like]: qLike } },
+              { student_type:    { [Op.like]: qLike } },
+            ];
+            break;
+        }
       }
     }
 
+    // Una única consulta con el where ya construido correctamente
     const { count, rows } = await SimulationModel.findAndCountAll({
       where: baseWhere,
       attributes: [
@@ -624,80 +641,7 @@ router.get('/simulations', async (req: AuthenticatedRequest, res: Response, next
       offset,
     });
 
-    // Para filtros de nombre/correo de estudiante necesitamos buscar por user
-    // Los filtros studentName y studentEmail requieren un enfoque diferente:
-    // buscamos primero los userIds que coincidan y luego filtramos
-    if (q && (filter === 'studentName' || filter === 'studentEmail')) {
-      const qLike = `%${q}%`;
-      const userWhere = filter === 'studentName'
-        ? { [Op.or]: [
-            { first_name: { [Op.like]: qLike } },
-            { last_name:  { [Op.like]: qLike } },
-          ]}
-        : { email: { [Op.like]: qLike } };
-
-      const matchingUsers = await UserModel.findAll({
-        attributes: ['id'],
-        where: userWhere,
-      });
-      const userIds = matchingUsers.map(u => u.id);
-
-      const filteredWhere: Record<string, unknown> = {
-        deleted_at: null,
-        user_id: { [Op.in]: userIds },
-      };
-
-      const { count: fCount, rows: fRows } = await SimulationModel.findAndCountAll({
-        where: filteredWhere,
-        attributes: [
-          'id', 'created_at', 'modality', 'level', 'student_type',
-          'financed_value', 'initial_payment_value', 'first_payment_date',
-          'total_payments', 'academic_period', 'user_id',
-        ],
-        order: [['created_at', 'DESC']],
-        limit: pageSize,
-        offset,
-      });
-
-      const userIds2 = [...new Set(fRows.map(r => r.user_id))];
-      const users2 = await UserModel.findAll({
-        attributes: ['id', 'first_name', 'last_name', 'email'],
-        where: { id: { [Op.in]: userIds2 } },
-      });
-      const userMap2 = new Map(users2.map(u => [u.id, u]));
-
-      const items2 = fRows.map(sim => {
-        const u = userMap2.get(sim.user_id);
-        return {
-          id:                 sim.id,
-          createdAt:          sim.created_at,
-          studentName:        u ? `${u.first_name} ${u.last_name}`.trim() : '',
-          studentEmail:       u?.email ?? '',
-          modality:           sim.modality,
-          educationLevel:     sim.level,
-          studentType:        sim.student_type,
-          financedValue:      Number(sim.financed_value),
-          initialPaymentValue: Number(sim.initial_payment_value),
-          firstPaymentDate:   sim.first_payment_date,
-          numberOfPayments:   sim.total_payments,
-          academicPeriod:     sim.academic_period ?? '',
-        };
-      });
-
-      res.json({
-        success: true,
-        data: {
-          items: items2,
-          page,
-          pageSize,
-          total: fCount,
-          totalPages: Math.ceil(fCount / pageSize),
-        },
-      });
-      return;
-    }
-
-    // Caso general: cargar datos de usuario para los resultados
+    // Cargar datos de usuario para decorar cada fila
     const userIds = [...new Set(rows.map(r => r.user_id))];
     const users = await UserModel.findAll({
       attributes: ['id', 'first_name', 'last_name', 'email'],
@@ -708,18 +652,18 @@ router.get('/simulations', async (req: AuthenticatedRequest, res: Response, next
     const items = rows.map(sim => {
       const u = userMap.get(sim.user_id);
       return {
-        id:                 sim.id,
-        createdAt:          sim.created_at,
-        studentName:        u ? `${u.first_name} ${u.last_name}`.trim() : '',
-        studentEmail:       u?.email ?? '',
-        modality:           sim.modality,
-        educationLevel:     sim.level,
-        studentType:        sim.student_type,
-        financedValue:      Number(sim.financed_value),
+        id:                  sim.id,
+        createdAt:           sim.created_at,
+        studentName:         u ? `${u.first_name} ${u.last_name}`.trim() : '',
+        studentEmail:        u?.email ?? '',
+        modality:            sim.modality,
+        educationLevel:      sim.level,
+        studentType:         sim.student_type,
+        financedValue:       Number(sim.financed_value),
         initialPaymentValue: Number(sim.initial_payment_value),
-        firstPaymentDate:   sim.first_payment_date,
-        numberOfPayments:   sim.total_payments,
-        academicPeriod:     sim.academic_period ?? '',
+        firstPaymentDate:    sim.first_payment_date,
+        numberOfPayments:    sim.total_payments,
+        academicPeriod:      sim.academic_period ?? '',
       };
     });
 

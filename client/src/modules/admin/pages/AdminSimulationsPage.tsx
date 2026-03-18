@@ -139,6 +139,7 @@ export function AdminSimulationsPage() {
         setDeleting(false);
         return;
       }
+      const deletedId = selectedId;
       setShowDeleteModal(false);
       setDeleting(false);
       setSelectedId(null);
@@ -151,9 +152,7 @@ export function AdminSimulationsPage() {
       if (targetPage !== page) {
         setPage(targetPage);
       } else {
-        // Forzar re-fetch cambiando query mínimamente y restaurando
-        setPage(prev => { if (prev === targetPage) { setItems(i => i.filter(x => x.id !== selectedId)); setTotal(newTotal); setTotalPages(newTotalPages); } return prev; });
-        setItems(i => i.filter(x => x.id !== selectedId));
+        setItems(i => i.filter(x => x.id !== deletedId));
         setTotal(newTotal);
         setTotalPages(newTotalPages);
       }
@@ -537,7 +536,7 @@ export function AdminSimulationsPage() {
                 Eliminar Simulación
               </h2>
               <p className="text-gray-500 text-sm leading-relaxed">
-                Esta acción eliminará la simulación del sistema de forma permanente.
+                Esta acción marcará la simulación como eliminada y dejará de aparecer en los listados.
                 {selectedItem?.studentName && (
                   <><br /><span className="font-semibold text-gray-700">{selectedItem.studentName}</span><br /></>
                 )}
