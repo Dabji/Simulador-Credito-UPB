@@ -12,6 +12,7 @@ import { AdminStudentsPage } from './modules/admin/pages/AdminStudentsPage';
 import { AdminStudentProfilePage } from './modules/admin/pages/AdminStudentProfilePage';
 import { AdminParametersPage } from './modules/admin/pages/AdminParametersPage';
 import { AdminSimulationsPage } from './modules/admin/pages/AdminSimulationsPage';
+import { AdminSimulationDetailPage } from './modules/admin/pages/AdminSimulationDetailPage';
 import { LoginPage } from './modules/auth/pages/LoginPage';
 import { RegisterPage } from './modules/auth/pages/RegisterPage';
 import { ForgotPasswordPage } from './modules/auth/pages/ForgotPasswordPage';
@@ -60,6 +61,7 @@ export function App() {
           <Route path="/admin/students/:id" element={<ProtectedRoute requiredRole="ADMIN"><AdminStudentProfilePage /></ProtectedRoute>} />
           <Route path="/admin/parameters" element={<ProtectedRoute requiredRole="ADMIN"><AdminParametersPage /></ProtectedRoute>} />
           <Route path="/admin/simulations" element={<ProtectedRoute requiredRole="ADMIN"><AdminSimulationsPage /></ProtectedRoute>} />
+          <Route path="/admin/simulations/:id" element={<ProtectedRoute requiredRole="ADMIN"><AdminSimulationDetailPage /></ProtectedRoute>} />
 
           {/* Rutas con Layout (protegidas) */}
           <Route element={<Layout />}>

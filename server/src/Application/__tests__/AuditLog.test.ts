@@ -69,6 +69,19 @@ jest.mock('../../Infrastructure/persistence/models/UserModel', () => ({
   },
 }));
 
+jest.mock('../../Infrastructure/persistence/models/SimulationModel', () => ({
+  SimulationModel: {
+    init: jest.fn(),
+    findByPk: jest.fn(),
+    findAll: jest.fn(),
+    findOne: jest.fn(),
+    findAndCountAll: jest.fn().mockResolvedValue({ rows: [], count: 0 }),
+    update: jest.fn(),
+    create: jest.fn(),
+    destroy: jest.fn(),
+  },
+}));
+
 jest.mock('../../Infrastructure/config/database', () => ({
   Database: {
     getInstance: jest.fn().mockReturnValue({
