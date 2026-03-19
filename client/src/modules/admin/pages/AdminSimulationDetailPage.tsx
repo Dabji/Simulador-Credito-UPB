@@ -12,7 +12,7 @@ import { UpbFooter } from '@/shared/components/UpbFooter';
 import { SummaryCard } from '@/shared/components/SummaryCard';
 import { SimulationCharts } from '@/shared/components/SimulationCharts';
 import {
-  getSimulationByIdAdmin,
+  adminGetSimulationById,
   type AdminSimulationDetailDTO,
 } from '@/shared/services/api';
 
@@ -85,6 +85,7 @@ export function AdminSimulationDetailPage() {
   const [simulation, setSimulation] = useState<AdminSimulationDetailDTO | null>(null);
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState<string | null>(null);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   /* ── Carga inicial ─────────────────────────────────────── */
   useEffect(() => {
@@ -93,7 +94,7 @@ export function AdminSimulationDetailPage() {
     void (async () => {
       setLoading(true);
       setError(null);
-      const res = await getSimulationByIdAdmin(id);
+      const res = await adminGetSimulationById(id);
       if (cancelled) return;
       setLoading(false);
       if (res.error) {
@@ -330,7 +331,10 @@ export function AdminSimulationDetailPage() {
             ════════════════════════════════════════════════════ */}
             <SimulationCharts
               schedule={s.schedule}
-              totalCapital={s.totalPaid - s.initialPayment - s.totalInterest}
+              totalCapital={(() => {
+                const capital = s.totalPaid - s.initialPayment - s.totalInterest;
+                return (capital + s.totalInterest > 0) ? capital : s.financedValue;
+              })()}
               totalInterest={s.totalInterest}
             />
 
@@ -427,7 +431,7 @@ export function AdminSimulationDetailPage() {
             <div className="flex justify-center pt-2 pb-4">
               <button
                 type="button"
-                onClick={() => alert('Funcionalidad de exportación próximamente.')}
+                onClick={() => setIsExportModalOpen(true)}
                 className="
                   w-full sm:w-auto px-10 py-3.5 rounded-xl text-sm font-bold text-white
                   transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]
@@ -452,6 +456,41 @@ export function AdminSimulationDetailPage() {
           </div>
         )}
       </main>
+
+      {/* ── Modal de Exportación ── */}
+      {isExportModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 relative">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Exportar Simulación</h3>
+            <p className="text-sm text-gray-500 mb-5">
+              Selecciona el formato en el que deseas descargar los datos de esta simulación.
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={() => { alert('Exportación PDF en desarrollo'); setIsExportModalOpen(false); }}
+                className="w-full py-2.5 rounded-lg text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 transition-colors"
+              >
+                Exportar como PDF
+              </button>
+              <button
+                type="button"
+                onClick={() => { alert('Exportación CSV en desarrollo'); setIsExportModalOpen(false); }}
+                className="w-full py-2.5 rounded-lg text-sm font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors"
+              >
+                Exportar como Excel (CSV)
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsExportModalOpen(false)}
+                className="w-full py-2.5 rounded-lg text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors mt-2"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <UpbFooter />
     </div>

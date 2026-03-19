@@ -608,7 +608,7 @@ export interface AdminSimulationDetailDTO {
 }
 
 /** GET /api/admin/simulations/:id — Detalle completo de una simulación (admin) */
-export async function getSimulationByIdAdmin(
+export async function adminGetSimulationById(
   id: string,
 ): Promise<ApiResponse<{ data: AdminSimulationDetailDTO }>> {
   return request<{ data: AdminSimulationDetailDTO }>(`/admin/simulations/${id}`);

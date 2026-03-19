@@ -13,7 +13,7 @@ export class GetSimulationByIdAdminUseCase {
   async execute(simulationId: string): Promise<PersistedSimulationWithUser> {
     const simulation = await this.simulationRepo.findByIdWithUser(simulationId);
     if (!simulation) {
-      throw new NotFoundError('Simulación no encontrada.');
+      throw new NotFoundError('Simulación');
     }
     return simulation;
   }
