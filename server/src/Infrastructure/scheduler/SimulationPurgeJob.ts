@@ -27,6 +27,7 @@ import { Op, literal } from 'sequelize';
 
 const simulationRepo = new SequelizeSimulationRepository();
 let intervalRef: ReturnType<typeof setInterval> | null = null;
+let timeoutRef: ReturnType<typeof setTimeout> | null = null;
 
 /**
  * Ejecuta la purga de simulaciones que superan el período de retención.
@@ -114,7 +115,7 @@ export function startPurgeScheduler(): void {
   logger.info(`Scheduler de purga iniciado (retención: ${retentionDays} días, ciclo cada ${intervalHours}h, batch: ${env.PURGE_BATCH_SIZE})`);
 
   // Ejecución inicial diferida 30s para no bloquear el arranque
-  setTimeout(() => {
+  timeoutRef = setTimeout(() => {
     void purgeExpiredSimulations();
   }, 30_000);
 
@@ -122,7 +123,10 @@ export function startPurgeScheduler(): void {
     void purgeExpiredSimulations();
   }, intervalMs);
 
-  // No impedir que el proceso termine si solo queda el interval
+  // No impedir que el proceso termine si solo queda el timeout/interval
+  if (timeoutRef && typeof timeoutRef === 'object' && 'unref' in timeoutRef) {
+    timeoutRef.unref();
+  }
   if (intervalRef && typeof intervalRef === 'object' && 'unref' in intervalRef) {
     intervalRef.unref();
   }
@@ -132,9 +136,15 @@ export function startPurgeScheduler(): void {
  * Detiene el scheduler de purga (útil para tests y shutdown).
  */
 export function stopPurgeScheduler(): void {
+  if (timeoutRef) {
+    clearTimeout(timeoutRef);
+    timeoutRef = null;
+  }
   if (intervalRef) {
     clearInterval(intervalRef);
     intervalRef = null;
+  }
+  if (!timeoutRef && !intervalRef) {
     logger.info('Scheduler de purga detenido');
   }
 }

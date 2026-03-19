@@ -220,8 +220,9 @@ describe('SimulationPurgeJob', () => {
       );
 
       // Puede re-iniciar después de detenerse
+      (logger.warn as jest.Mock).mockClear();
       startPurgeScheduler();
-      expect(logger.warn).not.toHaveBeenCalledTimes(2);
+      expect(logger.warn).not.toHaveBeenCalled();
 
       jest.useRealTimers();
     });

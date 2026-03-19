@@ -60,8 +60,8 @@ const envSchema = z.object({
 
   // ── Retención / Purga automática ─────────────────────────
   RETENTION_DAYS: z.coerce.number().int().min(1).default(90),
-  PURGE_INTERVAL_HOURS: z.coerce.number().min(1).default(24),
-  PURGE_BATCH_SIZE: z.coerce.number().int().min(1).default(500),
+  PURGE_INTERVAL_HOURS: z.coerce.number().min(1).max(596).default(24),
+  PURGE_BATCH_SIZE: z.coerce.number().int().min(1).max(10000).default(500),
 });
 
 /** Tipo inferido del esquema de entorno — utilizado en toda la app */
