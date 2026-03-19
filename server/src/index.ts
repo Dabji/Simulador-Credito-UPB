@@ -18,7 +18,7 @@ async function bootstrap(): Promise<void> {
       await db.connect();
       logger.info('Conexión a MySQL establecida correctamente');
 
-      // 2. Iniciar scheduler de purga automática (90 días)
+      // 2. Iniciar scheduler de purga automática (configurable vía RETENTION_DAYS)
       startPurgeScheduler();
 
       // 3. Sincronizar modelos (en producción usar migraciones)
