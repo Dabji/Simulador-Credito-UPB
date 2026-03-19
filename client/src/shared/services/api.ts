@@ -587,6 +587,33 @@ export async function adminDeleteSimulation(
   );
 }
 
+/** DTO del detalle completo de una simulación para admin (HU-43) */
+export interface AdminSimulationDetailDTO {
+  readonly id: string;
+  readonly userId: string;
+  readonly savedAt: string;
+  readonly level: 'PREGRADO' | 'POSGRADO' | 'UPB_TEC';
+  readonly studentType: 'NUEVO' | 'CONTINUO';
+  readonly studentObservation: string | null;
+  readonly appliedRateMonthly: number;
+  readonly student: {
+    readonly firstName: string;
+    readonly lastName: string;
+    readonly identificationNumber: string;
+    readonly email: string;
+    readonly documentType: string;
+    readonly phone: string | null;
+  };
+  readonly summary: SimulationSummaryDTO;
+}
+
+/** GET /api/admin/simulations/:id — Detalle completo de una simulación (admin) */
+export async function adminGetSimulationById(
+  id: string,
+): Promise<ApiResponse<{ data: AdminSimulationDetailDTO }>> {
+  return request<{ data: AdminSimulationDetailDTO }>(`/admin/simulations/${id}`);
+}
+
 // ── HU-35: Historial de simulaciones del estudiante ───────────────────────
 
 export type StudentHistoryFilter =

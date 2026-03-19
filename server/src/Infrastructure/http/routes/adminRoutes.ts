@@ -22,6 +22,7 @@ import type { UserFilterField } from '../../../Application/use-cases/ListUsersBy
 import { GetUserByAdminUseCase } from '../../../Application/use-cases/GetUserByAdminUseCase';
 import { UpdateUserByAdminUseCase } from '../../../Application/use-cases/UpdateUserByAdminUseCase';
 import { ListUserSimulationsByAdminUseCase } from '../../../Application/use-cases/ListUserSimulationsByAdminUseCase';
+import { GetSimulationByIdAdminUseCase } from '../../../Application/use-cases/GetSimulationByIdAdminUseCase';
 import { UpdateUserByAdminSchema, UpdateUserByAdminInputSchema } from '../../../Application/dtos/UpdateUserByAdminInput';
 import { validateRequest } from '../middlewares/validateRequest';
 
@@ -425,6 +426,7 @@ const listUsersUseCase        = new ListUsersByAdminUseCase();
 const getUserUseCase          = new GetUserByAdminUseCase(userRepo);
 const updateUserUseCase       = new UpdateUserByAdminUseCase(userRepo);
 const listUserSimsUseCase     = new ListUserSimulationsByAdminUseCase(userRepo, simulationRepo);
+const getSimByIdAdminUseCase  = new GetSimulationByIdAdminUseCase(simulationRepo);
 
 const VALID_FILTERS = new Set<UserFilterField>([
   'identificationNumber', 'documentType', 'fullName', 'email', 'phone', 'createdAt',
@@ -677,6 +679,24 @@ router.get('/simulations', async (req: AuthenticatedRequest, res: Response, next
         totalPages: Math.ceil(count / pageSize),
       },
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// HU-43: Detalle de una simulación (ADMIN)
+// ══════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/admin/simulations/:id
+ * HU-43: Retorna el detalle completo de una simulación con datos del estudiante.
+ */
+router.get('/simulations/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const simId = req.params['id'] as string;
+    const simulation = await getSimByIdAdminUseCase.execute(simId);
+    res.json({ success: true, data: simulation });
   } catch (error) {
     next(error);
   }
