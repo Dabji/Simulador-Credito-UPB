@@ -7,10 +7,12 @@ import { Op } from 'sequelize';
 import { Database } from '../../config/database';
 import { SimulationModel } from '../models/SimulationModel';
 import { AmortizationRowModel } from '../models/AmortizationRowModel';
+import { UserModel } from '../models/UserModel';
 import type {
   ISimulationRepository,
   SaveSimulationData,
   PersistedSimulation,
+  PersistedSimulationWithUser,
   SimulationSummaryItem,
 } from '../../../Core/repositories/ISimulationRepository';
 import type { AmortizationRowDTO } from '../../../Application/dtos/SimulationSummary';
@@ -113,6 +115,41 @@ export class SequelizeSimulationRepository implements ISimulationRepository {
     });
 
     return this.toPersistedSimulation(sim, rows);
+  }
+
+  async findByIdWithUser(id: string): Promise<PersistedSimulationWithUser | null> {
+    const sim = await SimulationModel.findOne({
+      where: { id, deleted_at: null },
+    });
+    if (!sim) return null;
+
+    const [rows, user] = await Promise.all([
+      AmortizationRowModel.findAll({
+        where: { simulation_id: sim.id },
+        order: [['payment_no', 'ASC']],
+      }),
+      UserModel.findByPk(sim.user_id, {
+        attributes: ['first_name', 'last_name', 'document_number', 'email', 'document_type', 'phone'],
+      }),
+    ]);
+
+    const base = this.toPersistedSimulation(sim, rows);
+
+    return {
+      ...base,
+      level:              sim.level,
+      studentType:        sim.student_type,
+      studentObservation: sim.student_observation,
+      appliedRateMonthly: Number(sim.applied_rate_monthly),
+      student: {
+        firstName:            user?.first_name ?? '',
+        lastName:             user?.last_name ?? '',
+        identificationNumber: user?.document_number ?? '',
+        email:                user?.email ?? '',
+        documentType:         user?.document_type ?? '',
+        phone:                user?.phone ?? null,
+      },
+    };
   }
 
   async findSummariesByUserId(userId: string, limit = 20): Promise<SimulationSummaryItem[]> {

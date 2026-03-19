@@ -47,6 +47,22 @@ export interface PersistedSimulation {
   readonly summary: SimulationSummary;
 }
 
+/** Simulación persistida con datos básicos del estudiante creador */
+export interface PersistedSimulationWithUser extends PersistedSimulation {
+  readonly level: string;
+  readonly studentType: string;
+  readonly studentObservation: string | null;
+  readonly appliedRateMonthly: number;
+  readonly student: {
+    readonly firstName: string;
+    readonly lastName: string;
+    readonly identificationNumber: string;
+    readonly email: string;
+    readonly documentType: string;
+    readonly phone: string | null;
+  };
+}
+
 export interface ISimulationRepository {
   /** Persiste la simulación y sus filas de amortización (transacción) */
   save(data: SaveSimulationData): Promise<{ id: string; savedAt: Date }>;
@@ -56,6 +72,9 @@ export interface ISimulationRepository {
 
   /** Busca una simulación por id */
   findById(id: string): Promise<PersistedSimulation | null>;
+
+  /** Busca una simulación por id incluyendo datos básicos del estudiante creador (admin) */
+  findByIdWithUser(id: string): Promise<PersistedSimulationWithUser | null>;
 
   /** Lista resúmenes ligeros de simulaciones del usuario (sin filas de amortización), orden desc, límite 20 */
   findSummariesByUserId(userId: string, limit?: number): Promise<SimulationSummaryItem[]>;
