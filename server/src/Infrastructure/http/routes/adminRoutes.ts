@@ -785,10 +785,12 @@ router.get('/simulations/:id/export/pdf', async (req: AuthenticatedRequest, res:
 
     const pdfBuffer = await buildSimulationPdf(simulation);
 
-    const safeName = `${simulation.student.firstName} ${simulation.student.lastName}`
+    let safeName = `${simulation.student.firstName} ${simulation.student.lastName}`
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-zA-Z0-9 ]/g, '').trim().replace(/\s+/g, '-');
-    const safeId = String(simulation.student.identificationNumber).replace(/[^a-zA-Z0-9]/g, '');
+    if (!safeName) safeName = 'estudiante';
+    let safeId = String(simulation.student.identificationNumber ?? '').replace(/[^a-zA-Z0-9]/g, '');
+    if (!safeId) safeId = simId.slice(0, 8);
     const filename = `simulacion-upb-${safeName}-${safeId}.pdf`;
 
     void auditLog({
@@ -833,10 +835,12 @@ router.get('/simulations/:id/export/csv', async (req: AuthenticatedRequest, res:
     const csvContent = buildSimulationCsv(simulation);
     const csvBuffer  = Buffer.from(csvContent, 'utf-8');
 
-    const safeName = `${simulation.student.firstName} ${simulation.student.lastName}`
+    let safeName = `${simulation.student.firstName} ${simulation.student.lastName}`
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-zA-Z0-9 ]/g, '').trim().replace(/\s+/g, '-');
-    const safeId = String(simulation.student.identificationNumber).replace(/[^a-zA-Z0-9]/g, '');
+    if (!safeName) safeName = 'estudiante';
+    let safeId = String(simulation.student.identificationNumber ?? '').replace(/[^a-zA-Z0-9]/g, '');
+    if (!safeId) safeId = simId.slice(0, 8);
     const filename = `simulacion-upb-${safeName}-${safeId}.csv`;
 
     void auditLog({

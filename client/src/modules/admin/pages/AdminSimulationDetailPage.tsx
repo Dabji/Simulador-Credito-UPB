@@ -102,7 +102,7 @@ export function AdminSimulationDetailPage() {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 100);
   }
 
   function showToast(type: 'success' | 'error', msg: string): void {

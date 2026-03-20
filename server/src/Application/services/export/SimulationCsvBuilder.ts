@@ -107,7 +107,7 @@ export function buildSimulationCsv(sim: PersistedSimulationWithUser): string {
       'Fecha',
       'Saldo Inicial (COP)',
       'Capital (COP)',
-      'Interes (COP)',
+      'Interés (COP)',
       'Valor Cuota (COP)',
       'Saldo Final (COP)',
     ));
@@ -129,7 +129,7 @@ export function buildSimulationCsv(sim: PersistedSimulationWithUser): string {
 
   // ── Bloque 4: Evolución del saldo (tabla para gráfica) ───────
   if (s.schedule.length > 0) {
-    lines.push(row('Evolucion del saldo', '', ''));
+    lines.push(row('Evolución del saldo', '', ''));
     lines.push(row('N° Cuota', 'Fecha', 'Saldo Final (COP)'));
     for (const r of s.schedule) {
       lines.push(row(r.period, fmtDate(r.date), r.finalBalance));
@@ -137,7 +137,7 @@ export function buildSimulationCsv(sim: PersistedSimulationWithUser): string {
     lines.push('');
   }
 
-  lines.push(row('Nota', 'Los valores son referenciales y pueden variar segun politicas institucionales vigentes.'));
+  lines.push(row('Nota', 'Los valores son referenciales y pueden variar según políticas institucionales vigentes.'));
 
   // BOM UTF-8 al inicio para apertura correcta en Excel
   return '\uFEFF' + lines.join('\r\n');

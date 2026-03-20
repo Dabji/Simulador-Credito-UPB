@@ -12,7 +12,6 @@
     "test:coverage": "jest --coverage --forceExit --detectOpenHandles"
   },
   "dependencies": {
-    "@types/pdfkit": "^0.17.5",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
@@ -32,6 +31,7 @@
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
+    "@types/pdfkit": "^0.17.5",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jest": "^29.5.14",

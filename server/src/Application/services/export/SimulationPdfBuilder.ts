@@ -22,8 +22,15 @@ const RULE_GRAY  = '#bbbbbb';   // líneas de borde internas
 const ROW_ALT    = '#f5f5f5';   // fondo fila alternada
 const WHITE      = '#ffffff';
 
-// ── Ruta al logo (copiado junto a este archivo) ───────────────
+// ── Logo cargado una sola vez al importar el módulo ─────────────
 const LOGO_PATH = path.join(__dirname, 'logo-upb.png');
+let _logoCache: Buffer | null | undefined = undefined;
+function getLogo(): Buffer | null {
+  if (_logoCache !== undefined) return _logoCache;
+  try { _logoCache = fs.readFileSync(LOGO_PATH); }
+  catch { _logoCache = null; }
+  return _logoCache;
+}
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -88,9 +95,8 @@ export function buildSimulationPdf(sim: PersistedSimulationWithUser): Promise<Bu
     const PAGE_H = doc.page.height - 55;    // margen inferior útil
     const now = new Date();
 
-    // ── Carga logo (silencia error si no existe) ───────────────
-    let logoBuffer: Buffer | null = null;
-    try { logoBuffer = fs.readFileSync(LOGO_PATH); } catch { logoBuffer = null; }
+    // ── Logo desde caché de módulo ──────────────────────────────
+    const logoBuffer = getLogo();
 
     // ══════════════════════════════════════════════════════════
     // CABECERA PÁGINA 1
@@ -246,7 +252,7 @@ export function buildSimulationPdf(sim: PersistedSimulationWithUser): Promise<Bu
     // ══════════════════════════════════════════════════════════
     sectionHeader('4. Distribución Capital vs Intereses');
 
-    const capital  = s.financedValue;
+    const capital  = s.totalPaid - s.initialPayment - s.totalInterest;
     const interest = s.totalInterest;
     const totalVal = capital + interest;
 
