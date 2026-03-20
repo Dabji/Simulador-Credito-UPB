@@ -138,9 +138,6 @@ export function StudentHistoryPage() {
     if (selectedId) navigate(`/student/history/${selectedId}`);
   }
 
-  function handleExportar() {
-    if (selectedId) navigate(`/student/history/${selectedId}/export`);
-  }
 
   /* ── Render ──────────────────────────────────────────────── */
 
@@ -478,23 +475,6 @@ export function StudentHistoryPage() {
               Ver Simulación
             </button>
 
-            <button
-              type="button"
-              disabled={!selectedId}
-              onClick={handleExportar}
-              className="
-                px-6 py-2.5 rounded-full text-sm font-bold text-white
-                transition-all duration-200
-                focus:outline-none focus:ring-2 focus:ring-[#A85BFF]/40
-                disabled:opacity-40 disabled:cursor-not-allowed
-              "
-              style={{
-                backgroundColor: selectedId ? '#6E11B0' : '#9CA3AF',
-                boxShadow: selectedId ? '0 4px 14px rgba(110,17,176,0.3)' : undefined,
-              }}
-            >
-              Exportar
-            </button>
           </div>
         </div>
 

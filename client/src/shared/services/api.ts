@@ -715,3 +715,40 @@ export async function getMySimulationHistory(
   const query = qs.toString() ? `?${qs.toString()}` : '';
   return request<StudentHistoryResponseDTO>(`/simulator/history${query}`);
 }
+
+// ── HU-36: Detalle de simulación del estudiante ───────────────────────────
+
+export type StudentSimulationDetailDTO = AdminSimulationDetailDTO;
+
+/** GET /api/simulator/history/:id — Detalle completo de una simulación (estudiante) */
+export async function getMySimulationById(
+  id: string,
+): Promise<ApiResponse<StudentSimulationDetailDTO>> {
+  return request<StudentSimulationDetailDTO>(`/simulator/history/${id}`);
+}
+
+/**
+ * Descarga el PDF de una simulación del estudiante autenticado.
+ * Lanza un Error con mensaje legible si la respuesta no es OK.
+ */
+export async function exportMySimulationPdf(id: string): Promise<{ blob: Blob; filename: string }> {
+  const token = localStorage.getItem('token');
+  const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
+  const response = await fetch(`${API_BASE}/simulator/history/${id}/export/pdf`, { headers });
+
+  if (!response.ok) {
+    let msg = 'Error al generar el PDF.';
+    try {
+      const body = (await response.json()) as { error?: string };
+      if (body.error) msg = body.error;
+    } catch { /* ignorar */ }
+    throw new Error(msg);
+  }
+
+  const blob = await response.blob();
+  const cd   = response.headers.get('Content-Disposition') ?? '';
+  const match = /filename="?([^"]+)"?/.exec(cd);
+  const filename = match?.[1] ?? `simulacion-upb-${id.slice(0, 8)}.pdf`;
+  return { blob, filename };
+}
