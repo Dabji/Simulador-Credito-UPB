@@ -6,7 +6,7 @@
 // Exportación solo en PDF (sin CSV).
 // ============================================================
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { UpbHeader } from '@/shared/components/UpbHeader';
 import { UpbFooter } from '@/shared/components/UpbFooter';
@@ -15,7 +15,7 @@ import { SimulationCharts } from '@/shared/components/SimulationCharts';
 import {
   getMySimulationById,
   exportMySimulationPdf,
-  type AdminSimulationDetailDTO,
+  type StudentSimulationDetailDTO,
 } from '@/shared/services/api';
 
 /* ── Helpers ─────────────────────────────────────────────── */
@@ -84,13 +84,20 @@ export function StudentHistoryDetailPage() {
   const navigate  = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
 
-  const [simulation, setSimulation] = useState<AdminSimulationDetailDTO | null>(null);
+  const [simulation, setSimulation] = useState<StudentSimulationDetailDTO | null>(null);
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState<string | null>(null);
 
   /* Estado exportación PDF */
   const [exportStatus, setExportStatus] = useState<'idle' | 'loading-pdf'>('idle');
   const [exportToast,  setExportToast]  = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  }, []);
 
   function triggerBlobDownload(blob: Blob, filename: string): void {
     const url = URL.createObjectURL(blob);
@@ -104,8 +111,9 @@ export function StudentHistoryDetailPage() {
   }
 
   function showToast(type: 'success' | 'error', msg: string): void {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     setExportToast({ type, msg });
-    setTimeout(() => setExportToast(null), 5000);
+    toastTimerRef.current = setTimeout(() => setExportToast(null), 5000);
   }
 
   async function handleExportPdf(): Promise<void> {
@@ -137,7 +145,7 @@ export function StudentHistoryDetailPage() {
         setError(res.error);
         return;
       }
-      if (res.data?.data) setSimulation(res.data.data);
+      if (res.data) setSimulation(res.data);
     })();
     return () => { cancelled = true; };
   }, [id]);

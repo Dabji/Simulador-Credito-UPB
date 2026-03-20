@@ -718,11 +718,13 @@ export async function getMySimulationHistory(
 
 // ── HU-36: Detalle de simulación del estudiante ───────────────────────────
 
+export type StudentSimulationDetailDTO = AdminSimulationDetailDTO;
+
 /** GET /api/simulator/history/:id — Detalle completo de una simulación (estudiante) */
 export async function getMySimulationById(
   id: string,
-): Promise<ApiResponse<{ data: AdminSimulationDetailDTO }>> {
-  return request<{ data: AdminSimulationDetailDTO }>(`/simulator/history/${id}`);
+): Promise<ApiResponse<StudentSimulationDetailDTO>> {
+  return request<StudentSimulationDetailDTO>(`/simulator/history/${id}`);
 }
 
 /**

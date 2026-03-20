@@ -224,7 +224,7 @@ router.get('/history/:id', async (req: AuthenticatedRequest, res: Response, next
       return;
     }
 
-    res.json({ success: true, data: simulation });
+    res.json(simulation);
   } catch (error) {
     next(error);
   }
