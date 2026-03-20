@@ -13,6 +13,8 @@ import { SummaryCard } from '@/shared/components/SummaryCard';
 import { SimulationCharts } from '@/shared/components/SimulationCharts';
 import {
   adminGetSimulationById,
+  adminExportSimulationPdf,
+  adminExportSimulationCsv,
   type AdminSimulationDetailDTO,
 } from '@/shared/services/api';
 
@@ -87,6 +89,59 @@ export function AdminSimulationDetailPage() {
   const [error,      setError]      = useState<string | null>(null);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
+  /* Estado exportación */
+  type ExportStatus = 'idle' | 'loading-pdf' | 'loading-csv';
+  const [exportStatus, setExportStatus] = useState<ExportStatus>('idle');
+  const [exportToast,  setExportToast]  = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+
+  function triggerBlobDownload(blob: Blob, filename: string): void {
+    const url = URL.createObjectURL(blob);
+    const a   = document.createElement('a');
+    a.href     = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+  }
+
+  function showToast(type: 'success' | 'error', msg: string): void {
+    setExportToast({ type, msg });
+    setTimeout(() => setExportToast(null), 5000);
+  }
+
+  async function handleExportPdf(): Promise<void> {
+    if (!id || exportStatus !== 'idle') return;
+    setIsExportModalOpen(false);
+    setExportStatus('loading-pdf');
+    try {
+      const { blob, filename } = await adminExportSimulationPdf(id);
+      triggerBlobDownload(blob, filename);
+      showToast('success', 'PDF descargado correctamente.');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Error al generar el PDF.';
+      showToast('error', msg);
+    } finally {
+      setExportStatus('idle');
+    }
+  }
+
+  async function handleExportCsv(): Promise<void> {
+    if (!id || exportStatus !== 'idle') return;
+    setIsExportModalOpen(false);
+    setExportStatus('loading-csv');
+    try {
+      const { blob, filename } = await adminExportSimulationCsv(id);
+      triggerBlobDownload(blob, filename);
+      showToast('success', 'CSV descargado correctamente.');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Error al generar el CSV.';
+      showToast('error', msg);
+    } finally {
+      setExportStatus('idle');
+    }
+  }
+
   /* ── Carga inicial ─────────────────────────────────────── */
   useEffect(() => {
     if (!id) return;
@@ -120,6 +175,43 @@ export function AdminSimulationDetailPage() {
         profileOpen={profileOpen}
         onToggleProfile={() => setProfileOpen(p => !p)}
       />
+
+      {/* ── Spinner / descargando (top-right) ── */}
+      {exportStatus !== 'idle' && (
+        <div
+          className="fixed top-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl text-sm font-semibold text-white"
+          style={{ backgroundColor: exportStatus === 'loading-pdf' ? '#EF4444' : '#16a34a' }}
+          role="status"
+          aria-live="polite"
+        >
+          <span className="w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+          {exportStatus === 'loading-pdf' ? 'Generando PDF…' : 'Generando CSV…'}
+        </div>
+      )}
+
+      {/* ── Toast éxito / error ── */}
+      {exportToast && (
+        <div
+          className="fixed bottom-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl text-sm font-semibold"
+          style={{
+            backgroundColor: exportToast.type === 'success' ? '#f0fdf4' : '#fef2f2',
+            color:           exportToast.type === 'success' ? '#166534'  : '#991b1b',
+            border:          `1px solid ${exportToast.type === 'success' ? '#bbf7d0' : '#fecaca'}`,
+          }}
+          role="alert"
+        >
+          {exportToast.type === 'success' ? (
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          )}
+          {exportToast.msg}
+        </div>
+      )}
 
       <main className="flex-1 w-full max-w-screen-lg mx-auto px-4 sm:px-6 lg:px-10 py-10">
 
@@ -468,22 +560,28 @@ export function AdminSimulationDetailPage() {
             <div className="flex flex-col gap-3">
               <button
                 type="button"
-                onClick={() => { alert('Exportación PDF en desarrollo'); setIsExportModalOpen(false); }}
-                className="w-full py-2.5 rounded-lg text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 transition-colors"
+                disabled={exportStatus !== 'idle'}
+                onClick={() => { void handleExportPdf(); }}
+                className="w-full py-2.5 rounded-lg text-sm font-semibold text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ backgroundColor: '#EF4444' }}
+                onMouseEnter={e => { if (exportStatus === 'idle') (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#DC2626'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#EF4444'; }}
               >
-                Exportar como PDF
+                {exportStatus === 'loading-pdf' ? 'Generando PDF…' : 'Exportar como PDF'}
               </button>
               <button
                 type="button"
-                onClick={() => { alert('Exportación CSV en desarrollo'); setIsExportModalOpen(false); }}
-                className="w-full py-2.5 rounded-lg text-sm font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors"
+                disabled={exportStatus !== 'idle'}
+                onClick={() => { void handleExportCsv(); }}
+                className="w-full py-2.5 rounded-lg text-sm font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Exportar como Excel (CSV)
+                {exportStatus === 'loading-csv' ? 'Generando CSV…' : 'Exportar como Excel (CSV)'}
               </button>
               <button
                 type="button"
+                disabled={exportStatus !== 'idle'}
                 onClick={() => setIsExportModalOpen(false)}
-                className="w-full py-2.5 rounded-lg text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors mt-2"
+                className="w-full py-2.5 rounded-lg text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancelar
               </button>

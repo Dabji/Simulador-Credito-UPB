@@ -17,6 +17,8 @@ import type { UpdateParameterVersionData } from '../../../Core/repositories/IPar
 import { AuditLogModel } from '../../persistence/models/AuditLogModel';
 import type { AuthenticatedRequest } from '../middlewares/authGuard';
 import { auditLog, extractIp } from '../../../Application/services/AuditService';
+import { buildSimulationCsv } from '../../../Application/services/export/SimulationCsvBuilder';
+import { buildSimulationPdf } from '../../../Application/services/export/SimulationPdfBuilder';
 import { ListUsersByAdminUseCase } from '../../../Application/use-cases/ListUsersByAdminUseCase';
 import type { UserFilterField } from '../../../Application/use-cases/ListUsersByAdminUseCase';
 import { GetUserByAdminUseCase } from '../../../Application/use-cases/GetUserByAdminUseCase';
@@ -752,6 +754,109 @@ router.delete('/simulations/:id', async (req: AuthenticatedRequest, res: Respons
     });
 
     res.json({ success: true, message: 'Simulación eliminada correctamente.' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// HU-40 / HU-41: Exportar simulación (ADMIN) — PDF y CSV
+// ══════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/admin/simulations/:id/export/pdf
+ * HU-40: Genera y descarga el PDF de una simulación.
+ */
+router.get('/simulations/:id/export/pdf', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const adminUserId = req.user?.['userId'] as string | undefined;
+    if (!adminUserId) {
+      res.status(401).json({ error: 'Usuario no autenticado.' });
+      return;
+    }
+
+    const simId = String(req.params['id'] ?? '').trim();
+    if (!simId) {
+      res.status(400).json({ error: 'ID de simulación requerido.' });
+      return;
+    }
+
+    const simulation = await getSimByIdAdminUseCase.execute(simId);
+
+    const pdfBuffer = await buildSimulationPdf(simulation);
+
+    let safeName = `${simulation.student.firstName} ${simulation.student.lastName}`
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9 ]/g, '').trim().replace(/\s+/g, '-');
+    if (!safeName) safeName = 'estudiante';
+    let safeId = String(simulation.student.identificationNumber ?? '').replace(/[^a-zA-Z0-9]/g, '');
+    if (!safeId) safeId = simId.slice(0, 8);
+    const filename = `simulacion-upb-${safeName}-${safeId}.pdf`;
+
+    void auditLog({
+      action:     'SIMULATION_EXPORT_PDF',
+      entity:     'SIMULATION',
+      entity_id:  simId,
+      actor_type: 'ADMIN',
+      user_id:    adminUserId,
+      ip_address: extractIp(req),
+      details:    { simulation_id: simId, format: 'pdf' },
+    });
+
+    res.setHeader('Content-Type',        'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length',      pdfBuffer.length);
+    res.send(pdfBuffer);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/admin/simulations/:id/export/csv
+ * HU-41: Genera y descarga el CSV de una simulación.
+ */
+router.get('/simulations/:id/export/csv', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const adminUserId = req.user?.['userId'] as string | undefined;
+    if (!adminUserId) {
+      res.status(401).json({ error: 'Usuario no autenticado.' });
+      return;
+    }
+
+    const simId = String(req.params['id'] ?? '').trim();
+    if (!simId) {
+      res.status(400).json({ error: 'ID de simulación requerido.' });
+      return;
+    }
+
+    const simulation = await getSimByIdAdminUseCase.execute(simId);
+
+    const csvContent = buildSimulationCsv(simulation);
+    const csvBuffer  = Buffer.from(csvContent, 'utf-8');
+
+    let safeName = `${simulation.student.firstName} ${simulation.student.lastName}`
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9 ]/g, '').trim().replace(/\s+/g, '-');
+    if (!safeName) safeName = 'estudiante';
+    let safeId = String(simulation.student.identificationNumber ?? '').replace(/[^a-zA-Z0-9]/g, '');
+    if (!safeId) safeId = simId.slice(0, 8);
+    const filename = `simulacion-upb-${safeName}-${safeId}.csv`;
+
+    void auditLog({
+      action:     'SIMULATION_EXPORT_CSV',
+      entity:     'SIMULATION',
+      entity_id:  simId,
+      actor_type: 'ADMIN',
+      user_id:    adminUserId,
+      ip_address: extractIp(req),
+      details:    { simulation_id: simId, format: 'csv' },
+    });
+
+    res.setHeader('Content-Type',        'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length',      csvBuffer.length);
+    res.send(csvBuffer);
   } catch (error) {
     next(error);
   }

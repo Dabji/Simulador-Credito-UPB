@@ -587,6 +587,60 @@ export async function adminDeleteSimulation(
   );
 }
 
+// ── HU-40 / HU-41: Exportar simulación (ADMIN) ───────────────────────────
+
+/**
+ * Descarga el PDF de una simulación como Blob.
+ * Lanza un Error con mensaje legible si la respuesta no es OK.
+ */
+export async function adminExportSimulationPdf(id: string): Promise<{ blob: Blob; filename: string }> {
+  const token = localStorage.getItem('token');
+  const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
+  const response = await fetch(`${API_BASE}/admin/simulations/${id}/export/pdf`, { headers });
+
+  if (!response.ok) {
+    let msg = 'Error al generar el PDF.';
+    try {
+      const body = (await response.json()) as { error?: string };
+      if (body.error) msg = body.error;
+    } catch { /* ignorar */ }
+    throw new Error(msg);
+  }
+
+  const blob = await response.blob();
+  const cd   = response.headers.get('Content-Disposition') ?? '';
+  const match = /filename="?([^"]+)"?/.exec(cd);
+  const filename = match?.[1] ?? `simulacion-upb-${id.slice(0, 8)}.pdf`;
+  return { blob, filename };
+}
+
+/**
+ * Descarga el CSV de una simulación como Blob.
+ * Lanza un Error con mensaje legible si la respuesta no es OK.
+ */
+export async function adminExportSimulationCsv(id: string): Promise<{ blob: Blob; filename: string }> {
+  const token = localStorage.getItem('token');
+  const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
+  const response = await fetch(`${API_BASE}/admin/simulations/${id}/export/csv`, { headers });
+
+  if (!response.ok) {
+    let msg = 'Error al generar el CSV.';
+    try {
+      const body = (await response.json()) as { error?: string };
+      if (body.error) msg = body.error;
+    } catch { /* ignorar */ }
+    throw new Error(msg);
+  }
+
+  const blob = await response.blob();
+  const cd   = response.headers.get('Content-Disposition') ?? '';
+  const match = /filename="?([^"]+)"?/.exec(cd);
+  const filename = match?.[1] ?? `simulacion-upb-${id.slice(0, 8)}.csv`;
+  return { blob, filename };
+}
+
 /** DTO del detalle completo de una simulación para admin (HU-43) */
 export interface AdminSimulationDetailDTO {
   readonly id: string;
