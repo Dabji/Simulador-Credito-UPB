@@ -12,6 +12,7 @@
     "test:coverage": "jest --coverage --forceExit --detectOpenHandles"
   },
   "dependencies": {
+    "@types/pdfkit": "^0.17.5",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
@@ -22,6 +23,7 @@
     "mysql2": "^3.17.3",
     "nodemailer": "^8.0.2",
     "passport-ldapauth": "^3.0.1",
+    "pdfkit": "^0.18.0",
     "sequelize": "^6.37.7",
     "swagger-ui-express": "^5.0.1",
     "winston": "^3.19.0",
