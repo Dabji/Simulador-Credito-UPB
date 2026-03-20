@@ -18,6 +18,7 @@ import type { SimulationInput } from '../../../Application/dtos/SimulationInput'
 import { logger } from '../../logger';
 import type { AuthenticatedRequest } from '../middlewares/authGuard';
 import { auditLog, extractIp } from '../../../Application/services/AuditService';
+import { buildSimulationPdf } from '../../../Application/services/export/SimulationPdfBuilder';
 
 const router = Router();
 
@@ -189,6 +190,99 @@ router.get('/history', async (req: AuthenticatedRequest, res: Response, next: Ne
       total: count,
       totalPages: Math.ceil(count / pageSize),
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// HU-36: Detalle de una simulación guardada (ESTUDIANTE)
+// ══════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/simulator/history/:id
+ * HU-36: Retorna el detalle completo de una simulación con datos del estudiante.
+ * Solo accesible por el dueño de la simulación.
+ */
+router.get('/history/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.user?.userId as string | undefined;
+    if (!userId) {
+      res.status(401).json({ error: 'Usuario no autenticado.' });
+      return;
+    }
+
+    const simId = String(req.params['id'] ?? '').trim();
+    if (!simId) {
+      res.status(400).json({ error: 'ID de simulación requerido.' });
+      return;
+    }
+
+    const simulation = await simulationRepo.findByIdWithUser(simId);
+    if (!simulation || simulation.userId !== userId) {
+      res.status(404).json({ error: 'Simulación no encontrada.' });
+      return;
+    }
+
+    res.json({ success: true, data: simulation });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// HU-36 / HU-40: Exportar simulación como PDF (ESTUDIANTE)
+// ══════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/simulator/history/:id/export/pdf
+ * HU-36: Genera y descarga el PDF de una simulación.
+ * Solo accesible por el dueño de la simulación.
+ */
+router.get('/history/:id/export/pdf', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.user?.userId as string | undefined;
+    if (!userId) {
+      res.status(401).json({ error: 'Usuario no autenticado.' });
+      return;
+    }
+
+    const simId = String(req.params['id'] ?? '').trim();
+    if (!simId) {
+      res.status(400).json({ error: 'ID de simulación requerido.' });
+      return;
+    }
+
+    const simulation = await simulationRepo.findByIdWithUser(simId);
+    if (!simulation || simulation.userId !== userId) {
+      res.status(404).json({ error: 'Simulación no encontrada.' });
+      return;
+    }
+
+    const pdfBuffer = await buildSimulationPdf(simulation);
+
+    let safeName = `${simulation.student.firstName} ${simulation.student.lastName}`
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9 ]/g, '').trim().replace(/\s+/g, '-');
+    if (!safeName) safeName = 'estudiante';
+    let safeId = String(simulation.student.identificationNumber ?? '').replace(/[^a-zA-Z0-9]/g, '');
+    if (!safeId) safeId = simId.slice(0, 8);
+    const filename = `simulacion-upb-${safeName}-${safeId}.pdf`;
+
+    void auditLog({
+      action:     'SIMULATION_EXPORT_PDF',
+      entity:     'SIMULATION',
+      entity_id:  simId,
+      actor_type: 'STUDENT',
+      user_id:    userId,
+      ip_address: extractIp(req),
+      details:    { simulation_id: simId, format: 'pdf' },
+    });
+
+    res.setHeader('Content-Type',        'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length',      pdfBuffer.length);
+    res.send(pdfBuffer);
   } catch (error) {
     next(error);
   }
