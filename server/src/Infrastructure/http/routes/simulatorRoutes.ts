@@ -273,7 +273,7 @@ router.get('/history/:id/export/pdf', async (req: AuthenticatedRequest, res: Res
     if (!safeId) safeId = simId.slice(0, 8);
     const filename = `simulacion-upb-${safeName}-${safeId}.pdf`;
 
-    const contentFlags = { summary: true, amortizationTable: true, charts: false };
+    const contentFlags = { summary: true, amortizationTable: true, charts: true };
 
     // Registrar en export_logs (HU-40)
     void ExportLogModel.create({
@@ -283,7 +283,9 @@ router.get('/history/:id/export/pdf', async (req: AuthenticatedRequest, res: Res
       ip_address:    extractIp(req) ?? null,
       file_name:     filename,
       content_flags: JSON.stringify(contentFlags),
-    }).catch(() => { /* best-effort */ });
+    }).catch((err: unknown) => {
+      logger.warn('Failed to persist export log', { error: err, simulation_id: simId, format: 'PDF', user_id: userId });
+    });
 
     void auditLog({
       action:     'SIMULATION_EXPORTED_PDF',

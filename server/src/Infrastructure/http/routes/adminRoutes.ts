@@ -17,6 +17,7 @@ import type { UpdateParameterVersionData } from '../../../Core/repositories/IPar
 import { AuditLogModel } from '../../persistence/models/AuditLogModel';
 import type { AuthenticatedRequest } from '../middlewares/authGuard';
 import { auditLog, extractIp } from '../../../Application/services/AuditService';
+import { logger } from '../../logger';
 import { buildSimulationCsv } from '../../../Application/services/export/SimulationCsvBuilder';
 import { buildSimulationPdf } from '../../../Application/services/export/SimulationPdfBuilder';
 import { ExportLogModel } from '../../persistence/models/ExportLogModel';
@@ -808,7 +809,7 @@ router.get('/simulations/:id/export/pdf', async (req: AuthenticatedRequest, res:
     if (!safeId) safeId = simId.slice(0, 8);
     const filename = `simulacion-upb-${safeName}-${safeId}.pdf`;
 
-    const pdfContentFlags = { summary: true, amortizationTable: true, charts: false };
+    const pdfContentFlags = { summary: true, amortizationTable: true, charts: true };
 
     // Registrar en export_logs (HU-40)
     void ExportLogModel.create({
@@ -818,7 +819,9 @@ router.get('/simulations/:id/export/pdf', async (req: AuthenticatedRequest, res:
       ip_address:    extractIp(req) ?? null,
       file_name:     filename,
       content_flags: JSON.stringify(pdfContentFlags),
-    }).catch(() => { /* best-effort */ });
+    }).catch((err: unknown) => {
+      logger.warn('Failed to persist export log', { error: err, simulation_id: simId, format: 'PDF', user_id: adminUserId });
+    });
 
     void auditLog({
       action:     'SIMULATION_EXPORTED_PDF',
@@ -887,7 +890,9 @@ router.get('/simulations/:id/export/csv', async (req: AuthenticatedRequest, res:
       ip_address:    extractIp(req) ?? null,
       file_name:     filename,
       content_flags: JSON.stringify(csvContentFlags),
-    }).catch(() => { /* best-effort */ });
+    }).catch((err: unknown) => {
+      logger.warn('Failed to persist export log', { error: err, simulation_id: simId, format: 'CSV', user_id: adminUserId });
+    });
 
     void auditLog({
       action:     'SIMULATION_EXPORTED_CSV',
