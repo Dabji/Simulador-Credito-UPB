@@ -15,7 +15,7 @@
 //   - La auditoría individual se registra vía AuditService.ts con
 //     actor_type = 'SYSTEM' para cada simulación purgada.
 //   - Al finalizar cada ciclo se registra un evento agregado
-//     PURGE_COMPLETED para visibilidad en el panel de administración.
+//     SIMULATION_PURGE_COMPLETED para visibilidad en el panel de administración.
 // ============================================================
 
 import { SimulationModel } from '../persistence/models/SimulationModel';
@@ -72,19 +72,21 @@ export async function purgeExpiredSimulations(): Promise<number> {
       candidatesFound: expired.length,
     });
 
-    // Evento agregado de auditoría para visibilidad administrativa
+    const purgedAt = new Date().toISOString();
+
+    // Evento agregado de auditoría para visibilidad administrativa (HU-39)
     void auditLog({
-      action:     'PURGE_COMPLETED',
-      entity:     'SIMULATION',
-      entity_id:  'SYSTEM',
+      action:     'SIMULATION_PURGE_COMPLETED',
+      entity:     'SIMULATION_PURGE',
+      entity_id:  purgeReason,
       actor_type: 'SYSTEM',
       user_id:    null,
       details: {
-        retentionDays,
-        candidatesFound: expired.length,
-        affectedRows,
-        batchSize,
-        purgeReason,
+        reason:          purgeReason,
+        threshold_days:  retentionDays,
+        total_affected:  affectedRows,
+        purged_at:       purgedAt,
+        simulation_ids:  expired.map(s => s.id),
       },
     });
 
