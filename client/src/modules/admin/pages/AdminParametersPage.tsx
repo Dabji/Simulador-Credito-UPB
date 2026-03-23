@@ -14,6 +14,7 @@ import {
   getParameterVersion,
   updateParameterVersion,
   createParameterVersion,
+  activateParameterVersion,
   type AdminParameterVersion,
 } from '@/shared/services/api';
 import {
@@ -294,28 +295,8 @@ export function AdminParametersPage() {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    async function init() {
-      const activeRes = await getActiveParameters();
-      if (cancelled) return;
-      if (activeRes.error) { setError(activeRes.error); setLoading(false); return; }
-      const av = activeRes.data?.data ?? null;
-      if (!av) { setLoading(false); return; }
-      setOriginal(av);
-
-      let sec: AdminParameterVersion | null = null;
-      const listRes = await listParameterVersions();
-      if (!cancelled && !listRes.error && listRes.data?.data) {
-        const others = listRes.data.data.filter(s => s.id !== av.id);
-        if (others.length > 0) {
-          const dRes = await getParameterVersion(others[0].id);
-          if (!cancelled && !dRes.error && dRes.data?.data) sec = dRes.data.data;
-        }
-      }
-      if (!cancelled) { setSecondOriginal(sec); setForm(buildFormFromVersion(av, sec)); setLoading(false); }
-    }
-    void init();
-    return () => { cancelled = true; };
+    void loadParams();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Validación ────────────────────────────────────────────────────────
@@ -441,16 +422,26 @@ export function AdminParametersPage() {
 
     if (hasInactiveData) {
       const inactiveInterestRates = buildInterestRates(inactiveRates);
+
+      // Validar que ninguna tasa sea NaN antes de enviar al backend
+      const hasNaN = inactiveInterestRates.some(r => !Number.isFinite(r.rateMonthly));
+      if (hasNaN) {
+        setSaving(false);
+        setError('La opción inactiva tiene tasas incompletas. Rellene todas las tasas antes de guardar.');
+        return;
+      }
+
       const inactiveValidFrom = inactiveRates.pregradoValidFrom || form._validFrom;
 
       if (form.secondVersionId) {
         // Actualizar versión inactiva existente
-        await updateParameterVersion(form.secondVersionId, {
+        const upRes = await updateParameterVersion(form.secondVersionId, {
           validFrom: inactiveValidFrom,
           interestRates: inactiveInterestRates,
           modalityRules,
           initialPaymentRules,
         });
+        if (upRes.error) { setSaving(false); setError(upRes.error); return; }
       } else {
         // Crear nueva versión inactiva
         const createRes = await createParameterVersion({
@@ -460,7 +451,8 @@ export function AdminParametersPage() {
           modalityRules,
           initialPaymentRules,
         });
-        if (!createRes.error && createRes.data?.data) {
+        if (createRes.error) { setSaving(false); setError(createRes.error); return; }
+        if (createRes.data?.data) {
           setForm(prev => prev ? { ...prev, secondVersionId: createRes.data!.data.id } : prev);
         }
       }
@@ -476,6 +468,23 @@ export function AdminParametersPage() {
     if (original) setForm(buildFormFromVersion(original, secondOriginal));
     setEditMode(false);
     setError(null);
+  }
+
+  /** Activa una opción en el backend y recarga los datos */
+  async function handleActivateOption(optNum: ActiveOption) {
+    if (!form) return;
+    const versionId = optNum === 1 ? form.versionId : form.secondVersionId;
+    if (!versionId) return;
+
+    setSaving(true);
+    setError(null);
+    const res = await activateParameterVersion(versionId);
+    if (res.error) { setSaving(false); setError(res.error); return; }
+
+    setSuccessMsg('Opción activada correctamente.');
+    setActiveOption(1);
+    setSaving(false);
+    void loadParams();
   }
 
   function setField<K extends keyof Omit<ParameterFormState, 'rateOptions'>>(key: K, subKey: string, value: string) {
@@ -548,7 +557,7 @@ export function AdminParametersPage() {
                   <button
                     type="button"
                     title={isActive ? 'Tasa activa' : 'Clic para activar esta opción'}
-                    onClick={() => { if (!isActive) setActiveOption(optNum); }}
+                    onClick={() => { if (!isActive) void handleActivateOption(optNum); }}
                     className="inline-flex items-center gap-1.5 text-[11px] font-semibold focus:outline-none group select-none"
                   >
                     <span className={[
@@ -598,12 +607,13 @@ export function AdminParametersPage() {
                   ) : (
                     <button
                       type="button"
-                      onClick={() => setActiveOption(optNum)}
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-white rounded-lg px-3 py-1.5 transition-opacity duration-150 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[#7c3aed]/40 focus:ring-offset-1"
+                      onClick={() => void handleActivateOption(optNum)}
+                      disabled={saving}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-white rounded-lg px-3 py-1.5 transition-opacity duration-150 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[#7c3aed]/40 focus:ring-offset-1 disabled:opacity-50"
                       style={{ backgroundColor: RELAXED_PURPLE }}
                     >
                       <span className="w-2 h-2 rounded-full bg-white/70" />
-                      Activar esta opción
+                      {saving ? 'Activando...' : 'Activar esta opción'}
                     </button>
                   )}
                 </div>

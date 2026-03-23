@@ -23,7 +23,7 @@ export function UpbHeader({ profileOpen, onToggleProfile }: UpbHeaderProps) {
   const [logoHover, setLogoHover] = useState(false);
   const { user, isAuthenticated, logout } = useAuth();
 
-  /** Determina la ruta de inicio según la URL actual y el rol */
+  /** Determina la ruta de inicio según el prefijo de la URL actual */
   function getHomeRoute(): string {
     const p = location.pathname;
     if (p.startsWith('/admin')) return '/admin/main';
@@ -59,7 +59,7 @@ export function UpbHeader({ profileOpen, onToggleProfile }: UpbHeaderProps) {
               alt=""
               aria-hidden="true"
               className="absolute inset-0 h-full w-full object-contain transition-transform duration-500 ease-in-out"
-              style={{ transform: logoHover ? 'translateY(0) scale(1.18)' : 'translateY(-100%) scale(1.18)' }}
+              style={{ transform: logoHover ? 'translateY(0) scale(1.35)' : 'translateY(-100%) scale(1.35)' }}
             />
           </button>
 

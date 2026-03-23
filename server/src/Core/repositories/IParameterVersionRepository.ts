@@ -106,6 +106,9 @@ export interface IParameterVersionRepository {
   /** Actualiza los datos y reglas de una versión existente */
   updateVersion(id: string, data: UpdateParameterVersionData): Promise<ActiveParameterVersion | null>;
 
+  /** Activa una versión específica y desactiva las demás (ajusta valid_from/valid_to) */
+  activateVersion(id: string): Promise<ActiveParameterVersion | null>;
+
   /**
    * Verifica si el rango [validFrom, validTo] se superpone con alguna versión existente.
    * @param excludeId ID de la versión a excluir de la verificación (útil al editar la misma).

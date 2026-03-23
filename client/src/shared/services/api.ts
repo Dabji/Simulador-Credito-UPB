@@ -356,9 +356,9 @@ export interface CreateParameterVersionPayload {
   validFrom: string;
   validTo?: string | null;
   notes?: string | null;
-  interestRates: { levelScope: string; rateMonthly: number }[];
-  modalityRules: { modality: string; level: string; maxTotalPayments: number; minInitialPct: number }[];
-  initialPaymentRules: { level: string; modality: string; extraInstallments: number; initialPctRequired: number }[];
+  interestRates: { levelScope: EducationLevelScope; rateMonthly: number }[];
+  modalityRules: { modality: ModalityType; level: EducationLevelScope; maxTotalPayments: number; minInitialPct: number }[];
+  initialPaymentRules: { level: EducationLevelScope; modality: ModalityType; extraInstallments: number; initialPctRequired: number }[];
 }
 
 /** POST /api/admin/parameters — crea una nueva versión de parámetros (requiere ADMIN) */
@@ -368,6 +368,16 @@ export async function createParameterVersion(
   return request<{ data: AdminParameterVersion; message: string }>(
     '/admin/parameters',
     { method: 'POST', body: JSON.stringify(payload) },
+  );
+}
+
+/** PATCH /api/admin/parameters/:id/activate — activa una versión y desactiva las demás */
+export async function activateParameterVersion(
+  id: string,
+): Promise<ApiResponse<{ data: AdminParameterVersion; message: string }>> {
+  return request<{ data: AdminParameterVersion; message: string }>(
+    `/admin/parameters/${id}/activate`,
+    { method: 'PATCH' },
   );
 }
 

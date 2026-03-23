@@ -245,6 +245,34 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
     return this.buildWithRules(created);
   }
 
+  async activateVersion(id: string): Promise<ActiveParameterVersion | null> {
+    const version = await ParameterVersionModel.findByPk(id);
+    if (!version) return null;
+
+    const today = SequelizeParameterVersionRepository.todayInColombia();
+    const yesterday = new Date(new Date(today).getTime() - 86_400_000)
+      .toISOString().slice(0, 10);
+
+    const sequelize = Database.getInstance().getSequelize();
+
+    await sequelize.transaction(async (t) => {
+      // Desactivar todas las demás versiones
+      await ParameterVersionModel.update(
+        { valid_to: yesterday },
+        { where: { id: { [Op.ne]: id } }, transaction: t },
+      );
+      // Activar la versión objetivo
+      await ParameterVersionModel.update(
+        { valid_from: today, valid_to: null },
+        { where: { id }, transaction: t },
+      );
+    });
+
+    // Recargar la versión actualizada
+    await version.reload();
+    return this.buildWithRules(version);
+  }
+
   private async buildWithRules(version: ParameterVersionModel): Promise<ActiveParameterVersion> {
     const versionId = version.id;
 

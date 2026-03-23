@@ -43,7 +43,7 @@ export function UpbHeaderGuest() {
               alt=""
               aria-hidden="true"
               className="absolute inset-0 h-full w-full object-contain transition-transform duration-500 ease-in-out"
-              style={{ transform: logoHover ? 'translateY(0) scale(1.18)' : 'translateY(-100%) scale(1.18)' }}
+              style={{ transform: logoHover ? 'translateY(0) scale(1.35)' : 'translateY(-100%) scale(1.35)' }}
             />
           </button>
 

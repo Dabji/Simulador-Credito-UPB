@@ -206,7 +206,27 @@ router.post('/parameters', async (req: AuthenticatedRequest, res: Response, next
       return next(new BadRequestError('initialPaymentRules es obligatorio'));
     }
 
-    const adminUserId = String(req.user?.['userId'] ?? 'unknown');
+    // Validar que validFrom sea anterior a validTo (si se especifica)
+    if (
+      body.validTo &&
+      new Date(body.validFrom) >= new Date(body.validTo)
+    ) {
+      return next(new BadRequestError('validFrom debe ser anterior a validTo'));
+    }
+
+    // Verificar superposición de vigencias con versiones existentes
+    const overlaps = await paramRepo.hasOverlap(body.validFrom, body.validTo ?? null);
+    if (overlaps) {
+      return next(new BadRequestError(
+        'La vigencia especificada se superpone con otra versión de parámetros existente. ' +
+        'Ajuste las fechas para evitar conflictos.',
+      ));
+    }
+
+    const adminUserId = req.user?.['userId'] as string | undefined;
+    if (!adminUserId) {
+      return next(new UnauthorizedError('No se pudo determinar el usuario administrador'));
+    }
 
     const createData: CreateParameterVersionData = {
       createdBy: adminUserId,
@@ -238,12 +258,45 @@ router.post('/parameters', async (req: AuthenticatedRequest, res: Response, next
       entity:     'PARAMETER_VERSION',
       entity_id:  created.id,
       actor_type: 'ADMIN',
-      user_id:    adminUserId !== 'unknown' ? adminUserId : null,
+      user_id:    adminUserId,
       ip_address: extractIp(req),
       details:    { validFrom: body.validFrom, validTo: body.validTo ?? null },
     });
 
     res.status(201).json({ success: true, data: created, message: 'Versión de parámetros creada.' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ── PATCH /api/admin/parameters/:id/activate ─────────────────────────────
+
+/**
+ * PATCH /api/admin/parameters/:id/activate
+ * Activa una versión de parámetros y desactiva las demás.
+ */
+router.patch('/parameters/:id/activate', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { id } = req.params as { id: string };
+    const activated = await paramRepo.activateVersion(id);
+
+    if (!activated) {
+      return next(new NotFoundError(`Versión ${id} no encontrada`));
+    }
+
+    const adminUserId = String(req.user?.['userId'] ?? 'unknown');
+
+    await auditLog({
+      action:     'ACTIVATE_PARAMETER_VERSION',
+      entity:     'PARAMETER_VERSION',
+      entity_id:  id,
+      actor_type: 'ADMIN',
+      user_id:    adminUserId !== 'unknown' ? adminUserId : null,
+      ip_address: extractIp(req),
+      details:    { activatedVersionId: id },
+    });
+
+    res.json({ success: true, data: activated, message: 'Versión activada correctamente.' });
   } catch (error) {
     next(error);
   }
