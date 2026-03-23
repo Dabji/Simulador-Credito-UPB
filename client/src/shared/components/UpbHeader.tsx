@@ -5,8 +5,9 @@
 ───────────────────────────────────────────────────────────────── */
 
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import LogoUpb from '@/assets/Images/LogoUpb.png';
+import LogoUpbColor from '@/assets/Images/logoUpbColor.png';
 import { useAuth } from '@/modules/auth/context/AuthContext';
 import { UPB_NAV_LINKS } from '@/shared/components/upbLinks';
 
@@ -17,20 +18,50 @@ interface UpbHeaderProps {
 
 export function UpbHeader({ profileOpen, onToggleProfile }: UpbHeaderProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [logoHover, setLogoHover] = useState(false);
   const { user, isAuthenticated, logout } = useAuth();
+
+  /** Determina la ruta de inicio según la URL actual y el rol */
+  function getHomeRoute(): string {
+    const p = location.pathname;
+    if (p.startsWith('/admin')) return '/admin/main';
+    if (p.startsWith('/guest')) return '/guest/main';
+    if (p.startsWith('/student') || p.startsWith('/simulator')) return '/student/main';
+    return '/';
+  }
 
   return (
     <header className="w-full bg-white" style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.10)' }}>
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-10 2xl:px-16">
         <div className="flex items-center justify-between h-[68px]">
 
-          {/* Logo institucional */}
-          <img
-            src={LogoUpb}
-            alt="Logo Universidad Pontificia Bolivariana"
-            className="h-9 sm:h-11 w-auto flex-shrink-0"
-          />
+          {/* Logo institucional — interactivo con deslizamiento vertical */}
+          <button
+            type="button"
+            onClick={() => navigate(getHomeRoute())}
+            onMouseEnter={() => setLogoHover(true)}
+            onMouseLeave={() => setLogoHover(false)}
+            className="relative h-9 sm:h-11 w-[90px] sm:w-[110px] flex-shrink-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6b21a8]/40 focus:ring-offset-2 overflow-hidden"
+            aria-label="Ir al menú principal"
+          >
+            {/* Logo gris — posición normal, al hover baja y desaparece */}
+            <img
+              src={LogoUpb}
+              alt="Logo Universidad Pontificia Bolivariana"
+              className="absolute inset-0 h-full w-full object-contain transition-transform duration-500 ease-in-out"
+              style={{ transform: logoHover ? 'translateY(100%)' : 'translateY(0)' }}
+            />
+            {/* Logo a color — arriba oculto, al hover baja a su posición (scale compensa padding extra de la imagen) */}
+            <img
+              src={LogoUpbColor}
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 h-full w-full object-contain transition-transform duration-500 ease-in-out"
+              style={{ transform: logoHover ? 'translateY(0) scale(1.18)' : 'translateY(-100%) scale(1.18)' }}
+            />
+          </button>
 
           {/* Menú desktop — centrado con separadores */}
           <nav className="hidden md:flex flex-1 items-center justify-center" aria-label="Menú principal">

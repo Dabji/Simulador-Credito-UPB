@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UpbHeader } from '@/shared/components/UpbHeader';
 import { UpbFooter } from '@/shared/components/UpbFooter';
+import { BackNavLink } from '@/shared/components/BackNavLink';
 import {
   adminListUsers,
   type AdminUserListItemDTO,
@@ -140,18 +141,7 @@ export function AdminStudentsPage() {
       <main className="flex-1 w-full max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-10 py-10">
 
         {/* Breadcrumb / título */}
-        <div className="mb-2">
-          <button
-            type="button"
-            onClick={() => navigate('/admin/main')}
-            className="group inline-flex items-center gap-1.5 text-sm font-semibold text-[#6b21a8] hover:text-[#581c87] transition-all duration-200 focus:outline-none"
-          >
-            <svg className="w-4 h-4 transition-transform duration-200 group-hover:-translate-x-1" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-            Volver al menú
-          </button>
-        </div>
+        <BackNavLink to="/admin/main" label="Volver al menú" />
 
         <h1 className="text-2xl sm:text-3xl font-black text-gray-900 mb-1 mt-3">
           Gestión de Estudiantes

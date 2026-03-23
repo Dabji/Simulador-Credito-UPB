@@ -79,6 +79,17 @@ export interface ParameterVersionSummary {
   readonly isActive: boolean;
 }
 
+/** Datos para crear una nueva versión de parámetros */
+export interface CreateParameterVersionData {
+  readonly createdBy: string;
+  readonly validFrom: string;
+  readonly validTo?: string | null;
+  readonly notes?: string | null;
+  readonly interestRates: UpdateInterestRateInput[];
+  readonly modalityRules: UpdateModalityRuleInput[];
+  readonly initialPaymentRules: UpdateInitialPaymentRuleInput[];
+}
+
 export interface IParameterVersionRepository {
   /** Retorna la versión activa (cuyo valid_from ≤ hoy y valid_to null o ≥ hoy) */
   findActive(): Promise<ActiveParameterVersion | null>;
@@ -88,6 +99,9 @@ export interface IParameterVersionRepository {
 
   /** Retorna todas las versiones de parámetros (resumen para listado) */
   findAll(): Promise<ParameterVersionSummary[]>;
+
+  /** Crea una nueva versión de parámetros con todas sus reglas */
+  createVersion(data: CreateParameterVersionData): Promise<ActiveParameterVersion>;
 
   /** Actualiza los datos y reglas de una versión existente */
   updateVersion(id: string, data: UpdateParameterVersionData): Promise<ActiveParameterVersion | null>;

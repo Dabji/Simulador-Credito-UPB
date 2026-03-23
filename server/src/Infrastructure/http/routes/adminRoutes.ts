@@ -13,7 +13,7 @@ import { SequelizeSimulationRepository } from '../../persistence/repositories/Se
 import { SimulationModel } from '../../persistence/models/SimulationModel';
 import { UserModel } from '../../persistence/models/UserModel';
 import { BadRequestError, NotFoundError, UnauthorizedError } from '../../../Core/errors';
-import type { UpdateParameterVersionData } from '../../../Core/repositories/IParameterVersionRepository';
+import type { UpdateParameterVersionData, CreateParameterVersionData } from '../../../Core/repositories/IParameterVersionRepository';
 import { AuditLogModel } from '../../persistence/models/AuditLogModel';
 import type { AuthenticatedRequest } from '../middlewares/authGuard';
 import { auditLog, extractIp } from '../../../Application/services/AuditService';
@@ -167,6 +167,83 @@ router.get('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
       return next(new NotFoundError(`Versión de parámetros con id '${id}' no encontrada`));
     }
     res.json({ success: true, data: version });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ── POST /api/admin/parameters ───────────────────────────────────────────
+
+/**
+ * POST /api/admin/parameters
+ * Crea una nueva versión de parámetros (opción inactiva).
+ * Body: { validFrom, validTo?, notes?, interestRates, modalityRules, initialPaymentRules }
+ */
+router.post('/parameters', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const body = req.body as {
+      validFrom: string;
+      validTo?: string | null;
+      notes?: string | null;
+      interestRates: { levelScope: string; rateMonthly: number }[];
+      modalityRules: { modality: string; level: string; maxTotalPayments: number; minInitialPct: number }[];
+      initialPaymentRules: { level: string; modality: string; extraInstallments: number; initialPctRequired: number }[];
+    };
+
+    if (!body.validFrom || !isValidDate(body.validFrom)) {
+      return next(new BadRequestError('validFrom es obligatorio y debe tener formato YYYY-MM-DD'));
+    }
+    if (body.validTo !== undefined && body.validTo !== null && !isValidDate(body.validTo)) {
+      return next(new BadRequestError('validTo debe tener formato YYYY-MM-DD'));
+    }
+    if (!Array.isArray(body.interestRates) || body.interestRates.length === 0) {
+      return next(new BadRequestError('interestRates es obligatorio y debe tener al menos un elemento'));
+    }
+    if (!Array.isArray(body.modalityRules) || body.modalityRules.length === 0) {
+      return next(new BadRequestError('modalityRules es obligatorio'));
+    }
+    if (!Array.isArray(body.initialPaymentRules) || body.initialPaymentRules.length === 0) {
+      return next(new BadRequestError('initialPaymentRules es obligatorio'));
+    }
+
+    const adminUserId = String(req.user?.['userId'] ?? 'unknown');
+
+    const createData: CreateParameterVersionData = {
+      createdBy: adminUserId,
+      validFrom: body.validFrom,
+      validTo: body.validTo ?? null,
+      notes: body.notes ?? null,
+      interestRates: body.interestRates.map(r => ({
+        levelScope: r.levelScope as 'PREGRADO' | 'POSGRADO' | 'UPB_TEC',
+        rateMonthly: r.rateMonthly,
+      })),
+      modalityRules: body.modalityRules.map(r => ({
+        modality: r.modality as 'SIN_INTERES' | 'CON_INTERES',
+        level: r.level as 'PREGRADO' | 'POSGRADO' | 'UPB_TEC',
+        maxTotalPayments: r.maxTotalPayments,
+        minInitialPct: r.minInitialPct,
+      })),
+      initialPaymentRules: body.initialPaymentRules.map(r => ({
+        level: r.level as 'PREGRADO' | 'POSGRADO' | 'UPB_TEC',
+        modality: r.modality as 'SIN_INTERES' | 'CON_INTERES',
+        extraInstallments: r.extraInstallments,
+        initialPctRequired: r.initialPctRequired,
+      })),
+    };
+
+    const created = await paramRepo.createVersion(createData);
+
+    await auditLog({
+      action:     'CREATE_PARAMETER_VERSION',
+      entity:     'PARAMETER_VERSION',
+      entity_id:  created.id,
+      actor_type: 'ADMIN',
+      user_id:    adminUserId !== 'unknown' ? adminUserId : null,
+      ip_address: extractIp(req),
+      details:    { validFrom: body.validFrom, validTo: body.validTo ?? null },
+    });
+
+    res.status(201).json({ success: true, data: created, message: 'Versión de parámetros creada.' });
   } catch (error) {
     next(error);
   }

@@ -351,6 +351,26 @@ export async function getParameterVersion(
   return request<{ data: AdminParameterVersion }>(`/admin/parameters/${id}`);
 }
 
+/** Payload para crear una nueva versión de parámetros */
+export interface CreateParameterVersionPayload {
+  validFrom: string;
+  validTo?: string | null;
+  notes?: string | null;
+  interestRates: { levelScope: string; rateMonthly: number }[];
+  modalityRules: { modality: string; level: string; maxTotalPayments: number; minInitialPct: number }[];
+  initialPaymentRules: { level: string; modality: string; extraInstallments: number; initialPctRequired: number }[];
+}
+
+/** POST /api/admin/parameters — crea una nueva versión de parámetros (requiere ADMIN) */
+export async function createParameterVersion(
+  payload: CreateParameterVersionPayload,
+): Promise<ApiResponse<{ data: AdminParameterVersion; message: string }>> {
+  return request<{ data: AdminParameterVersion; message: string }>(
+    '/admin/parameters',
+    { method: 'POST', body: JSON.stringify(payload) },
+  );
+}
+
 /** PUT /api/admin/parameters/:id — actualiza una versión de parámetros */
 export async function updateParameterVersion(
   id: string,

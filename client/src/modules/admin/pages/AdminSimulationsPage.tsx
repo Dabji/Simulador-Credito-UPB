@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UpbHeader } from '@/shared/components/UpbHeader';
 import { UpbFooter } from '@/shared/components/UpbFooter';
+import { BackNavLink } from '@/shared/components/BackNavLink';
 import {
   adminListSimulations,
   adminDeleteSimulation,
@@ -192,22 +193,7 @@ export function AdminSimulationsPage() {
       <main className="flex-1 w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-10 2xl:px-16 py-12">
 
         {/* Botón volver */}
-        <div className="mb-4">
-          <button
-            type="button"
-            onClick={() => navigate('/admin/main')}
-            className="
-              inline-flex items-center gap-1 text-sm font-semibold text-[#6b21a8]
-              hover:text-[#4a0e7a] transition-colors duration-150
-              focus:outline-none focus:underline
-            "
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-            Volver al menú
-          </button>
-        </div>
+        <BackNavLink to="/admin/main" label="Volver al menú" />
 
         <h1 className="text-2xl sm:text-3xl font-black text-gray-900 mb-1 mt-3">
           Gestión de Simulaciones
