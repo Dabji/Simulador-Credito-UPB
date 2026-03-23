@@ -4,17 +4,20 @@
    del simulador de crédito UPB.
 ───────────────────────────────────────────────────────────────────── */
 
-import { useNavigate } from 'react-router-dom';
 import { UpbHeader } from '@/shared/components/UpbHeader';
 import { UpbFooter } from '@/shared/components/UpbFooter';
+import { BackNavLink } from '@/shared/components/BackNavLink';
 import { useState, useEffect, useCallback } from 'react';
 import {
   getActiveParameters,
+  listParameterVersions,
+  getParameterVersion,
   updateParameterVersion,
+  createParameterVersion,
+  activateParameterVersion,
   type AdminParameterVersion,
 } from '@/shared/services/api';
 import {
-  ArrowLeft,
   Pencil,
   Save,
   X,
@@ -64,11 +67,13 @@ interface InitialPaymentForm {
 
 interface ParameterFormState {
   versionId: string;
-  /** Version-level dates — passed through unchanged on save */
+  /** ID en BD de la segunda opción (inactiva) — null si aún no se ha creado */
+  secondVersionId: string | null;
+  /** Fechas de la versión — se envían sin cambios al guardar */
   _validFrom: string;
   _validTo: string;
   _notes: string;
-  /** Two alternative rate configurations; activeOption decides which is saved */
+  /** Dos configuraciones alternativas de tasas; activeOption decide cuál se guarda */
   rateOptions: [RateSet, RateSet];
   limits: ModalityLimitsForm;
   minInitialPct: MinInitialPctForm;
@@ -107,11 +112,24 @@ function clampInt(raw: string, min: number, max: number): string {
   return raw;
 }
 
-function buildFormFromVersion(v: AdminParameterVersion): ParameterFormState {
+/** Extrae un RateSet de las tasas de interés de una versión */
+function rateSetFromVersion(v: AdminParameterVersion): RateSet {
   const pregrado = v.interestRates.find(r => r.levelScope === 'PREGRADO');
   const posgrado = v.interestRates.find(r => r.levelScope === 'POSGRADO');
   const upbTec   = v.interestRates.find(r => r.levelScope === 'UPB_TEC');
+  return {
+    pregradoRate: pregrado ? rateToPercent(pregrado.rateMonthly) : '',
+    pregradoValidFrom: v.validFrom,
+    posgradoRate: posgrado ? rateToPercent(posgrado.rateMonthly) : '',
+    posgradoValidFrom: v.validFrom,
+    upbTecRate:   upbTec   ? rateToPercent(upbTec.rateMonthly)   : '',
+    upbTecValidFrom: v.validFrom,
+  };
+}
 
+const EMPTY_RATE_SET: RateSet = { pregradoRate: '', pregradoValidFrom: '', posgradoRate: '', posgradoValidFrom: '', upbTecRate: '', upbTecValidFrom: '' };
+
+function buildFormFromVersion(v: AdminParameterVersion, secondary?: AdminParameterVersion | null): ParameterFormState {
   const sinInteresPreg = v.modalityRules.find(r => r.modality === 'SIN_INTERES' && r.level === 'PREGRADO');
   const conInteresPreg = v.modalityRules.find(r => r.modality === 'CON_INTERES' && r.level === 'PREGRADO');
   const sinInteresTec  = v.modalityRules.find(r => r.modality === 'SIN_INTERES' && r.level === 'UPB_TEC');
@@ -127,24 +145,15 @@ function buildFormFromVersion(v: AdminParameterVersion): ParameterFormState {
     return rule ? (rule.initialPctRequired * 100).toFixed(2).replace(/\.?0+$/, '') : '';
   };
 
-  /** Blank template used for options 2 & 3 on fresh load */
-  const emptyRateSet: RateSet = { pregradoRate: '', pregradoValidFrom: '', posgradoRate: '', posgradoValidFrom: '', upbTecRate: '', upbTecValidFrom: '' };
-
   return {
     versionId: v.id,
+    secondVersionId: secondary?.id ?? null,
     _validFrom: v.validFrom,
     _validTo: v.validTo ?? '',
     _notes: v.notes ?? '',
     rateOptions: [
-      {
-        pregradoRate: pregrado ? rateToPercent(pregrado.rateMonthly) : '',
-        pregradoValidFrom: v.validFrom,
-        posgradoRate: posgrado ? rateToPercent(posgrado.rateMonthly) : '',
-        posgradoValidFrom: v.validFrom,
-        upbTecRate:   upbTec   ? rateToPercent(upbTec.rateMonthly)   : '',
-        upbTecValidFrom: v.validFrom,
-      },
-      { ...emptyRateSet },
+      rateSetFromVersion(v),
+      secondary ? rateSetFromVersion(secondary) : { ...EMPTY_RATE_SET },
     ],
     limits: {
       sinInteresMax: sinInteresPreg ? String(sinInteresPreg.maxTotalPayments) : '',
@@ -237,7 +246,6 @@ function Card({ icon, title, children, className = '' }: CardProps) {
 // ═══════════════════════════════════════════════════════════════════════
 
 export function AdminParametersPage() {
-  const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
 
   const [loading, setLoading]       = useState(true);
@@ -245,48 +253,53 @@ export function AdminParametersPage() {
   const [editMode, setEditMode]     = useState(false);
   const [pencilAnim, setPencilAnim] = useState(false);
   const [saveAnim, setSaveAnim]     = useState(false);
-  /** Which of the 3 rate-option cards is currently selected as primary */
+  /** Cuál de las tarjetas de opciones de tasas está seleccionada como principal */
   const [activeOption, setActiveOption] = useState<ActiveOption>(1);
   const [error, setError]         = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [form, setForm]           = useState<ParameterFormState | null>(null);
   const [original, setOriginal]   = useState<AdminParameterVersion | null>(null);
+  const [secondOriginal, setSecondOriginal] = useState<AdminParameterVersion | null>(null);
 
-  // ── Data fetching ──────────────────────────────────────────────────────
+  // ── Carga de datos ────────────────────────────────────────────────────
 
+  /** Carga versión activa + versión inactiva (segunda opción) si existe */
   const loadParams = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const res = await getActiveParameters();
-    if (res.error) {
-      setError(res.error);
-    } else if (res.data?.data) {
-      const version = res.data.data;
-      setOriginal(version);
-      setForm(buildFormFromVersion(version));
+
+    // 1. Obtener la versión activa
+    const activeRes = await getActiveParameters();
+    if (activeRes.error) { setError(activeRes.error); setLoading(false); return; }
+    const activeVersion = activeRes.data?.data ?? null;
+    if (!activeVersion) { setLoading(false); return; }
+
+    setOriginal(activeVersion);
+
+    // 2. Intentar cargar una segunda versión (inactiva) si existe
+    let secondaryVersion: AdminParameterVersion | null = null;
+    const listRes = await listParameterVersions();
+    if (!listRes.error && listRes.data?.data) {
+      const others = listRes.data.data.filter(s => s.id !== activeVersion.id);
+      if (others.length > 0) {
+        const detailRes = await getParameterVersion(others[0].id);
+        if (!detailRes.error && detailRes.data?.data) {
+          secondaryVersion = detailRes.data.data;
+        }
+      }
     }
+
+    setSecondOriginal(secondaryVersion);
+    setForm(buildFormFromVersion(activeVersion, secondaryVersion));
     setLoading(false);
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    async function init() {
-      const res = await getActiveParameters();
-      if (cancelled) return;
-      if (res.error) {
-        setError(res.error);
-      } else if (res.data?.data) {
-        const version = res.data.data;
-        setOriginal(version);
-        setForm(buildFormFromVersion(version));
-      }
-      setLoading(false);
-    }
-    void init();
-    return () => { cancelled = true; };
+    void loadParams();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Validation ─────────────────────────────────────────────────────────
+  // ── Validación ────────────────────────────────────────────────────────
 
   function validate(): string | null {
     if (!form) return 'No hay datos cargados';
@@ -315,7 +328,62 @@ export function AdminParametersPage() {
     return null;
   }
 
-  // ── Save ───────────────────────────────────────────────────────────────
+  // ── Guardar ─────────────────────────────────────────────────────────
+
+  /** Construye el arreglo de tasas de interés a partir de un RateSet */
+  function buildInterestRates(rs: RateSet) {
+    const levels = ['PREGRADO', 'POSGRADO', 'UPB_TEC'] as const;
+    const map: Record<string, number> = {
+      PREGRADO: percentToRate(rs.pregradoRate),
+      POSGRADO: percentToRate(rs.posgradoRate),
+      UPB_TEC:  percentToRate(rs.upbTecRate),
+    };
+    return levels.map(l => ({ levelScope: l, rateMonthly: map[l] }));
+  }
+
+  /** Construye las reglas compartidas de modalidad y cuota inicial desde el form */
+  function buildSharedRules() {
+    const levels = ['PREGRADO', 'POSGRADO', 'UPB_TEC'] as const;
+    const sinMax = parseInt(form!.limits.sinInteresMax, 10);
+    const conMax = parseInt(form!.limits.conInteresMax, 10);
+    const sinMinPreg = percentToRate(form!.minInitialPct.pregradoSinInteres);
+    const conMinPreg = percentToRate(form!.minInitialPct.pregradoConInteres);
+    const sinMinTec  = percentToRate(form!.minInitialPct.upbTecSinInteres);
+    const conMinTec  = percentToRate(form!.minInitialPct.upbTecConInteres);
+
+    const modalityRules = levels.flatMap(level => [
+      { modality: 'SIN_INTERES' as const, level, maxTotalPayments: sinMax, minInitialPct: level === 'UPB_TEC' ? sinMinTec : sinMinPreg },
+      { modality: 'CON_INTERES' as const, level, maxTotalPayments: conMax, minInitialPct: level === 'UPB_TEC' ? conMinTec : conMinPreg },
+    ]);
+
+    const formInitPcts: Record<number, number> = {};
+    ([
+      [0, form!.initialPayments.extra0],
+      [1, form!.initialPayments.extra1],
+      [2, form!.initialPayments.extra2],
+      [3, form!.initialPayments.extra3],
+      [4, form!.initialPayments.extra4],
+      [5, form!.initialPayments.extra5],
+    ] as [number, string][]).forEach(([key, value]) => {
+      const rate = percentToRate(value);
+      if (Number.isFinite(rate)) formInitPcts[key] = rate;
+    });
+
+    const initialPaymentRules = original!.initialPaymentRules.map(rule => {
+      const isEditable =
+        rule.level === 'PREGRADO' && rule.modality === 'CON_INTERES' && rule.extraInstallments in formInitPcts;
+      const pct = isEditable ? formInitPcts[rule.extraInstallments] : rule.initialPctRequired;
+      const isMirrored =
+        rule.level === 'POSGRADO' && rule.modality === 'CON_INTERES' && rule.extraInstallments in formInitPcts;
+      return {
+        level: rule.level, modality: rule.modality,
+        extraInstallments: rule.extraInstallments,
+        initialPctRequired: isMirrored ? formInitPcts[rule.extraInstallments] : pct,
+      };
+    });
+
+    return { modalityRules, initialPaymentRules };
+  }
 
   async function handleSave() {
     setSaveAnim(true);
@@ -332,86 +400,91 @@ export function AdminParametersPage() {
     setError(null);
     setSuccessMsg(null);
 
-    const levels = ['PREGRADO', 'POSGRADO', 'UPB_TEC'] as const;
+    const { modalityRules, initialPaymentRules } = buildSharedRules();
 
-    // Use the rates from the selected active option
-    const activeRates = form.rateOptions[activeOption - 1];
-    const rateMap: Record<string, number> = {
-      PREGRADO: percentToRate(activeRates.pregradoRate),
-      POSGRADO: percentToRate(activeRates.posgradoRate),
-      UPB_TEC:  percentToRate(activeRates.upbTecRate),
-    };
-    const interestRates = levels.map(l => ({ levelScope: l, rateMonthly: rateMap[l] }));
-
-    const sinMax = parseInt(form.limits.sinInteresMax, 10);
-    const conMax = parseInt(form.limits.conInteresMax, 10);
-    const sinMinPreg = percentToRate(form.minInitialPct.pregradoSinInteres);
-    const conMinPreg = percentToRate(form.minInitialPct.pregradoConInteres);
-    const sinMinTec  = percentToRate(form.minInitialPct.upbTecSinInteres);
-    const conMinTec  = percentToRate(form.minInitialPct.upbTecConInteres);
-
-    const modalityRules = levels.flatMap(level => [
-      {
-        modality: 'SIN_INTERES' as const, level,
-        maxTotalPayments: sinMax,
-        minInitialPct: level === 'UPB_TEC' ? sinMinTec : sinMinPreg,
-      },
-      {
-        modality: 'CON_INTERES' as const, level,
-        maxTotalPayments: conMax,
-        minInitialPct: level === 'UPB_TEC' ? conMinTec : conMinPreg,
-      },
-    ]);
-
-    const formInitPcts: Record<number, number> = {};
-    ([
-      [0, form.initialPayments.extra0],
-      [1, form.initialPayments.extra1],
-      [2, form.initialPayments.extra2],
-      [3, form.initialPayments.extra3],
-      [4, form.initialPayments.extra4],
-      [5, form.initialPayments.extra5],
-    ] as [number, string][]).forEach(([key, value]) => {
-      const rate = percentToRate(value);
-      if (Number.isFinite(rate)) formInitPcts[key] = rate;
-    });
-
-    const initialPaymentRules = original.initialPaymentRules.map(rule => {
-      const isEditable =
-        rule.level === 'PREGRADO' && rule.modality === 'CON_INTERES' && rule.extraInstallments in formInitPcts;
-      const pct = isEditable ? formInitPcts[rule.extraInstallments] : rule.initialPctRequired;
-      const isMirrored =
-        rule.level === 'POSGRADO' && rule.modality === 'CON_INTERES' && rule.extraInstallments in formInitPcts;
-      return {
-        level: rule.level, modality: rule.modality,
-        extraInstallments: rule.extraInstallments,
-        initialPctRequired: isMirrored ? formInitPcts[rule.extraInstallments] : pct,
-      };
-    });
-
-    // Pass version-level dates unchanged — UI does not expose them
+    // ── Guardar la opción ACTIVA en su versión ─────────────────────
+    const activeRatesPayload = buildInterestRates(form.rateOptions[activeOption - 1]);
     const res = await updateParameterVersion(form.versionId, {
       validFrom: form._validFrom,
       validTo: form._validTo || null,
       notes: form._notes || null,
-      interestRates,
+      interestRates: activeRatesPayload,
       modalityRules,
       initialPaymentRules,
     });
 
+    if (res.error) { setSaving(false); setError(res.error); return; }
+
+    // ── Guardar las tasas de la opción INACTIVA ────────────────────
+    const inactiveIdx = activeOption === 1 ? 1 : 0;
+    const inactiveRates = form.rateOptions[inactiveIdx];
+    const hasInactiveData = inactiveRates.pregradoRate !== '' || inactiveRates.upbTecRate !== '';
+
+    if (hasInactiveData) {
+      const inactiveInterestRates = buildInterestRates(inactiveRates);
+
+      // Validar que ninguna tasa sea NaN antes de enviar al backend
+      const hasNaN = inactiveInterestRates.some(r => !Number.isFinite(r.rateMonthly));
+      if (hasNaN) {
+        setSaving(false);
+        setError('La opción inactiva tiene tasas incompletas. Rellene todas las tasas antes de guardar.');
+        return;
+      }
+
+      const inactiveValidFrom = inactiveRates.pregradoValidFrom || form._validFrom;
+
+      if (form.secondVersionId) {
+        // Actualizar versión inactiva existente
+        const upRes = await updateParameterVersion(form.secondVersionId, {
+          validFrom: inactiveValidFrom,
+          interestRates: inactiveInterestRates,
+          modalityRules,
+          initialPaymentRules,
+        });
+        if (upRes.error) { setSaving(false); setError(upRes.error); return; }
+      } else {
+        // Crear nueva versión inactiva
+        const createRes = await createParameterVersion({
+          validFrom: inactiveValidFrom,
+          notes: 'Opción alternativa de tasas',
+          interestRates: inactiveInterestRates,
+          modalityRules,
+          initialPaymentRules,
+        });
+        if (createRes.error) { setSaving(false); setError(createRes.error); return; }
+        if (createRes.data?.data) {
+          setForm(prev => prev ? { ...prev, secondVersionId: createRes.data!.data.id } : prev);
+        }
+      }
+    }
+
     setSaving(false);
-
-    if (res.error) { setError(res.error); return; }
-
     setSuccessMsg('Parámetros actualizados correctamente.');
     setEditMode(false);
     void loadParams();
   }
 
   function handleCancelEdit() {
-    if (original) setForm(buildFormFromVersion(original));
+    if (original) setForm(buildFormFromVersion(original, secondOriginal));
     setEditMode(false);
     setError(null);
+  }
+
+  /** Activa una opción en el backend y recarga los datos */
+  async function handleActivateOption(optNum: ActiveOption) {
+    if (!form) return;
+    const versionId = optNum === 1 ? form.versionId : form.secondVersionId;
+    if (!versionId) return;
+
+    setSaving(true);
+    setError(null);
+    const res = await activateParameterVersion(versionId);
+    if (res.error) { setSaving(false); setError(res.error); return; }
+
+    setSuccessMsg('Opción activada correctamente.');
+    setActiveOption(1);
+    setSaving(false);
+    void loadParams();
   }
 
   function setField<K extends keyof Omit<ParameterFormState, 'rateOptions'>>(key: K, subKey: string, value: string) {
@@ -484,7 +557,7 @@ export function AdminParametersPage() {
                   <button
                     type="button"
                     title={isActive ? 'Tasa activa' : 'Clic para activar esta opción'}
-                    onClick={() => { if (!isActive) setActiveOption(optNum); }}
+                    onClick={() => { if (!isActive) void handleActivateOption(optNum); }}
                     className="inline-flex items-center gap-1.5 text-[11px] font-semibold focus:outline-none group select-none"
                   >
                     <span className={[
@@ -534,12 +607,13 @@ export function AdminParametersPage() {
                   ) : (
                     <button
                       type="button"
-                      onClick={() => setActiveOption(optNum)}
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-white rounded-lg px-3 py-1.5 transition-opacity duration-150 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[#7c3aed]/40 focus:ring-offset-1"
+                      onClick={() => void handleActivateOption(optNum)}
+                      disabled={saving}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-white rounded-lg px-3 py-1.5 transition-opacity duration-150 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[#7c3aed]/40 focus:ring-offset-1 disabled:opacity-50"
                       style={{ backgroundColor: RELAXED_PURPLE }}
                     >
                       <span className="w-2 h-2 rounded-full bg-white/70" />
-                      Activar esta opción
+                      {saving ? 'Activando...' : 'Activar esta opción'}
                     </button>
                   )}
                 </div>
@@ -692,17 +766,7 @@ export function AdminParametersPage() {
               Gestión de tasas de interés, cuotas iniciales y límites por modalidad
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate('/admin/main')}
-            className="group inline-flex items-center gap-1.5 self-start sm:self-auto text-sm font-semibold text-[#6b21a8] hover:text-[#581c87] transition-all duration-200 focus:outline-none relative"
-          >
-            <ArrowLeft size={16} className="transition-transform duration-200 group-hover:-translate-x-1" />
-            <span className="relative">
-              Volver al menú
-              <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-[#6b21a8] rounded-full transition-all duration-200 group-hover:w-full" />
-            </span>
-          </button>
+          <BackNavLink to="/admin/main" label="Volver al menú" />
         </div>
 
         {/* ── Alerts ──────────────────────────────────────────── */}

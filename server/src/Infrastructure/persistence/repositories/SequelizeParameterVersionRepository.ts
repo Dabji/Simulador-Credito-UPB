@@ -14,6 +14,7 @@ import type {
   ActiveParameterVersion,
   ParameterVersionSummary,
   UpdateParameterVersionData,
+  CreateParameterVersionData,
 } from '../../../Core/repositories/IParameterVersionRepository';
 
 export class SequelizeParameterVersionRepository implements IParameterVersionRepository {
@@ -176,6 +177,100 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
     const updated = await ParameterVersionModel.findByPk(id);
     if (!updated) return null;
     return this.buildWithRules(updated);
+  }
+
+  async createVersion(data: CreateParameterVersionData): Promise<ActiveParameterVersion> {
+    const sequelize = Database.getInstance().getSequelize();
+    const versionId = crypto.randomUUID();
+
+    await sequelize.transaction(async (t) => {
+      await ParameterVersionModel.create(
+        {
+          id: versionId,
+          valid_from: data.validFrom,
+          valid_to: data.validTo ?? null,
+          notes: data.notes ?? null,
+          installments_window_from: data.validFrom,
+          installments_window_to: data.validTo ?? data.validFrom,
+          payment_period_days: 30,
+          created_by: data.createdBy,
+        },
+        { transaction: t },
+      );
+
+      for (const rate of data.interestRates) {
+        await InterestRateModel.create(
+          {
+            id: crypto.randomUUID(),
+            rate_monthly: rate.rateMonthly,
+            rate_type: 'MV',
+            level_scope: rate.levelScope,
+            parameter_version_id: versionId,
+          },
+          { transaction: t },
+        );
+      }
+
+      for (const rule of data.modalityRules) {
+        await ModalityRuleModel.create(
+          {
+            id: crypto.randomUUID(),
+            modality: rule.modality,
+            level: rule.level,
+            max_total_payments: rule.maxTotalPayments,
+            min_initial_pct: rule.minInitialPct,
+            parameter_version_id: versionId,
+          },
+          { transaction: t },
+        );
+      }
+
+      for (const rule of data.initialPaymentRules) {
+        await InitialPaymentRuleModel.create(
+          {
+            id: crypto.randomUUID(),
+            level: rule.level,
+            modality: rule.modality,
+            extra_installments: rule.extraInstallments,
+            initial_pct_required: rule.initialPctRequired,
+            parameter_version_id: versionId,
+          },
+          { transaction: t },
+        );
+      }
+    });
+
+    const created = await ParameterVersionModel.findByPk(versionId);
+    if (!created) throw new Error('No se pudo crear la versión de parámetros');
+    return this.buildWithRules(created);
+  }
+
+  async activateVersion(id: string): Promise<ActiveParameterVersion | null> {
+    const version = await ParameterVersionModel.findByPk(id);
+    if (!version) return null;
+
+    const today = SequelizeParameterVersionRepository.todayInColombia();
+    const yesterday = new Date(new Date(today).getTime() - 86_400_000)
+      .toISOString().slice(0, 10);
+
+    const sequelize = Database.getInstance().getSequelize();
+
+    await sequelize.transaction(async (t) => {
+      // Desactivar todas las demás versiones
+      await ParameterVersionModel.update(
+        { valid_to: yesterday },
+        { where: { id: { [Op.ne]: id } }, transaction: t },
+      );
+      // Activar la versión objetivo
+      await ParameterVersionModel.update(
+        { valid_from: today, valid_to: null },
+        { where: { id }, transaction: t },
+      );
+    });
+
+    // Recargar la versión actualizada
+    await version.reload();
+    return this.buildWithRules(version);
   }
 
   private async buildWithRules(version: ParameterVersionModel): Promise<ActiveParameterVersion> {

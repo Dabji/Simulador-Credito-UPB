@@ -13,7 +13,7 @@ import { SequelizeSimulationRepository } from '../../persistence/repositories/Se
 import { SimulationModel } from '../../persistence/models/SimulationModel';
 import { UserModel } from '../../persistence/models/UserModel';
 import { BadRequestError, NotFoundError, UnauthorizedError } from '../../../Core/errors';
-import type { UpdateParameterVersionData } from '../../../Core/repositories/IParameterVersionRepository';
+import type { UpdateParameterVersionData, CreateParameterVersionData } from '../../../Core/repositories/IParameterVersionRepository';
 import { AuditLogModel } from '../../persistence/models/AuditLogModel';
 import type { AuthenticatedRequest } from '../middlewares/authGuard';
 import { auditLog, extractIp } from '../../../Application/services/AuditService';
@@ -167,6 +167,136 @@ router.get('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
       return next(new NotFoundError(`Versión de parámetros con id '${id}' no encontrada`));
     }
     res.json({ success: true, data: version });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ── POST /api/admin/parameters ───────────────────────────────────────────
+
+/**
+ * POST /api/admin/parameters
+ * Crea una nueva versión de parámetros (opción inactiva).
+ * Body: { validFrom, validTo?, notes?, interestRates, modalityRules, initialPaymentRules }
+ */
+router.post('/parameters', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const body = req.body as {
+      validFrom: string;
+      validTo?: string | null;
+      notes?: string | null;
+      interestRates: { levelScope: string; rateMonthly: number }[];
+      modalityRules: { modality: string; level: string; maxTotalPayments: number; minInitialPct: number }[];
+      initialPaymentRules: { level: string; modality: string; extraInstallments: number; initialPctRequired: number }[];
+    };
+
+    if (!body.validFrom || !isValidDate(body.validFrom)) {
+      return next(new BadRequestError('validFrom es obligatorio y debe tener formato YYYY-MM-DD'));
+    }
+    if (body.validTo !== undefined && body.validTo !== null && !isValidDate(body.validTo)) {
+      return next(new BadRequestError('validTo debe tener formato YYYY-MM-DD'));
+    }
+    if (!Array.isArray(body.interestRates) || body.interestRates.length === 0) {
+      return next(new BadRequestError('interestRates es obligatorio y debe tener al menos un elemento'));
+    }
+    if (!Array.isArray(body.modalityRules) || body.modalityRules.length === 0) {
+      return next(new BadRequestError('modalityRules es obligatorio'));
+    }
+    if (!Array.isArray(body.initialPaymentRules) || body.initialPaymentRules.length === 0) {
+      return next(new BadRequestError('initialPaymentRules es obligatorio'));
+    }
+
+    // Validar que validFrom sea anterior a validTo (si se especifica)
+    if (
+      body.validTo &&
+      new Date(body.validFrom) >= new Date(body.validTo)
+    ) {
+      return next(new BadRequestError('validFrom debe ser anterior a validTo'));
+    }
+
+    // Verificar superposición de vigencias con versiones existentes
+    const overlaps = await paramRepo.hasOverlap(body.validFrom, body.validTo ?? null);
+    if (overlaps) {
+      return next(new BadRequestError(
+        'La vigencia especificada se superpone con otra versión de parámetros existente. ' +
+        'Ajuste las fechas para evitar conflictos.',
+      ));
+    }
+
+    const adminUserId = req.user?.['userId'] as string | undefined;
+    if (!adminUserId) {
+      return next(new UnauthorizedError('No se pudo determinar el usuario administrador'));
+    }
+
+    const createData: CreateParameterVersionData = {
+      createdBy: adminUserId,
+      validFrom: body.validFrom,
+      validTo: body.validTo ?? null,
+      notes: body.notes ?? null,
+      interestRates: body.interestRates.map(r => ({
+        levelScope: r.levelScope as 'PREGRADO' | 'POSGRADO' | 'UPB_TEC',
+        rateMonthly: r.rateMonthly,
+      })),
+      modalityRules: body.modalityRules.map(r => ({
+        modality: r.modality as 'SIN_INTERES' | 'CON_INTERES',
+        level: r.level as 'PREGRADO' | 'POSGRADO' | 'UPB_TEC',
+        maxTotalPayments: r.maxTotalPayments,
+        minInitialPct: r.minInitialPct,
+      })),
+      initialPaymentRules: body.initialPaymentRules.map(r => ({
+        level: r.level as 'PREGRADO' | 'POSGRADO' | 'UPB_TEC',
+        modality: r.modality as 'SIN_INTERES' | 'CON_INTERES',
+        extraInstallments: r.extraInstallments,
+        initialPctRequired: r.initialPctRequired,
+      })),
+    };
+
+    const created = await paramRepo.createVersion(createData);
+
+    await auditLog({
+      action:     'CREATE_PARAMETER_VERSION',
+      entity:     'PARAMETER_VERSION',
+      entity_id:  created.id,
+      actor_type: 'ADMIN',
+      user_id:    adminUserId,
+      ip_address: extractIp(req),
+      details:    { validFrom: body.validFrom, validTo: body.validTo ?? null },
+    });
+
+    res.status(201).json({ success: true, data: created, message: 'Versión de parámetros creada.' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ── PATCH /api/admin/parameters/:id/activate ─────────────────────────────
+
+/**
+ * PATCH /api/admin/parameters/:id/activate
+ * Activa una versión de parámetros y desactiva las demás.
+ */
+router.patch('/parameters/:id/activate', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { id } = req.params as { id: string };
+    const activated = await paramRepo.activateVersion(id);
+
+    if (!activated) {
+      return next(new NotFoundError(`Versión ${id} no encontrada`));
+    }
+
+    const adminUserId = String(req.user?.['userId'] ?? 'unknown');
+
+    await auditLog({
+      action:     'ACTIVATE_PARAMETER_VERSION',
+      entity:     'PARAMETER_VERSION',
+      entity_id:  id,
+      actor_type: 'ADMIN',
+      user_id:    adminUserId !== 'unknown' ? adminUserId : null,
+      ip_address: extractIp(req),
+      details:    { activatedVersionId: id },
+    });
+
+    res.json({ success: true, data: activated, message: 'Versión activada correctamente.' });
   } catch (error) {
     next(error);
   }

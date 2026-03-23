@@ -7,6 +7,7 @@
 import { useState, useRef } from 'react';
 import { UpbHeader }                from '@/shared/components/UpbHeader';
 import { UpbFooter }                from '@/shared/components/UpbFooter';
+import { BackNavLink }              from '@/shared/components/BackNavLink';
 import { SimulationForm }           from '@/shared/components/SimulationForm';
 import { SimulationResultsPreview } from '@/shared/components/SimulationResultsPreview';
 import type { SimulationSummaryDTO, SimulationInputDTO } from '@/shared/services/api';
@@ -52,9 +53,12 @@ export function CreateSimulationPage() {
       />
 
       <main className="flex-1 w-full max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-10 2xl:px-16 py-8">
-        <h1 className="text-3xl sm:text-4xl font-black text-gray-900 mb-8 tracking-tight">
-          Formulario de Simulación
-        </h1>
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl sm:text-4xl font-black text-gray-900 tracking-tight">
+            Formulario de Simulación
+          </h1>
+          <BackNavLink to="/student/main" label="Volver al inicio" className="" />
+        </div>
 
         {/* Formulario conectado a la API real */}
         <SimulationForm onResult={handleResult} />
