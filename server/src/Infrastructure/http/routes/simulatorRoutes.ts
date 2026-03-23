@@ -19,6 +19,7 @@ import { logger } from '../../logger';
 import type { AuthenticatedRequest } from '../middlewares/authGuard';
 import { auditLog, extractIp } from '../../../Application/services/AuditService';
 import { buildSimulationPdf } from '../../../Application/services/export/SimulationPdfBuilder';
+import { ExportLogModel } from '../../persistence/models/ExportLogModel';
 
 const router = Router();
 
@@ -84,11 +85,14 @@ router.post('/save', async (req: AuthenticatedRequest, res: Response, next: Next
       user_id:    userId,
       ip_address: extractIp(req),
       details:    {
-        simulation_id:   result.id,
-        education_level: input.educationLevel,
-        interest_mode:   input.interestMode,
-        tuition_gross:   input.tuitionGross,
-        payments:        input.numberOfPayments,
+        simulation_id:        result.id,
+        user_id:              userId,
+        level:                input.educationLevel,
+        modality:             input.interestMode,
+        parameter_version_id: result.parameterVersionId,
+        financed_value:       result.summary.financedValue,
+        total_payments:       result.summary.numberOfPayments,
+        applied_rate_monthly: result.appliedRateMonthly,
       },
     });
 
@@ -269,14 +273,33 @@ router.get('/history/:id/export/pdf', async (req: AuthenticatedRequest, res: Res
     if (!safeId) safeId = simId.slice(0, 8);
     const filename = `simulacion-upb-${safeName}-${safeId}.pdf`;
 
+    const contentFlags = { summary: true, amortizationTable: true, charts: false };
+
+    // Registrar en export_logs (HU-40)
+    void ExportLogModel.create({
+      format:        'PDF',
+      simulation_id: simId,
+      user_id:       userId,
+      ip_address:    extractIp(req) ?? null,
+      file_name:     filename,
+      content_flags: JSON.stringify(contentFlags),
+    }).catch(() => { /* best-effort */ });
+
     void auditLog({
-      action:     'SIMULATION_EXPORT_PDF',
+      action:     'SIMULATION_EXPORTED_PDF',
       entity:     'SIMULATION',
       entity_id:  simId,
       actor_type: 'STUDENT',
       user_id:    userId,
       ip_address: extractIp(req),
-      details:    { simulation_id: simId, format: 'pdf' },
+      details:    {
+        simulation_id:            simId,
+        format:                   'PDF',
+        include_summary:          contentFlags.summary,
+        include_amortization_table: contentFlags.amortizationTable,
+        include_charts:           contentFlags.charts,
+        file_name:                filename,
+      },
     });
 
     res.setHeader('Content-Type',        'application/pdf');

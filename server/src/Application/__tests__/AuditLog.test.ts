@@ -82,6 +82,14 @@ jest.mock('../../Infrastructure/persistence/models/SimulationModel', () => ({
   },
 }));
 
+jest.mock('../../Infrastructure/persistence/models/ExportLogModel', () => ({
+  ExportLogModel: {
+    init: jest.fn(),
+    create: jest.fn().mockResolvedValue({}),
+    findAll: jest.fn().mockResolvedValue([]),
+  },
+}));
+
 jest.mock('../../Infrastructure/config/database', () => ({
   Database: {
     getInstance: jest.fn().mockReturnValue({

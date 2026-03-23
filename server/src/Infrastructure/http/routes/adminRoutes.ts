@@ -19,6 +19,7 @@ import type { AuthenticatedRequest } from '../middlewares/authGuard';
 import { auditLog, extractIp } from '../../../Application/services/AuditService';
 import { buildSimulationCsv } from '../../../Application/services/export/SimulationCsvBuilder';
 import { buildSimulationPdf } from '../../../Application/services/export/SimulationPdfBuilder';
+import { ExportLogModel } from '../../persistence/models/ExportLogModel';
 import { ListUsersByAdminUseCase } from '../../../Application/use-cases/ListUsersByAdminUseCase';
 import type { UserFilterField } from '../../../Application/use-cases/ListUsersByAdminUseCase';
 import { GetUserByAdminUseCase } from '../../../Application/use-cases/GetUserByAdminUseCase';
@@ -737,6 +738,12 @@ router.delete('/simulations/:id', async (req: AuthenticatedRequest, res: Respons
       if (reason.length > 255) reason = reason.slice(0, 255);
     }
 
+    // Obtener datos de la simulación antes del soft-delete para la auditoría
+    const simRecord = await SimulationModel.findOne({
+      attributes: ['user_id', 'modality', 'level', 'financed_value'],
+      where: { id: simId, deleted_at: null },
+    });
+
     const deleted = await simulationRepo.softDelete(simId, adminUserId, reason);
     if (!deleted) {
       res.status(404).json({ error: 'Simulación no encontrada o ya eliminada.' });
@@ -750,7 +757,15 @@ router.delete('/simulations/:id', async (req: AuthenticatedRequest, res: Respons
       actor_type: 'ADMIN',
       user_id:    adminUserId,
       ip_address: extractIp(req),
-      details:    { simulation_id: simId, reason },
+      details:    {
+        simulation_id:   simId,
+        affected_user_id: simRecord?.user_id ?? null,
+        reason,
+        previous_status: 'ACTIVE',
+        modality:        simRecord?.modality ?? null,
+        level:           simRecord?.level ?? null,
+        financed_value:  simRecord ? Number(simRecord.financed_value) : null,
+      },
     });
 
     res.json({ success: true, message: 'Simulación eliminada correctamente.' });
@@ -793,14 +808,33 @@ router.get('/simulations/:id/export/pdf', async (req: AuthenticatedRequest, res:
     if (!safeId) safeId = simId.slice(0, 8);
     const filename = `simulacion-upb-${safeName}-${safeId}.pdf`;
 
+    const pdfContentFlags = { summary: true, amortizationTable: true, charts: false };
+
+    // Registrar en export_logs (HU-40)
+    void ExportLogModel.create({
+      format:        'PDF',
+      simulation_id: simId,
+      user_id:       adminUserId,
+      ip_address:    extractIp(req) ?? null,
+      file_name:     filename,
+      content_flags: JSON.stringify(pdfContentFlags),
+    }).catch(() => { /* best-effort */ });
+
     void auditLog({
-      action:     'SIMULATION_EXPORT_PDF',
+      action:     'SIMULATION_EXPORTED_PDF',
       entity:     'SIMULATION',
       entity_id:  simId,
       actor_type: 'ADMIN',
       user_id:    adminUserId,
       ip_address: extractIp(req),
-      details:    { simulation_id: simId, format: 'pdf' },
+      details:    {
+        simulation_id:              simId,
+        format:                     'PDF',
+        include_summary:            pdfContentFlags.summary,
+        include_amortization_table: pdfContentFlags.amortizationTable,
+        include_charts:             pdfContentFlags.charts,
+        file_name:                  filename,
+      },
     });
 
     res.setHeader('Content-Type',        'application/pdf');
@@ -843,14 +877,32 @@ router.get('/simulations/:id/export/csv', async (req: AuthenticatedRequest, res:
     if (!safeId) safeId = simId.slice(0, 8);
     const filename = `simulacion-upb-${safeName}-${safeId}.csv`;
 
+    const csvContentFlags = { summary: true, amortizationTable: true };
+
+    // Registrar en export_logs (HU-41)
+    void ExportLogModel.create({
+      format:        'CSV',
+      simulation_id: simId,
+      user_id:       adminUserId,
+      ip_address:    extractIp(req) ?? null,
+      file_name:     filename,
+      content_flags: JSON.stringify(csvContentFlags),
+    }).catch(() => { /* best-effort */ });
+
     void auditLog({
-      action:     'SIMULATION_EXPORT_CSV',
+      action:     'SIMULATION_EXPORTED_CSV',
       entity:     'SIMULATION',
       entity_id:  simId,
       actor_type: 'ADMIN',
       user_id:    adminUserId,
       ip_address: extractIp(req),
-      details:    { simulation_id: simId, format: 'csv' },
+      details:    {
+        simulation_id:              simId,
+        format:                     'CSV',
+        include_summary:            csvContentFlags.summary,
+        include_amortization_table: csvContentFlags.amortizationTable,
+        file_name:                  filename,
+      },
     });
 
     res.setHeader('Content-Type',        'text/csv; charset=utf-8');
