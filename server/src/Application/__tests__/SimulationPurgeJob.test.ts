@@ -114,7 +114,7 @@ describe('SimulationPurgeJob', () => {
       expect(result).toBe(1);
     });
 
-    it('registra evento SIMULATION_DELETED agregado con detalles de purga', async () => {
+    it('registra evento SIMULATION_PURGE_COMPLETED agregado con detalles de purga', async () => {
       mockFindAll.mockResolvedValue([{ id: 'sim-1' }]);
       mockSoftDelete.mockResolvedValue(true);
 
@@ -122,9 +122,9 @@ describe('SimulationPurgeJob', () => {
 
       expect(mockAuditLogFn).toHaveBeenCalledWith(
         expect.objectContaining({
-          action: 'SIMULATION_DELETED',
-          entity: 'SIMULATION',
-          entity_id: 'SYSTEM',
+          action: 'SIMULATION_PURGE_COMPLETED',
+          entity: 'SIMULATION_PURGE',
+          entity_id: 'PURGA_AUTOMATICA_RETENCION_90_DIAS',
           actor_type: 'SYSTEM',
           user_id: null,
           details: expect.objectContaining({
