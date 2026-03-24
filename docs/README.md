@@ -123,7 +123,7 @@ Las siguientes capturas provienen de los Pull Requests del proyecto y documentan
 | Captura | Descripción |
 |:---:|---|
 | <img src="https://github.com/user-attachments/assets/40ea854a-02b2-49a7-a7d3-8bfe328df40d" width="400" /> | Página principal invitado con badge "Modo Invitado" |
-| <img src="https://github.com/user-attachments/assets/edea8693-cd6e-41ba-a666-87985c499062" width="400" /> | CTA "Crear Nueva Simulación" |
+| <img src="https://github.com/user-attachments/assets/edea8693-cd6e-41ba-a666-87985c495062" width="400" /> | CTA "Crear Nueva Simulación" |
 | <img src="https://github.com/user-attachments/assets/2cf7914c-bae2-44b8-ad7d-2f50c9d7a1d8" width="400" /> | Tarjeta informativa modo invitado |
 | <img src="https://github.com/user-attachments/assets/91d1ff52-9c86-4b1a-a116-4343927465dd" width="400" /> | Formulario de simulación (guest) |
 | <img src="https://github.com/user-attachments/assets/5719bb52-769d-4914-9427-23cc3a43e3be" width="400" /> | Resultados invitado (sin botón "Guardar") |

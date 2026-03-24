@@ -13,12 +13,12 @@ import { useNavigate } from 'react-router-dom';
 import { GuestLayout } from '@/shared/components/GuestLayout';
 
 /* Assets locales */
-import HeroImg        from '@/assets/Images/pregadroCardHome.png';
-import AltFinImg      from '@/assets/Images/ImagenStudentAltFianzas.png';
-import ImgBucaramanga from '@/assets/Images/imagenBucaramanga.png';
-import ImgMedellin    from '@/assets/Images/ImagenMedellin.png';
-import ImgMonteria    from '@/assets/Images/ImagenMonteria.png';
-import ImgPalmira     from '@/assets/Images/ImagenPalmira.png';
+import HeroImg        from '@/assets/images/hero-card.png';
+import AltFinImg      from '@/assets/images/student-alt-finance.png';
+import ImgBucaramanga from '@/assets/images/bucaramanga.png';
+import ImgMedellin    from '@/assets/images/medellin.png';
+import ImgMonteria    from '@/assets/images/monteria.png';
+import ImgPalmira     from '@/assets/images/palmira.png';
 
 /* ── Datos estáticos de sedes ────────────────────────────────── */
 interface Sede {

@@ -4,11 +4,11 @@
    oferta académica, logo alternativo, redes sociales y copyright.
 ───────────────────────────────────────────────────────────────── */
 
-import LogoUpb2 from '@/assets/Images/LogoUpb (2).png';
-import LogoFacebook from '@/assets/Images/LogoFacebook.png';
-import LogoInstagram from '@/assets/Images/LogoIngtagram.png';
-import LogoX from '@/assets/Images/logoTwitterMejor.png';
-import LogoYoutube from '@/assets/Images/youtube_style_play_icon_512.png';
+import LogoUpb2 from '@/assets/images/logo-upb-alt.png';
+import LogoFacebook from '@/assets/images/logo-facebook.png';
+import LogoInstagram from '@/assets/images/logo-instagram.png';
+import LogoX from '@/assets/images/logo-x.png';
+import LogoYoutube from '@/assets/images/logo-youtube.png';
 
 /* Links de redes sociales */
 const SOCIAL_LINKS = [

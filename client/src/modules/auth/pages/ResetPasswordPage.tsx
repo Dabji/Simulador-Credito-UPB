@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { resetPassword } from '@/shared/services/api';
-import LogoUpb from '@/assets/Images/LogoUpb.png';
+import LogoUpb from '@/assets/images/logo-upb.png';
 import { UpbFooter } from '@/shared/components/UpbFooter';
 
 // ── Zod Schema ──────────────────────────────────────────────────────────────

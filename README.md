@@ -1,6 +1,6 @@
 <div align="center">
 
-  <img src="./client/src/assets/Images/logoUpbColor.png" alt="Logo UPB" width="150" />
+  <img src="./client/src/assets/images/logo-upb-color.png" alt="Logo UPB" width="150" />
 
   # 🎓 Simulador de Crédito UPB
 
@@ -54,7 +54,7 @@ El **Simulador de Crédito UPB** permite a estudiantes, invitados y administrado
 |:---:|:---:|
 | <img src="https://github.com/user-attachments/assets/40ea854a-02b2-49a7-a7d3-8bfe328df40d" width="480" alt="Guest main" /> | <img src="https://github.com/user-attachments/assets/91d1ff52-9c86-4b1a-a116-4343927465dd" width="480" alt="Guest simulation" /> |
 | **Página principal modo invitado** | **Formulario de simulación (guest)** |
-| <img src="https://github.com/user-attachments/assets/edea8693-cd6e-41ba-a666-87985c499062" width="480" alt="Guest CTA" /> | <img src="https://github.com/user-attachments/assets/5719bb52-769d-4914-9427-23cc3a43e3be" width="480" alt="Guest results" /> |
+| <img src="https://github.com/user-attachments/assets/edea8693-cd6e-41ba-a666-87985c495062" width="480" alt="Guest CTA" /> | <img src="https://github.com/user-attachments/assets/5719bb52-769d-4914-9427-23cc3a43e3be" width="480" alt="Guest results" /> |
 | **CTA "Crear Nueva Simulación"** | **Resultados invitado (sin botón Guardar)** |
 
 </details>
@@ -298,6 +298,10 @@ simulador-credito-upb/
 ├── .github/                         # CI/CD workflows, templates, Dependabot
 ├── .env.example                     # Variables de entorno de referencia
 ├── package.json                     # Monorepo workspaces (npm)
+├── LICENSE                          # Licencia MIT
+├── SECURITY.md                      # Política de reporte de vulnerabilidades
+├── CONTRIBUTING.md                  # Guía de contribución
+├── CODE_OF_CONDUCT.md               # Código de conducta
 └── README.md
 ```
 
@@ -399,13 +403,21 @@ npm run test --workspace=client
 4. Sube tu rama: `git push origin feature/mi-feature`.
 5. Abre un **Pull Request** describiendo tus cambios.
 
-> Consulta la [plantilla de Pull Request](./.github/PULL_REQUEST_TEMPLATE.md) para la estructura esperada.
+> 📖 Consulta la [Guía de Contribución](./CONTRIBUTING.md) para convenciones de código, commits y flujo de trabajo.
+> 📝 Usa la [plantilla de Pull Request](./.github/PULL_REQUEST_TEMPLATE.md) para la estructura esperada.
+> 🤝 Lee nuestro [Código de Conducta](./CODE_OF_CONDUCT.md) antes de participar.
 
 ---
 
-## 📄 Licencia
+## � Seguridad
 
-Este proyecto está licenciado bajo la [Licencia MIT](LICENSE).
+Si descubres una vulnerabilidad de seguridad, **NO** abras un issue público. Consulta nuestra [Política de Seguridad](./SECURITY.md) para el proceso de reporte responsable.
+
+---
+
+## �📄 Licencia
+
+Este proyecto está licenciado bajo la [Licencia MIT](LICENSE) — libre para uso, modificación y distribución.
 
 ---
 
@@ -413,6 +425,6 @@ Este proyecto está licenciado bajo la [Licencia MIT](LICENSE).
 
   Hecho con ❤️ por el equipo de desarrollo — **Universidad Pontificia Bolivariana**
 
-  <sub>Proyecto Integrador · Ingeniería de Software · 2025-2026</sub>
+  <sub>Proyecto Integrador · Ingeniería de Sistemas e Informática · 2026-2027</sub>
 
 </div>
