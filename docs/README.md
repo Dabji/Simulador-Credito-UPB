@@ -12,6 +12,10 @@
 
 ```
 docs/
+├── architecture/           # 🏗️ Sustento técnico (ADRs, flujos, evidencias)
+│   ├── technical-decisions.md
+│   ├── system-design.md
+│   └── test-evidence.md
 ├── requirements/           # Requisitos, charter, backlog y especificaciones
 ├── diagrams/               # Diagramas UML por módulo (StarUML)
 │   └── class-diagram/      # Diagrama de clases general
@@ -21,6 +25,18 @@ docs/
 └── sprints/                # Artefactos por sprint
     └── sprint-1/
 ```
+
+---
+
+## 🛡️ Sustento Técnico — Arquitectura y Evidencias
+
+Documentación técnica que fundamenta las decisiones de diseño y demuestra la calidad del sistema.
+
+| Archivo | Descripción |
+|---|---|
+| [`technical-decisions.md`](./architecture/technical-decisions.md) | **8 ADRs** — Clean Architecture, Strategy Pattern, validación Zod + XSS, autenticación dual JWT/LDAP, monorepo npm workspaces, stack React 19 + Vite, MySQL Aiven Cloud, soft-delete + purga automática. |
+| [`system-design.md`](./architecture/system-design.md) | **Flujos técnicos** — Diagrama de secuencia completo de una simulación (Form → Middleware → UseCase → Engine → Strategy), modelo de seguridad Defense in Depth (7 capas), flujo de autenticación, exportación PDF, ciclo de vida de simulaciones y modelo ER detallado. |
+| [`test-evidence.md`](./architecture/test-evidence.md) | **Evidencias de testing** — Salida de Jest (4 suites, 50 tests) y Vitest (2 suites, 6 tests), reporte de cobertura de código, análisis de componentes con alta/baja cobertura y plan de mejora por sprint. |
 
 ---
 
