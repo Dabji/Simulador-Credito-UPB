@@ -5,8 +5,8 @@ import { z } from 'zod';
 import { useNavigate, Link } from 'react-router-dom';
 import { loginUser, NETWORK_ERROR_MESSAGE } from '@/shared/services/api';
 import { useAuth } from '../context/AuthContext';
-import LogoUpb from '@/assets/Images/LogoUpb.png';
-import fondoLogin from '@/assets/Images/fondoLogin.png';
+import LogoUpb from '@/assets/images/logo-upb.png';
+import fondoLogin from '@/assets/images/login-bg.png';
 
 // ── Zod Schema ──────────────────────────────────────────────────────────────
 

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import LogoUpb from '@/assets/Images/LogoUpb.png';
+import LogoUpb from '@/assets/images/logo-upb.png';
 
 export function GuestPage() {
   return (

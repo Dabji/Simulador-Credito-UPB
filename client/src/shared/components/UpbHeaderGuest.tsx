@@ -7,8 +7,8 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import LogoUpb from '@/assets/Images/LogoUpb.png';
-import LogoUpbColor from '@/assets/Images/logoUpbColor.png';
+import LogoUpb from '@/assets/images/logo-upb.png';
+import LogoUpbColor from '@/assets/images/logo-upb-color.png';
 import { UPB_NAV_LINKS } from '@/shared/components/upbLinks';
 
 export function UpbHeaderGuest() {

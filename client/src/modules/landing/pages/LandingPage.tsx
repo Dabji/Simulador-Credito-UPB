@@ -9,12 +9,12 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { LandingHeader } from '@/shared/components/LandingHeader';
 
-import ImgBucaramanga from '@/assets/Images/imagenBucaramanga.png';
-import ImgMedellin    from '@/assets/Images/ImagenMedellin.png';
-import ImgMonteria    from '@/assets/Images/ImagenMonteria.png';
-import ImgPalmira     from '@/assets/Images/ImagenPalmira.png';
-import ImgHero        from '@/assets/Images/pregadroCardHome.png';
-import ImgFondo       from '@/assets/Images/fondoLogin.png';
+import ImgBucaramanga from '@/assets/images/bucaramanga.png';
+import ImgMedellin    from '@/assets/images/medellin.png';
+import ImgMonteria    from '@/assets/images/monteria.png';
+import ImgPalmira     from '@/assets/images/palmira.png';
+import ImgHero        from '@/assets/images/hero-card.png';
+import ImgFondo       from '@/assets/images/login-bg.png';
 
 /* ── URLs de redes sociales — editar aquí ──────────────────────── */
 const FACEBOOK_URL  = 'https://www.facebook.com/UPBBGA/?locale=es_LA';
