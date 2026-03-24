@@ -1,0 +1,67 @@
+Cali --> Tunja
+Serial 0/0/0
+
+Cali --> Bogotá
+Serial 0/1/0
+
+Cali-->Pasto
+Serial 0/1/1
+
+Cali-->Medellín
+Serial 0/0/1
+
+
+enable
+configure terminal
+hostname CALI
+ipv6 unicast-routing
+interface serial 0/0/0
+ip address 10.0.0.49 255.255.255.252
+ipv6 enable
+ipv6 address 280A::F/127
+no shutdown
+exit
+interface serial 0/1/0
+ip address 10.0.0.46 255.255.255.252
+ipv6 enable
+ipv6 address 280A::13/127
+no shutdown
+exit
+interface serial 0/1/1
+ip address 10.0.0.61 255.255.255.252
+ipv6 enable
+ipv6 address 280A::16/127
+no shutdown
+exit
+interface serial 0/0/1
+ip address 10.0.0.57 255.255.255.252
+ipv6 enable
+ipv6 address 280A::14/127
+no shutdown
+exit
+ip route 0.0.0.0 0.0.0.0 10.0.0.45
+ipv6 route ::/0 280A::12
+interface Gigabitethernet 0/0
+ip address 10.5.0.1 255.255.0.0
+ipv6 enable
+ipv6 address fe80::1 link-local
+ipv6 address 280A:5::/32
+ipv6 nd other-config-flag
+ipv6 nd managed-config-flag
+no shutdown
+exit
+exit
+copy running-config startup-config
+
+
+enable
+configure terminal
+hostname SWCALI
+interface vlan 1
+ip address 10.5.0.2 255.255.0.0
+no shutdown
+exit
+ip default-Gateway 10.5.0.1
+exit
+copy running-config startup-config
+
