@@ -145,7 +145,7 @@ All files                           |   19.09 |    12.62 |   15.73 |   19.47 |
   UpdateUserByAdminInput.ts         |     100 |      100 |     100 |     100 |
 ------------------------------------|---------|----------|---------|---------|-------------------
  Application/services               |   55.79 |    37.14 |      50 |   55.38 |
-  AuditService.ts                   |   93.33 |    72.22 |     100 |     100 | 40-67,76
+  AuditService.ts                   |   93.33 |    72.22 |     100 |   93.33 | 40-67,76
   SimulationEngine.ts               |   92.64 |    86.66 |   81.81 |   92.18 | 56,177,203-205
   SimulationService.ts              |       0 |        0 |       0 |       0 | 5-119
   ParameterService.ts               |       0 |        0 |       0 |       0 | 5-42
@@ -187,7 +187,7 @@ Estos son los componentes críticos del dominio financiero, testeados exhaustiva
 | Componente | Statements | Branches | Functions | Lines | Análisis |
 |---|:---:|:---:|:---:|:---:|---|
 | `SimulationEngine.ts` | 92.64% | 86.66% | 81.81% | 92.18% | ✅ **Motor financiero** — componente más crítico, alta cobertura |
-| `AuditService.ts` | 93.33% | 72.22% | 100% | 100% | ✅ Servicio de auditoría cubre todos los flujos |
+| `AuditService.ts` | 93.33% | 72.22% | 100% | 93.33% | ✅ Servicio de auditoría — alta cobertura (líneas 40-67,76 sin cubrir) |
 | `FrenchAmortizationStrategy.ts` | 81.25% | 50% | 100% | 92.85% | ✅ Estrategia de amortización francesa |
 | `NoInterestStrategy.ts` | 80% | 66.66% | 100% | 100% | ✅ Estrategia sin intereses |
 | `constants.ts` | 100% | 100% | 100% | 100% | ✅ Constantes de dominio completamente cubiertas |
@@ -208,7 +208,7 @@ graph LR
     subgraph ALTA["✅ Cobertura Alta (Sprint 2)"]
         A["SimulationEngine<br/>92%"]
         B["InterestStrategies<br/>81-94%"]
-        C["AuditService<br/>93-100%"]
+        C["AuditService<br/>93%"]
         D["PurgeJob<br/>tested"]
     end
 
@@ -266,7 +266,7 @@ graph TD
 | **Naming** | `describe('Componente')` → `it('should + comportamiento esperado')` |
 | **Mocks** | Jest mocks para dependencias externas (BD, email, LDAP) |
 | **Assertions** | Un assert por test cuando es posible, múltiples solo si validan el mismo comportamiento |
-| **CI** | Tests ejecutados automáticamente en cada PR |
+| **CI** | Tests de **backend** (server) ejecutados automáticamente en cada PR vía GitHub Actions |
 
 ---
 

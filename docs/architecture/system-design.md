@@ -32,7 +32,7 @@ graph TD
     end
 
     subgraph SERVIDOR["🔧 Servidor"]
-        MW["🛡️ Middleware Pipeline<br/>(Helmet → CORS → XSS → Rate Limit)"]
+        MW["🛡️ Middleware Pipeline<br/>(Helmet → CORS → XSS<br/>+ Rate Limit por grupo de rutas)"]
         AUTH["🔐 Auth Layer<br/>(JWT + LDAP)"]
         UC["📦 Use Cases<br/>(Preview, Save, History)"]
         ENG["🧮 SimulationEngine<br/>(Strategy Pattern)"]
@@ -53,7 +53,7 @@ graph TD
     UC --> EXP
     UC --> DB
     ENG -->|"InterestStrategy"| ENG
-    SCH -->|"Purga cada hora"| DB
+    SCH -->|"Purga cada N horas (configurable)"| DB
     AUTH -->|"ADMIN login"| AD
     UC -->|"Reset password"| SMTP
 
@@ -94,7 +94,6 @@ sequenceDiagram
     participant SF as SimulationForm.tsx
     participant API as api.ts (fetch)
     participant XSS as xssMiddleware
-    participant VAL as validateRequest(Zod)
     participant RT as simulatorRoutes.ts
     participant PUC as PreviewSimulationUseCase
     participant SS as SimulationService
@@ -107,20 +106,23 @@ sequenceDiagram
     SF->>SF: Validación client-side (Zod + RHF)
     SF->>API: POST /api/simulator/preview {SimulationInput}
 
-    Note over XSS,VAL: Pipeline de Middlewares
+    Note over XSS,RT: Pipeline de Middlewares
 
     API->>XSS: Request entrante
     XSS->>XSS: Sanitizar body, query, params
-    XSS->>VAL: Request sanitizada
-    VAL->>VAL: SimulationInputSchema.parseAsync()
+    XSS->>RT: Request sanitizada
+
+    Note over RT: Validación manual de campos<br/>obligatorios (studentType,<br/>educationLevel, tuitionGross,<br/>academicPeriod, etc.)
+
+    RT->>RT: SimulationInputSchema.safeParse(body)
 
     alt ❌ Validación falla
-        VAL-->>API: 400 {fieldErrors}
+        RT-->>API: 400 {error: mensajes}
         API-->>SF: Mostrar errores por campo
     end
 
-    VAL->>RT: Request válida + tipada
-    RT->>PUC: execute(input: SimulationInput)
+    RT->>RT: Input válido + tipado
+    RT->>PUC: execute(result.data: SimulationInput)
     PUC->>DB: paramRepo.findActive()
     DB-->>PUC: ActiveParameterVersion (tasas, reglas, topes)
     PUC->>SS: calculate(input, activeVersion)
@@ -189,7 +191,7 @@ Donde:
 
 ## 3. Modelo de Seguridad — Defense in Depth
 
-La seguridad se implementa como un pipeline de **6 capas** que toda request debe atravesar antes de llegar a la lógica de negocio.
+La seguridad se implementa como un pipeline de **7 capas** que toda request debe atravesar antes de llegar a la lógica de negocio.
 
 ### 3.1. Pipeline de Seguridad
 
@@ -274,7 +276,7 @@ graph LR
     subgraph STUDENT["🎓 STUDENT (authGuard)"]
         R8["/api/simulator/save"]
         R9["/api/simulator/history"]
-        R10["/api/simulator/export/:id/pdf"]
+        R10["/api/simulator/history/:id/export/pdf"]
         R11["/api/users/me"]
     end
 
@@ -321,7 +323,7 @@ sequenceDiagram
     participant DB as MySQL
 
     U->>FE: Click "Exportar PDF"
-    FE->>BE: GET /api/simulator/export/:id/pdf
+    FE->>BE: GET /api/simulator/history/:id/export/pdf
     BE->>BE: authGuard → verificar token
     BE->>DB: Buscar simulación por ID + usuario
     DB-->>BE: Simulation + AmortizationRows
@@ -349,8 +351,8 @@ stateDiagram-v2
     Preview --> Guardada : POST /save (auth required)
 
     Guardada --> Consultada : GET /history
-    Guardada --> Exportada : GET /export/:id/pdf
-    Guardada --> SoftDeleted : DELETE /history/:id
+    Guardada --> Exportada : GET /history/:id/export/pdf
+    Guardada --> SoftDeleted : DELETE /history/:id (futuro)
 
     SoftDeleted --> PurgadaAuto : SimulationPurgeJob (>90 días)
 
@@ -359,7 +361,7 @@ stateDiagram-v2
 
     Exportada --> SoftDeleted
 
-    PurgadaAuto --> [*] : Eliminación física + audit_log
+    PurgadaAuto --> [*] : Eliminación lógica + audit_logs
 
     note right of Preview
         Sin persistencia
@@ -375,7 +377,7 @@ stateDiagram-v2
 
     note right of SoftDeleted
         Campo deleted_at != null
-        Visible en audit_log
+        Visible en audit_logs
         Recuperable antes de purga
     end note
 ```
@@ -413,8 +415,8 @@ erDiagram
         decimal financed_value
         enum interest_mode
         string academic_period
-        int first_payment_month
-        int number_of_payments
+        date first_payment_date
+        int total_payments
         decimal periodic_payment
         decimal total_paid
         decimal total_interest
@@ -466,6 +468,9 @@ erDiagram
         uuid user_id FK
         enum format "PDF | CSV"
         timestamp exported_at
+        string ip_address "nullable"
+        string file_name
+        string content_flags "JSON serializado"
     }
 
     AUDIT_LOG {
@@ -476,7 +481,7 @@ erDiagram
         enum actor_type "STUDENT | ADMIN | SYSTEM"
         uuid user_id FK "nullable"
         string ip_address
-        json details
+        string details "JSON serializado (TEXT long)"
         timestamp created_at
     }
 

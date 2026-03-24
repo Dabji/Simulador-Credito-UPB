@@ -301,7 +301,7 @@ sequenceDiagram
 - ✅ **Cumplimiento institucional**: Admins usan sus credenciales AD existentes.
 - ✅ **Autonomía estudiantil**: Estudiantes se registran sin depender de TI de la UPB.
 - ✅ **Stateless**: JWT permite escalar sin sesiones compartidas.
-- ✅ **Audit trail**: Cada login (exitoso o fallido) se registra en `audit_log` con IP y tipo de actor.
+- ✅ **Audit trail**: Cada login (exitoso o fallido) se registra en `audit_logs` con IP y tipo de actor.
 - ⚠️ **Complejidad dual**: Dos flujos de autenticación que mantener y testear.
 - ⚠️ **LDAP stub**: En desarrollo, el servicio LDAP es un stub; requiere integración real para producción.
 
@@ -363,9 +363,9 @@ Usar **npm workspaces** nativos con la siguiente estructura:
 | **TypeScript** | 5.9 | Tipado estático |
 | **Tailwind CSS** | 4 | Utility-first styling |
 | **React Hook Form** | 7 | Gestión de formularios sin re-renders |
-| **Zod** | 3 | Validación + inferencia de tipos |
+| **Zod** | 4 | Validación + inferencia de tipos |
 | **React Router** | 7 | Routing con rutas protegidas por rol |
-| **Recharts** | 2 | Gráficas financieras (donut, bar) |
+| **Recharts** (planificado) | 2 | Gráficas financieras (donut, bar) — aún no integrado en el código ni en package.json |
 | **Lucide React** | — | Iconografía consistente |
 | **Vitest** | — | Testing unitario |
 
@@ -419,13 +419,13 @@ Usar **npm workspaces** nativos con la siguiente estructura:
 ### Decisión
 
 1. **Soft-delete**: Las simulaciones se marcan con `deleted_at` en lugar de eliminarse físicamente.
-2. **Purga automática**: Un `SimulationPurgeJob` ejecuta cada hora un batch que elimina físicamente simulaciones con `deleted_at` > 90 días.
-3. **Audit log**: Cada purga genera un registro en `audit_log` con el número de registros eliminados.
+2. **Purga automática (soft-delete)**: Un `SimulationPurgeJob` ejecuta periódicamente (cada N horas, configurable vía `PURGE_INTERVAL_HOURS`) un batch que selecciona simulaciones con `saved_at` ≤ NOW() − retentionDays y `deleted_at IS NULL`, y les aplica soft-delete seteando `deleted_at` y `delete_reason` (sin borrado físico).
+3. **Audit log**: Cada ejecución del job genera un registro en `audit_logs` con el número de registros eliminados lógicamente.
 
 ### Consecuencias
 
 - ✅ **Recuperación**: Un admin puede restaurar simulaciones "eliminadas" antes de la purga.
-- ✅ **Trazabilidad**: Toda eliminación queda registrada en `audit_log`.
+- ✅ **Trazabilidad**: Toda eliminación queda registrada en `audit_logs`.
 - ✅ **Cumplimiento**: La política de retención de 90 días se aplica automáticamente.
 - ⚠️ **Crecimiento de BD**: Las simulaciones "eliminadas" ocupan espacio hasta la purga.
 
