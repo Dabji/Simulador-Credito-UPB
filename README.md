@@ -409,13 +409,13 @@ npm run test --workspace=client
 
 ---
 
-## � Seguridad
+## 🔒 Seguridad
 
 Si descubres una vulnerabilidad de seguridad, **NO** abras un issue público. Consulta nuestra [Política de Seguridad](./SECURITY.md) para el proceso de reporte responsable.
 
 ---
 
-## �📄 Licencia
+## 📄 Licencia
 
 Este proyecto está licenciado bajo la [Licencia MIT](LICENSE) — libre para uso, modificación y distribución.
 
