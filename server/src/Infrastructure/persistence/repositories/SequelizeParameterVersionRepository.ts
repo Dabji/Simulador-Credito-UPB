@@ -9,6 +9,7 @@ import { ParameterVersionModel } from '../models/ParameterVersionModel';
 import { InterestRateModel } from '../models/InterestRateModel';
 import { ModalityRuleModel } from '../models/ModalityRuleModel';
 import { InitialPaymentRuleModel } from '../models/InitialPaymentRuleModel';
+import { LevelConfigModel } from '../models/LevelConfigModel';
 import type {
   IParameterVersionRepository,
   ActiveParameterVersion,
@@ -171,6 +172,25 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
           );
         }
       }
+
+      // HU-PV-01: Reemplazar configuración por nivel si se proporcionó
+      if (data.levelConfigs !== undefined) {
+        await LevelConfigModel.destroy({ where: { parameter_version_id: id }, transaction: t });
+        for (const lc of data.levelConfigs) {
+          await LevelConfigModel.create(
+            {
+              id: crypto.randomUUID(),
+              level_scope: lc.levelScope,
+              is_active: lc.isActive,
+              valid_from: lc.validFrom,
+              payment_count: lc.paymentCount,
+              rate_monthly: lc.rateMonthly,
+              parameter_version_id: id,
+            },
+            { transaction: t },
+          );
+        }
+      }
     });
 
     // Recargar versión actualizada
@@ -238,6 +258,24 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
           { transaction: t },
         );
       }
+
+      // HU-PV-01: Persistir configuración por nivel
+      if (data.levelConfigs) {
+        for (const lc of data.levelConfigs) {
+          await LevelConfigModel.create(
+            {
+              id: crypto.randomUUID(),
+              level_scope: lc.levelScope,
+              is_active: lc.isActive,
+              valid_from: lc.validFrom,
+              payment_count: lc.paymentCount,
+              rate_monthly: lc.rateMonthly,
+              parameter_version_id: versionId,
+            },
+            { transaction: t },
+          );
+        }
+      }
     });
 
     const created = await ParameterVersionModel.findByPk(versionId);
@@ -276,10 +314,11 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
   private async buildWithRules(version: ParameterVersionModel): Promise<ActiveParameterVersion> {
     const versionId = version.id;
 
-    const [rates, modRules, initRules] = await Promise.all([
+    const [rates, modRules, initRules, lvlConfigs] = await Promise.all([
       InterestRateModel.findAll({ where: { parameter_version_id: versionId } }),
       ModalityRuleModel.findAll({ where: { parameter_version_id: versionId } }),
       InitialPaymentRuleModel.findAll({ where: { parameter_version_id: versionId } }),
+      LevelConfigModel.findAll({ where: { parameter_version_id: versionId } }),
     ]);
 
     return {
@@ -304,6 +343,13 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
         modality: i.modality,
         extraInstallments: i.extra_installments,
         initialPctRequired: Number(i.initial_pct_required),
+      })),
+      levelConfigs: lvlConfigs.map(lc => ({
+        levelScope: lc.level_scope,
+        isActive: lc.is_active,
+        validFrom: lc.valid_from,
+        paymentCount: lc.payment_count,
+        rateMonthly: Number(lc.rate_monthly),
       })),
     };
   }

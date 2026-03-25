@@ -42,10 +42,8 @@ export class SimulationService {
 
     // Regla: cuota inicial mínima — usar parámetros de BD si están disponibles
     const dbLevel = LEVEL_MAP[input.educationLevel];
-    // #59 — Modalidad efectiva anticipada para leer la regla de cuota inicial correcta
-    const modeForRule = input.interestMode === 'con_interes' && input.numberOfPayments <= 3
-      ? 'sin_interes'
-      : input.interestMode;
+    // HU-PV-02: Derivar modalidad efectiva desde levelConfigs si existen, sino fallback #59
+    const modeForRule = this.deriveEffectiveMode(input, activeVersion, dbLevel);
     const initialModalityRule = findModalityRule(activeVersion, dbLevel, modeForRule);
     if (initialModalityRule) {
       const minPct = initialModalityRule.minInitialPct * 100; // decimal → porcentaje
@@ -79,10 +77,8 @@ export class SimulationService {
       );
     }
 
-    // #59 — Modalidad efectiva: forzar sin_interes si con_interes + cuotas <= 3
-    const effectiveMode = input.interestMode === 'con_interes' && input.numberOfPayments <= 3
-      ? 'sin_interes'
-      : input.interestMode;
+    // HU-PV-02: Modalidad efectiva derivada desde parametrización real
+    const effectiveMode = this.deriveEffectiveMode(input, activeVersion, dbLevel);
 
     // Regla: número de cuotas no puede superar el máximo del periodo
     const maxByPeriod = this.paramService.getMaxInstallments(
@@ -117,5 +113,28 @@ export class SimulationService {
     }
 
     return this.engine.computeSummary(input, params, activeVersion);
+  }
+
+  // HU-PV-02: Deriva la modalidad efectiva desde levelConfigs si existen, sino fallback #59
+  private deriveEffectiveMode(
+    input: SimulationInput,
+    activeVersion: ActiveParameterVersion | undefined,
+    dbLevel: string | null | undefined,
+  ): string {
+    if (activeVersion && dbLevel) {
+      const cfgs = activeVersion.levelConfigs.filter(c => c.levelScope === dbLevel);
+      if (cfgs.length > 0) {
+        const cfg = cfgs.find(c => c.paymentCount === input.numberOfPayments);
+        if (cfg) {
+          return cfg.rateMonthly > 0 ? 'con_interes' : 'sin_interes';
+        }
+        return 'sin_interes';
+      }
+    }
+    // Fallback #59: regla legacy si no hay levelConfigs
+    if (input.interestMode === 'con_interes' && input.numberOfPayments <= 3) {
+      return 'sin_interes';
+    }
+    return input.interestMode;
   }
 }

@@ -38,6 +38,7 @@ import type { SimulationInput } from '../dtos/SimulationInput';
 import type { SimulationSummary, AmortizationRowDTO } from '../dtos/SimulationSummary';
 import type { ActiveParameterVersion } from '../../Core/repositories/IParameterVersionRepository';
 import type { InterestStrategy } from '../strategies/InterestStrategy';
+import { LEVEL_MAP } from '../dtos/constants';
 import { NoInterestStrategy } from '../strategies/NoInterestStrategy';
 import { FrenchAmortizationStrategy } from '../strategies/FrenchAmortizationStrategy';
 
@@ -58,23 +59,39 @@ export class SimulationEngine {
     return strategy;
   }
 
-  // Normaliza el input aplicando reglas de negocio (#57 beca UPB Tech, #59 modalidad forzada).
-  // Punto único de verdad: evita duplicar la lógica en computeSummary y buildAmortizationSchedule.
-  private normalizeInput(input: SimulationInput): SimulationInput {
-    return {
-      ...input,
-      // #57 — UPB Tech: ignorar beca/descuento aunque llegue en payload
-      scholarshipPct: input.educationLevel === 'upbTech' ? 0 : input.scholarshipPct,
-      // #59 — Forzar sin_interes si numberOfPayments <= 3 y se envió con_interes
-      interestMode: input.interestMode === 'con_interes' && input.numberOfPayments <= 3
-        ? 'sin_interes'
-        : input.interestMode,
-    };
+  // Normaliza el input aplicando reglas de negocio (#57 beca UPB Tech).
+  // HU-PV-02: Deriva modalidad desde levelConfigs si existen, sino fallback a #59.
+  private normalizeInput(input: SimulationInput, activeVersion?: ActiveParameterVersion): SimulationInput {
+    const scholarshipPct = input.educationLevel === 'upbTech' ? 0 : input.scholarshipPct;
+
+    let effectiveMode = input.interestMode;
+
+    // HU-PV-02: Derivar modalidad desde la parametrización por nivel (levelConfigs)
+    const dbLevel = LEVEL_MAP[input.educationLevel];
+    const cfgs = activeVersion && dbLevel
+      ? activeVersion.levelConfigs.filter(c => c.levelScope === dbLevel)
+      : [];
+
+    if (cfgs.length > 0) {
+      const cfg = cfgs.find(c => c.paymentCount === input.numberOfPayments);
+      if (cfg) {
+        effectiveMode = cfg.rateMonthly > 0 ? 'con_interes' : 'sin_interes';
+      } else {
+        effectiveMode = 'sin_interes';
+      }
+    } else {
+      // Fallback #59: regla legacy si no hay levelConfigs configurados
+      if (input.interestMode === 'con_interes' && input.numberOfPayments <= 3) {
+        effectiveMode = 'sin_interes';
+      }
+    }
+
+    return { ...input, scholarshipPct, interestMode: effectiveMode };
   }
 
   // Calcula el resumen completo + tabla a partir del input y los parámetros activos
   computeSummary(input: SimulationInput, _params: ParameterVersion, activeVersion?: ActiveParameterVersion): SimulationSummary {
-    const effectiveInput          = this.normalizeInput(input);
+    const effectiveInput          = this.normalizeInput(input, activeVersion);
     const effectiveScholarshipPct = effectiveInput.scholarshipPct;
     const effectiveInterestMode   = effectiveInput.interestMode;
 

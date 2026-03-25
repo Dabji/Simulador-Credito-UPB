@@ -177,10 +177,6 @@ const INITIAL_FIELDS: FormFields = {
   observations: '',
 };
 
-/* #59 — Aviso de modalidad forzada a sin_interes (dinámico según número de cuotas) */
-const forcedSinInteresText = (n: number): string =>
-  `Por regla institucional, con ${n} cuota${n === 1 ? '' : 's'} totales se aplica modalidad sin intereses.`;
-
 /* Clases CSS compartidas para inputs, labels y helpers */
 const INPUT_BASE =
   'w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none transition-all duration-200 bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-purple-400 focus:border-purple-400';
@@ -199,13 +195,61 @@ const LEVEL_SCOPE_MAP: Record<string, string> = {
   upbTech:  'UPB_TEC',
 };
 
-/** Tasa para mostrar en la UI (ej. 0.009 → "0.9") */
-function getActiveRateDisplay(params: AdminParameterVersion | null): string {
-  if (!params) return '0.9';
-  // Usar tasa de PREGRADO como referencia (misma para todos actualmente)
-  const entry = params.interestRates.find(r => r.levelScope === 'PREGRADO');
-  const rate = entry?.rateMonthly ?? 0.009;
-  return (rate * 100).toFixed(1).replace(/\.0$/, '');
+/** HU-PV-02: Obtiene la tasa dinámica por nivel y número de pagos desde levelConfigs */
+function getDynamicRate(
+  params: AdminParameterVersion | null,
+  educationLevel: string,
+  numberOfPayments: number,
+): number | null {
+  if (!params) return null;
+  const scope = LEVEL_SCOPE_MAP[educationLevel];
+  if (!scope) return null;
+  const cfgs = (params.levelConfigs ?? []).filter(c => c.levelScope === scope);
+  if (cfgs.length === 0) return null;
+  const cfg = cfgs.find(c => c.paymentCount === numberOfPayments);
+  return cfg ? cfg.rateMonthly : 0;
+}
+
+/** HU-PV-02: Texto dinámico para la etiqueta de "Con intereses" */
+function getDynamicRateLabel(
+  params: AdminParameterVersion | null,
+  educationLevel: string,
+  numberOfPayments: number,
+): string {
+  const rate = getDynamicRate(params, educationLevel, numberOfPayments);
+  if (rate !== null && numberOfPayments > 0) {
+    const pct = (rate * 100).toFixed(2).replace(/\.?0+$/, '');
+    return `Con intereses (${pct}% mensual M.V.)`;
+  }
+  return 'Con intereses (mensual vencida)';
+}
+
+/** HU-PV-01: Verifica si un nivel académico está inactivo según levelConfigs */
+function isLevelInactive(params: AdminParameterVersion | null, educationLevel: string): boolean {
+  if (!params) return false;
+  const scope = LEVEL_SCOPE_MAP[educationLevel];
+  if (!scope) return false;
+  const cfgs = (params.levelConfigs ?? []).filter(c => c.levelScope === scope);
+  if (cfgs.length === 0) return false;
+  return cfgs.every(c => !c.isActive);
+}
+
+/** HU-PV-02: Deriva la modalidad efectiva según la parametrización real */
+function deriveEffectiveMode(
+  params: AdminParameterVersion | null,
+  educationLevel: string,
+  numberOfPayments: number,
+  currentMode: string,
+): string {
+  const rate = getDynamicRate(params, educationLevel, numberOfPayments);
+  if (rate !== null) {
+    return rate > 0 ? 'con_interes' : 'sin_interes';
+  }
+  // Fallback #59: regla legacy si no hay levelConfigs
+  if (currentMode === 'con_interes' && numberOfPayments >= 1 && numberOfPayments <= 3) {
+    return 'sin_interes';
+  }
+  return currentMode;
 }
 
 /** Cuota inicial mínima (%) según nivel y modalidad desde params activos */
@@ -383,7 +427,7 @@ export function SimulationForm({ onResult, mode = 'student' }: SimulationFormPro
   /* Limpiar submitForcedMsg al cambiar cuotas o modalidad para no mostrar info vieja */
   const clearSubmitForced = () => setSubmitForcedMsg(null);
 
-  /* #59 — Forzar sin_interes si con_interes + numberOfPayments <= 3 */
+  /* HU-PV-02: Derivar modalidad dinámica al cambiar número de cuotas */
   const handleNumberOfPayments = (raw: string) => {
     clearSubmitForced();
     const v = raw.replace(/[^0-9]/g, '');
@@ -402,15 +446,21 @@ export function SimulationForm({ onResult, mode = 'student' }: SimulationFormPro
         numberOfPayments: capped,
         downPaymentPercent: '100',
         downPaymentValue: netTuition > 0 ? String(Math.round(netTuition)) : '',
-        interestMode: prev.interestMode === 'con_interes' ? 'sin_interes' : prev.interestMode,
+        interestMode: 'sin_interes',
       }));
       setApiError(null);
       return;
     }
 
-    if (fields.interestMode === 'con_interes' && nFinal >= 1 && nFinal <= 3) {
-      setForcedSinInteresMsg(forcedSinInteresText(nFinal));
-      setFields((prev) => ({ ...prev, interestMode: 'sin_interes', numberOfPayments: capped }));
+    // HU-PV-02: Derivar modalidad efectiva desde parametrización real
+    const derived = deriveEffectiveMode(activeParams, fields.educationLevel || 'pregrado', nFinal, fields.interestMode);
+    if (derived !== fields.interestMode && fields.interestMode) {
+      setForcedSinInteresMsg(
+        derived === 'sin_interes'
+          ? `Con ${nFinal} cuota${nFinal === 1 ? '' : 's'} total${nFinal === 1 ? '' : 'es'}, la modalidad se ajusta automáticamente a Sin intereses según la parametrización vigente.`
+          : `Con ${nFinal} cuota${nFinal === 1 ? '' : 's'} total${nFinal === 1 ? '' : 'es'}, la modalidad se ajusta automáticamente a Con intereses según la parametrización vigente.`,
+      );
+      setFields((prev) => ({ ...prev, interestMode: derived, numberOfPayments: capped }));
       setApiError(null);
     } else {
       setForcedSinInteresMsg(null);
@@ -418,14 +468,16 @@ export function SimulationForm({ onResult, mode = 'student' }: SimulationFormPro
     }
   };
 
-  /* Cambio de interestMode: aplica regla #59 si se intenta con_interes con cuotas <= 3.
+  /* HU-PV-02: Cambio de interestMode con derivación dinámica desde levelConfigs.
      También auto-actualiza el porcentaje mínimo de cuota inicial. */
   const handleInterestMode = (value: string) => {
     clearSubmitForced();
     const n = parseInt(fields.numberOfPayments || '0', 10);
-    const effectiveMode = (value === 'con_interes' && n >= 1 && n <= 3) ? 'sin_interes' : value;
-    if (value === 'con_interes' && n >= 1 && n <= 3) {
-      setForcedSinInteresMsg(forcedSinInteresText(n));
+    const effectiveMode = deriveEffectiveMode(activeParams, fields.educationLevel || 'pregrado', n, value);
+    if (effectiveMode !== value) {
+      setForcedSinInteresMsg(
+        `La modalidad se ajustó automáticamente a ${effectiveMode === 'sin_interes' ? 'Sin intereses' : 'Con intereses'} según la parametrización vigente.`,
+      );
     } else {
       setForcedSinInteresMsg(null);
     }
@@ -509,6 +561,10 @@ export function SimulationForm({ onResult, mode = 'student' }: SimulationFormPro
   function buildInput(): SimulationInputDTO | string {
     if (!fields.studentType)       return 'Selecciona el tipo de estudiante.';
     if (!fields.educationLevel)    return 'Selecciona el nivel de formación.';
+    // HU-PV-01: Bloquear si el nivel está inactivo
+    if (isLevelInactive(activeParams, fields.educationLevel)) {
+      return `El nivel de formación "${fields.educationLevel === 'upbTech' ? 'UPB Tech' : fields.educationLevel === 'posgrado' ? 'Posgrado' : 'Pregrado'}" se encuentra temporalmente deshabilitado por lineamientos institucionales.`;
+    }
     /* Extraer valores numéricos limpios de los campos formateados */
     const rawTuition      = parseCOPInput(fields.tuitionValue);
     const rawDownPct      = parsePctInput(fields.downPaymentPercent);
@@ -557,15 +613,17 @@ export function SimulationForm({ onResult, mode = 'student' }: SimulationFormPro
     e.preventDefault();
     setApiError(null);
 
-    /* #59 — Si el usuario tiene con_interes + cuotas <=3, corregir el radio ANTES
-       de construir el input. Así el radio queda en sin_interes visualmente y el
-       input enviado al backend es consistente con lo que ve el usuario. */
+    /* HU-PV-02: Derivar modalidad efectiva antes de enviar al backend */
     const nPayRaw = parseInt(fields.numberOfPayments, 10);
-    const modeWillForce = fields.interestMode === 'con_interes'
-      && nPayRaw >= 1 && nPayRaw <= 3;
+    const derived = deriveEffectiveMode(
+      activeParams, fields.educationLevel || 'pregrado', nPayRaw, fields.interestMode,
+    );
+    const modeWillForce = derived !== fields.interestMode;
     if (modeWillForce) {
-      setFields((prev) => ({ ...prev, interestMode: 'sin_interes' }));
-      setForcedSinInteresMsg(forcedSinInteresText(nPayRaw));
+      setFields((prev) => ({ ...prev, interestMode: derived }));
+      setForcedSinInteresMsg(
+        `La modalidad se ajustó automáticamente a ${derived === 'sin_interes' ? 'Sin intereses' : 'Con intereses'} según la parametrización vigente.`,
+      );
     }
 
     const inputOrError = buildInput();
@@ -573,16 +631,15 @@ export function SimulationForm({ onResult, mode = 'student' }: SimulationFormPro
 
     /* Usar la modalidad efectiva en el objeto enviado al backend */
     const effectiveInput: typeof inputOrError = modeWillForce
-      ? { ...inputOrError, interestMode: 'sin_interes' }
+      ? { ...inputOrError, interestMode: derived as 'sin_interes' | 'con_interes' }
       : inputOrError;
 
-    /* Mostrar aviso post-cálculo SOLO si la modalidad fue forzada en este submit */
-    const nPay = effectiveInput.numberOfPayments;
-    if (modeWillForce && nPay >= 1 && nPay <= 3) {
+    /* Mostrar aviso post-cálculo si la modalidad fue forzada */
+    if (modeWillForce) {
+      const nPay = effectiveInput.numberOfPayments;
       setSubmitForcedMsg(
-        `La simulación se calculó en modalidad Sin intereses (0%) porque seleccionaste ` +
-        `${nPay} cuota${nPay === 1 ? '' : 's'} total${nPay === 1 ? '' : 'es'}. ` +
-        `Por regla institucional, financiaciones de hasta 3 cuotas no generan intereses.`,
+        `La simulación se calculó en modalidad ${derived === 'sin_interes' ? 'Sin intereses' : 'Con intereses'} ` +
+        `para ${nPay} cuota${nPay === 1 ? '' : 's'} total${nPay === 1 ? '' : 'es'} según la parametrización vigente.`,
       );
     } else {
       setSubmitForcedMsg(null);
@@ -835,7 +892,7 @@ export function SimulationForm({ onResult, mode = 'student' }: SimulationFormPro
                 onChange={(e: ChangeEvent<HTMLInputElement>) => handleInterestMode(e.target.value)}
                 className="w-4 h-4 text-purple-600 focus:ring-purple-500"
               />
-              Con intereses ({getActiveRateDisplay(activeParams)}% mensual M.V.)
+              {getDynamicRateLabel(activeParams, fields.educationLevel || 'pregrado', parseInt(fields.numberOfPayments, 10) || 0)}
             </label>
           </div>
         </fieldset>

@@ -14,6 +14,7 @@ export interface ActiveParameterVersion {
   readonly interestRates: ActiveInterestRate[];
   readonly modalityRules: ActiveModalityRule[];
   readonly initialPaymentRules: ActiveInitialPaymentRule[];
+  readonly levelConfigs: ActiveLevelConfig[];
 }
 
 export interface ActiveInterestRate {
@@ -33,6 +34,14 @@ export interface ActiveInitialPaymentRule {
   readonly modality: 'SIN_INTERES' | 'CON_INTERES';
   readonly extraInstallments: number;
   readonly initialPctRequired: number;
+}
+
+export interface ActiveLevelConfig {
+  readonly levelScope: 'PREGRADO' | 'POSGRADO' | 'UPB_TEC';
+  readonly isActive: boolean;
+  readonly validFrom: string;
+  readonly paymentCount: number;  // 1-6
+  readonly rateMonthly: number;
 }
 
 // ── Tipos de entrada para operaciones de escritura ─────────────────
@@ -56,6 +65,14 @@ export interface UpdateInitialPaymentRuleInput {
   readonly initialPctRequired: number;
 }
 
+export interface UpdateLevelConfigInput {
+  readonly levelScope: 'PREGRADO' | 'POSGRADO' | 'UPB_TEC';
+  readonly isActive: boolean;
+  readonly validFrom: string;
+  readonly paymentCount: number;
+  readonly rateMonthly: number;
+}
+
 export interface UpdateParameterVersionData {
   readonly validFrom?: string;
   readonly validTo?: string | null;
@@ -66,6 +83,7 @@ export interface UpdateParameterVersionData {
   readonly interestRates?: UpdateInterestRateInput[];
   readonly modalityRules?: UpdateModalityRuleInput[];
   readonly initialPaymentRules?: UpdateInitialPaymentRuleInput[];
+  readonly levelConfigs?: UpdateLevelConfigInput[];
 }
 
 // ── Resumen de versión para el listado ─────────────────────────────
@@ -88,6 +106,7 @@ export interface CreateParameterVersionData {
   readonly interestRates: UpdateInterestRateInput[];
   readonly modalityRules: UpdateModalityRuleInput[];
   readonly initialPaymentRules: UpdateInitialPaymentRuleInput[];
+  readonly levelConfigs?: UpdateLevelConfigInput[];
 }
 
 export interface IParameterVersionRepository {

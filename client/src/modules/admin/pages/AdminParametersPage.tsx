@@ -30,6 +30,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Inbox,
+  GraduationCap,
 } from 'lucide-react';
 
 /** A complete set of all 3 institutional rates with per-rate vigencia (UI only) */
@@ -65,6 +66,15 @@ interface InitialPaymentForm {
   extra3: string; extra4: string; extra5: string;
 }
 
+/** HU-PV-01: Configuración de tasa por número de pagos para un nivel */
+interface LevelConfigFormEntry {
+  isActive: boolean;
+  validFrom: string;
+  rates: [string, string, string, string, string, string]; // payment_count 1..6 como % strings
+}
+
+type LevelConfigsForm = Record<'PREGRADO' | 'POSGRADO' | 'UPB_TEC', LevelConfigFormEntry>;
+
 interface ParameterFormState {
   versionId: string;
   /** ID en BD de la segunda opción (inactiva) — null si aún no se ha creado */
@@ -78,6 +88,8 @@ interface ParameterFormState {
   limits: ModalityLimitsForm;
   minInitialPct: MinInitialPctForm;
   initialPayments: InitialPaymentForm;
+  /** HU-PV-01: Configuración por nivel académico */
+  levelConfigs: LevelConfigsForm;
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -129,6 +141,42 @@ function rateSetFromVersion(v: AdminParameterVersion): RateSet {
 
 const EMPTY_RATE_SET: RateSet = { pregradoRate: '', pregradoValidFrom: '', posgradoRate: '', posgradoValidFrom: '', upbTecRate: '', upbTecValidFrom: '' };
 
+const LEVEL_SCOPES = ['PREGRADO', 'POSGRADO', 'UPB_TEC'] as const;
+
+/** Construye el estado del formulario de levelConfigs desde la versión activa */
+function buildLevelConfigsFromVersion(v: AdminParameterVersion): LevelConfigsForm {
+  const today = new Date().toISOString().slice(0, 10);
+  const defaultEntry = (): LevelConfigFormEntry => ({
+    isActive: true,
+    validFrom: today,
+    rates: ['0', '0', '0', '0', '0', '0'],
+  });
+
+  const result: LevelConfigsForm = {
+    PREGRADO: defaultEntry(),
+    POSGRADO: defaultEntry(),
+    UPB_TEC: defaultEntry(),
+  };
+
+  const cfgs = v.levelConfigs ?? [];
+  for (const scope of LEVEL_SCOPES) {
+    const levelCfgs = cfgs.filter(c => c.levelScope === scope);
+    if (levelCfgs.length > 0) {
+      result[scope].isActive = levelCfgs[0].isActive;
+      result[scope].validFrom = levelCfgs[0].validFrom;
+      const rates: [string, string, string, string, string, string] = ['0', '0', '0', '0', '0', '0'];
+      for (const c of levelCfgs) {
+        if (c.paymentCount >= 1 && c.paymentCount <= 6) {
+          rates[c.paymentCount - 1] = rateToPercent(c.rateMonthly);
+        }
+      }
+      result[scope].rates = rates;
+    }
+  }
+
+  return result;
+}
+
 function buildFormFromVersion(v: AdminParameterVersion, secondary?: AdminParameterVersion | null): ParameterFormState {
   const sinInteresPreg = v.modalityRules.find(r => r.modality === 'SIN_INTERES' && r.level === 'PREGRADO');
   const conInteresPreg = v.modalityRules.find(r => r.modality === 'CON_INTERES' && r.level === 'PREGRADO');
@@ -169,6 +217,7 @@ function buildFormFromVersion(v: AdminParameterVersion, secondary?: AdminParamet
       extra0: ip(0), extra1: ip(1), extra2: ip(2),
       extra3: ip(3), extra4: ip(4), extra5: ip(5),
     },
+    levelConfigs: buildLevelConfigsFromVersion(v),
   };
 }
 
@@ -402,6 +451,18 @@ export function AdminParametersPage() {
 
     const { modalityRules, initialPaymentRules } = buildSharedRules();
 
+    // ── Construir levelConfigs payload ─────────────────────────────
+    const levelConfigsPayload = LEVEL_SCOPES.flatMap(scope => {
+      const entry = form.levelConfigs[scope];
+      return entry.rates.map((ratePct, idx) => ({
+        levelScope: scope,
+        isActive: entry.isActive,
+        validFrom: entry.validFrom,
+        paymentCount: idx + 1,
+        rateMonthly: percentToRate(ratePct || '0'),
+      }));
+    });
+
     // ── Guardar la opción ACTIVA en su versión ─────────────────────
     const activeRatesPayload = buildInterestRates(form.rateOptions[activeOption - 1]);
     const res = await updateParameterVersion(form.versionId, {
@@ -411,6 +472,7 @@ export function AdminParametersPage() {
       interestRates: activeRatesPayload,
       modalityRules,
       initialPaymentRules,
+      levelConfigs: levelConfigsPayload,
     });
 
     if (res.error) { setSaving(false); setError(res.error); return; }
@@ -509,7 +571,141 @@ export function AdminParametersPage() {
     });
   }
 
+  /** HU-PV-01: Actualiza un campo del levelConfig para un nivel */
+  function setLevelConfig(scope: 'PREGRADO' | 'POSGRADO' | 'UPB_TEC', patch: Partial<LevelConfigFormEntry>) {
+    setForm(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        levelConfigs: {
+          ...prev.levelConfigs,
+          [scope]: { ...prev.levelConfigs[scope], ...patch },
+        },
+      };
+    });
+  }
+
+  function setLevelRate(scope: 'PREGRADO' | 'POSGRADO' | 'UPB_TEC', idx: number, value: string) {
+    setForm(prev => {
+      if (!prev) return prev;
+      const entry = prev.levelConfigs[scope];
+      const rates = [...entry.rates] as [string, string, string, string, string, string];
+      rates[idx] = value;
+      return {
+        ...prev,
+        levelConfigs: {
+          ...prev.levelConfigs,
+          [scope]: { ...entry, rates },
+        },
+      };
+    });
+  }
+
   // ── Section renderers ──────────────────────────────────────────────────
+
+  /** HU-PV-01: Paneles de configuración por nivel académico */
+  function renderLevelConfigs() {
+    if (!form) return null;
+
+    const LEVEL_LABELS: Record<string, string> = {
+      PREGRADO: 'Pregrado',
+      POSGRADO: 'Posgrado',
+      UPB_TEC: 'UPB Tech',
+    };
+
+    const PAYMENT_LABELS = [
+      'Solo cuota inicial (1 pago)',
+      'Cuota inicial + 1 cuota (2 pagos)',
+      'Cuota inicial + 2 cuotas (3 pagos)',
+      'Cuota inicial + 3 cuotas (4 pagos)',
+      'Cuota inicial + 4 cuotas (5 pagos)',
+      'Cuota inicial + 5 cuotas (6 pagos)',
+    ];
+
+    return (
+      <Card icon={<GraduationCap size={18} />} title="Cuotas vs Tasas de Interés por Nivel">
+        <p className="text-[11px] text-gray-400 mb-5">
+          Configure el porcentaje de interés mensual vencido (M.V.) por número total de pagos para cada nivel académico.
+          Cada nivel puede activarse o desactivarse independientemente.
+        </p>
+
+        <div className="flex flex-col gap-6">
+          {LEVEL_SCOPES.map(scope => {
+            const entry = form.levelConfigs[scope];
+            const label = LEVEL_LABELS[scope];
+
+            return (
+              <div
+                key={scope}
+                className={[
+                  'rounded-xl border-2 px-5 pt-4 pb-5 transition-all duration-200',
+                  entry.isActive
+                    ? 'border-[#7c3aed]/40 bg-[#7c3aed]/[0.02]'
+                    : 'border-gray-200 bg-gray-50/50',
+                ].join(' ')}
+              >
+                {/* ── Header del panel ── */}
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-bold text-gray-800">{label}</h3>
+
+                  <button
+                    type="button"
+                    disabled={!editMode}
+                    onClick={() => setLevelConfig(scope, { isActive: !entry.isActive })}
+                    className="inline-flex items-center gap-1.5 text-[11px] font-semibold focus:outline-none select-none disabled:opacity-70"
+                  >
+                    <span className={[
+                      'w-3 h-3 rounded-full transition-all duration-200',
+                      entry.isActive
+                        ? 'bg-emerald-500 shadow-[0_0_6px_2px_rgba(16,185,129,0.4)]'
+                        : 'bg-red-400',
+                    ].join(' ')} />
+                    <span className={entry.isActive ? 'text-emerald-600' : 'text-red-500'}>
+                      {entry.isActive ? 'Activo' : 'Inactivo'}
+                    </span>
+                  </button>
+                </div>
+
+                {/* ── Vigencia desde ── */}
+                <div className="mb-4 max-w-xs">
+                  <Field
+                    label="Vigencia desde"
+                    value={entry.validFrom}
+                    type="date"
+                    readOnly={!editMode}
+                    onChange={v => setLevelConfig(scope, { validFrom: v })}
+                  />
+                </div>
+
+                {/* ── Tasas por número de pagos ── */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-5 gap-y-1">
+                  {PAYMENT_LABELS.map((plabel, idx) => (
+                    <Field
+                      key={idx}
+                      label={plabel}
+                      value={entry.rates[idx]}
+                      suffix="% M.V."
+                      placeholder="0"
+                      type="number"
+                      readOnly={!editMode}
+                      onChange={v => setLevelRate(scope, idx, clampPct(v))}
+                    />
+                  ))}
+                </div>
+
+                {/* ── Mensaje cuando está inactivo ── */}
+                {!entry.isActive && (
+                  <div className="mt-2 rounded-lg px-3 py-2 text-xs font-medium bg-amber-50 border border-amber-200 text-amber-700">
+                    Este nivel está deshabilitado. Los estudiantes no podrán crear simulaciones para {label}.
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+    );
+  }
 
   function renderTasaSection() {
     if (!form) return null;
@@ -868,6 +1064,9 @@ export function AdminParametersPage() {
                 {renderCuotasVsTasas()}
               </div>
             </div>
+
+            {/* ── HU-PV-01: Cuotas vs Tasas por Nivel — full width ── */}
+            {renderLevelConfigs()}
 
             {/* ── Límites — full-width centred row ── */}
             <div className="flex justify-center">

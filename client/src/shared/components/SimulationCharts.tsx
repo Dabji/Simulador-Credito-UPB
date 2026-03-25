@@ -245,12 +245,17 @@ function LineChart({ schedule }: { schedule: AmortizationRowDTO[] }) {
           />
         ))}
 
-        {/* Eje X: etiquetas de cuota */}
-        {points.map((p, i) => (
-          <text key={i} x={p.x} y={H - 12} textAnchor="middle" fontSize="12" fontWeight="500" fill="#6B7280">
-            Cuota {p.row.period}
-          </text>
-        ))}
+        {/* Eje X: mes correspondiente a cada cuota */}
+        {points.map((p, i) => {
+          const dt = new Date(p.row.date + 'T00:00:00');
+          const monthLabel = dt.toLocaleString('es-CO', { month: 'short' }).replace('.', '');
+          const yr = dt.getFullYear();
+          return (
+            <text key={i} x={p.x} y={H - 12} textAnchor="middle" fontSize="11" fontWeight="500" fill="#6B7280">
+              {monthLabel} {yr}
+            </text>
+          );
+        })}
       </svg>
 
       <Tooltip state={tooltip} />
@@ -340,10 +345,17 @@ function BarChart({ schedule }: { schedule: AmortizationRowDTO[] }) {
                 })}
                 onMouseLeave={() => setTooltip(t => ({ ...t, visible: false }))}
               />
-              {/* Etiqueta cuota */}
-              <text x={cx} y={H - 12} textAnchor="middle" fontSize="12" fontWeight="500" fill="#6B7280">
-                Cuota {row.period}
-              </text>
+              {/* Etiqueta mes */}
+              {(() => {
+                const dt = new Date(row.date + 'T00:00:00');
+                const monthLabel = dt.toLocaleString('es-CO', { month: 'short' }).replace('.', '');
+                const yr = dt.getFullYear();
+                return (
+                  <text x={cx} y={H - 12} textAnchor="middle" fontSize="11" fontWeight="500" fill="#6B7280">
+                    {monthLabel} {yr}
+                  </text>
+                );
+              })()}
             </g>
           );
         })}

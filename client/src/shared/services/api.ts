@@ -287,6 +287,14 @@ export interface AdminInitialPaymentRule {
   readonly initialPctRequired: number;
 }
 
+export interface AdminLevelConfig {
+  readonly levelScope: EducationLevelScope;
+  readonly isActive: boolean;
+  readonly validFrom: string;
+  readonly paymentCount: number;
+  readonly rateMonthly: number;
+}
+
 export interface AdminParameterVersion {
   readonly id: string;
   readonly validFrom: string;
@@ -298,6 +306,7 @@ export interface AdminParameterVersion {
   readonly interestRates: AdminInterestRate[];
   readonly modalityRules: AdminModalityRule[];
   readonly initialPaymentRules: AdminInitialPaymentRule[];
+  readonly levelConfigs?: AdminLevelConfig[];
 }
 
 export interface AdminParameterVersionSummary {
@@ -325,6 +334,13 @@ export interface UpdateParameterVersionPayload {
     modality: ModalityType;
     extraInstallments: number;
     initialPctRequired: number;
+  }[];
+  levelConfigs?: {
+    levelScope: EducationLevelScope;
+    isActive: boolean;
+    validFrom: string;
+    paymentCount: number;
+    rateMonthly: number;
   }[];
 }
 
