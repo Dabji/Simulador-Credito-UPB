@@ -347,6 +347,8 @@ export function SimulationForm({ onResult, mode = 'student' }: SimulationFormPro
   const [submitForcedMsg, setSubmitForcedMsg] = useState<string | null>(null);
   /* Diálogo de confirmación emergente — usado para Limpiar formulario */
   const [dialog, setDialog]           = useState<ConfirmDialogState>(DIALOG_CLOSED);
+  /* Modal de nivel deshabilitado */
+  const [blockedLevelModal, setBlockedLevelModal] = useState<string | null>(null);
 
   /* Persiste el borrador en sessionStorage cada vez que cambian los campos */
   useEffect(() => {
@@ -406,8 +408,13 @@ export function SimulationForm({ onResult, mode = 'student' }: SimulationFormPro
         const pct    = parseFloat(parsePctInput(next.downPaymentPercent)) || 0;
         next.downPaymentValue = newNet > 0 && pct > 0 ? String(Math.round(newNet * pct / 100)) : '';
       }
-      /* Al cambiar nivel educativo → auto-rellenar cuota inicial al mínimo paramétrico */
+      /* Al cambiar nivel educativo → bloquear si inactivo, auto-rellenar cuota inicial */
       if (key === 'educationLevel' && value) {
+        if (isLevelInactive(activeParams, value)) {
+          const lbl = value === 'upbTech' ? 'UPB Tech' : value === 'posgrado' ? 'Posgrado' : 'Pregrado';
+          setBlockedLevelModal(lbl);
+          return prev; // no cambiar el campo
+        }
         const minPctLevel = getMinInitialPct(activeParams, value, next.interestMode || 'sin_interes');
         next.downPaymentPercent = String(minPctLevel);
         const tuitionVal  = parseFloat(parseCOPInput(next.tuitionValue)) || 0;
@@ -452,44 +459,48 @@ export function SimulationForm({ onResult, mode = 'student' }: SimulationFormPro
       return;
     }
 
-    // HU-PV-02: Derivar modalidad efectiva desde parametrización real
-    const derived = deriveEffectiveMode(activeParams, fields.educationLevel || 'pregrado', nFinal, fields.interestMode);
-    if (derived !== fields.interestMode && fields.interestMode) {
-      setForcedSinInteresMsg(
-        derived === 'sin_interes'
-          ? `Con ${nFinal} cuota${nFinal === 1 ? '' : 's'} total${nFinal === 1 ? '' : 'es'}, la modalidad se ajusta automáticamente a Sin intereses según la parametrización vigente.`
-          : `Con ${nFinal} cuota${nFinal === 1 ? '' : 's'} total${nFinal === 1 ? '' : 'es'}, la modalidad se ajusta automáticamente a Con intereses según la parametrización vigente.`,
-      );
-      setFields((prev) => ({ ...prev, interestMode: derived, numberOfPayments: capped }));
-      setApiError(null);
-    } else {
-      setForcedSinInteresMsg(null);
-      set('numberOfPayments', capped);
+    setForcedSinInteresMsg(null);
+    // Solo derivar modalidad cuando hay un número válido — nunca cuando el campo está vacío o borrando
+    if (!isNaN(nFinal) && nFinal > 1) {
+      const derived = deriveEffectiveMode(activeParams, fields.educationLevel || 'pregrado', nFinal, fields.interestMode || 'sin_interes');
+      if (derived !== fields.interestMode) {
+        const level   = fields.educationLevel || 'pregrado';
+        const minPct  = getMinInitialPct(activeParams, level, derived);
+        const tuition = parseFloat(parseCOPInput(fields.tuitionValue)) || 0;
+        const scholar = parseFloat(parsePctInput(fields.scholarshipPercent)) || 0;
+        const netT    = level === 'upbTech' ? tuition : tuition * (1 - scholar / 100);
+        const curPct  = parseFloat(parsePctInput(fields.downPaymentPercent)) || 0;
+        setFields((prev) => ({
+          ...prev,
+          numberOfPayments: capped,
+          interestMode: derived,
+          downPaymentPercent: curPct < minPct ? String(minPct) : prev.downPaymentPercent,
+          downPaymentValue: curPct < minPct && netT > 0
+            ? String(Math.round(netT * minPct / 100))
+            : prev.downPaymentValue,
+        }));
+        setApiError(null);
+        return;
+      }
     }
+    set('numberOfPayments', capped);
   };
 
-  /* HU-PV-02: Cambio de interestMode con derivación dinámica desde levelConfigs.
-     También auto-actualiza el porcentaje mínimo de cuota inicial. */
+  /* Cambio libre de interestMode — el usuario elige sin forzado automático.
+     Solo actualiza el porcentaje mínimo de cuota inicial si queda por debajo del mínimo. */
   const handleInterestMode = (value: string) => {
     clearSubmitForced();
-    const n = parseInt(fields.numberOfPayments || '0', 10);
-    const effectiveMode = deriveEffectiveMode(activeParams, fields.educationLevel || 'pregrado', n, value);
-    if (effectiveMode !== value) {
-      setForcedSinInteresMsg(
-        `La modalidad se ajustó automáticamente a ${effectiveMode === 'sin_interes' ? 'Sin intereses' : 'Con intereses'} según la parametrización vigente.`,
-      );
-    } else {
-      setForcedSinInteresMsg(null);
-    }
+    setForcedSinInteresMsg(null);
     const level = fields.educationLevel || 'pregrado';
-    const minPct = getMinInitialPct(activeParams, level, effectiveMode);
+    const minPct = getMinInitialPct(activeParams, level, value);
     const tuition     = parseFloat(parseCOPInput(fields.tuitionValue)) || 0;
     const scholarship = parseFloat(parsePctInput(fields.scholarshipPercent)) || 0;
     const netT        = level === 'upbTech' ? tuition : tuition * (1 - scholarship / 100);
     const currentPct  = parseFloat(parsePctInput(fields.downPaymentPercent)) || 0;
     setFields((prev) => ({
       ...prev,
-      interestMode: effectiveMode,
+      interestMode: value,
+      numberOfPayments: '', // limpiar cuotas al cambiar modalidad para que el usuario reescoja
       downPaymentPercent: currentPct < minPct ? String(minPct) : prev.downPaymentPercent,
       downPaymentValue: currentPct < minPct && netT > 0
         ? String(Math.round(netT * minPct / 100))
@@ -705,9 +716,14 @@ export function SimulationForm({ onResult, mode = 'student' }: SimulationFormPro
             className={INPUT_BASE}
           >
             <option value="">Seleccionar...</option>
-            {EDUCATION_LEVELS.map((lvl) => (
-              <option key={lvl.value} value={lvl.value}>{lvl.label}</option>
-            ))}
+            {EDUCATION_LEVELS.map((lvl) => {
+              const inactive = isLevelInactive(activeParams, lvl.value);
+              return (
+                <option key={lvl.value} value={lvl.value} disabled={inactive}>
+                  {inactive ? `${lvl.label} (No disponible)` : lvl.label}
+                </option>
+              );
+            })}
           </select>
         </div>
       </section>
@@ -1098,6 +1114,58 @@ export function SimulationForm({ onResult, mode = 'student' }: SimulationFormPro
             <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <span>{submitForcedMsg}</span>
+        </div>
+      )}
+      {/* ── Modal: nivel de formación deshabilitado ── */}
+      {blockedLevelModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="blocked-level-title"
+          style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
+          onClick={() => setBlockedLevelModal(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl p-8 mx-4 w-full max-w-md flex flex-col items-center gap-5"
+            style={{ animation: 'fadeScaleIn 0.2s ease-out' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Icono de advertencia */}
+            <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center">
+              <svg className="w-7 h-7 text-amber-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+            </div>
+
+            <div className="text-center">
+              <h3 id="blocked-level-title" className="text-lg font-black text-gray-900 mb-2">
+                Nivel no disponible
+              </h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                El nivel de formación <span className="font-bold text-gray-800">{blockedLevelModal}</span> se encuentra
+                temporalmente deshabilitado por problemas de parametrización técnica.
+                <br /><br />
+                Pronto será habilitado nuevamente. Por favor selecciona otro nivel o intenta más tarde.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setBlockedLevelModal(null)}
+              className="px-8 py-2.5 rounded-full text-sm font-bold text-white transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 hover:brightness-110 active:scale-95"
+              style={{ backgroundColor: '#A85BFF' }}
+            >
+              Entendido
+            </button>
+          </div>
+
+          <style>{`
+            @keyframes fadeScaleIn {
+              from { opacity: 0; transform: scale(0.92); }
+              to   { opacity: 1; transform: scale(1); }
+            }
+          `}</style>
         </div>
       )}
     </form>

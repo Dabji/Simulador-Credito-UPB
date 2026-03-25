@@ -334,6 +334,7 @@ router.put('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
       interestRates?: { levelScope: string; rateMonthly: number }[];
       modalityRules?: { modality: string; level: string; maxTotalPayments: number; minInitialPct: number }[];
       initialPaymentRules?: { level: string; modality: string; extraInstallments: number; initialPctRequired: number }[];
+      levelConfigs?: { levelScope: string; isActive: boolean; validFrom: string; paymentCount: number; rateMonthly: number }[];
     };
 
     // ── Validación de fechas ─────────────────────────────────
@@ -417,6 +418,31 @@ router.put('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
       }
     }
 
+    // ── Validación de levelConfigs ────────────────────────────
+    if (body.levelConfigs !== undefined) {
+      if (!Array.isArray(body.levelConfigs)) {
+        return next(new BadRequestError('levelConfigs debe ser un arreglo'));
+      }
+      const validLevelsCfg = ['PREGRADO', 'POSGRADO', 'UPB_TEC'];
+      for (const cfg of body.levelConfigs) {
+        if (!validLevelsCfg.includes(cfg.levelScope)) {
+          return next(new BadRequestError(`levelScope '${cfg.levelScope}' inválido en levelConfigs`));
+        }
+        if (typeof cfg.isActive !== 'boolean') {
+          return next(new BadRequestError('isActive debe ser booleano en levelConfigs'));
+        }
+        if (!isValidDate(cfg.validFrom)) {
+          return next(new BadRequestError('validFrom de levelConfig debe tener formato YYYY-MM-DD'));
+        }
+        if (!Number.isInteger(cfg.paymentCount) || cfg.paymentCount < 1 || cfg.paymentCount > 6) {
+          return next(new BadRequestError('paymentCount en levelConfigs debe ser un entero entre 1 y 6'));
+        }
+        if (!Number.isFinite(cfg.rateMonthly) || cfg.rateMonthly < 0 || cfg.rateMonthly > 1) {
+          return next(new BadRequestError('rateMonthly en levelConfigs debe ser entre 0 y 1'));
+        }
+      }
+    }
+
     // ── Cargar versión actual: sirve para overlap check Y snapshot de auditoría ──
     const previous = await paramRepo.findById(id);
     if (!previous) {
@@ -464,6 +490,15 @@ router.put('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
           initialPctRequired: r.initialPctRequired,
         })),
       }),
+      ...(body.levelConfigs && {
+        levelConfigs: body.levelConfigs.map(c => ({
+          levelScope: c.levelScope as 'PREGRADO' | 'POSGRADO' | 'UPB_TEC',
+          isActive: c.isActive,
+          validFrom: c.validFrom,
+          paymentCount: c.paymentCount,
+          rateMonthly: c.rateMonthly,
+        })),
+      }),
     };
 
     const updated = await paramRepo.updateVersion(id, updateData);
@@ -482,6 +517,7 @@ router.put('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
     if (updateData.interestRates   !== undefined) changedFields.push('interestRates');
     if (updateData.modalityRules   !== undefined) changedFields.push('modalityRules');
     if (updateData.initialPaymentRules !== undefined) changedFields.push('initialPaymentRules');
+    if (updateData.levelConfigs    !== undefined) changedFields.push('levelConfigs');
 
     const changeSummary = changedFields.length > 0
       ? `Campos modificados: ${changedFields.join(', ')}`

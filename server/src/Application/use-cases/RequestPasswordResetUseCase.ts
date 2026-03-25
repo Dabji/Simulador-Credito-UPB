@@ -33,6 +33,8 @@ export class RequestPasswordResetUseCase {
       return;
     }
 
+    const resolvedEmail = input.email;
+
     // Generar token plano (64 hex chars) y hashearlo con SHA-256
     const tokenPlain = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(tokenPlain).digest('hex');
@@ -62,7 +64,7 @@ export class RequestPasswordResetUseCase {
       '',
       '══════════════════════════════════════════════════════════',
       '  🔑 TOKEN DE RECUPERACIÓN DE CONTRASEÑA',
-      `  Email:   ${input.email}`,
+      `  Email:   ${resolvedEmail}`,
       `  Token:   ${tokenPlain}`,
       `  Expira:  ${expiresAt.toISOString()}`,
       `  URL:     http://localhost:5173/reset-password?token=${tokenPlain}`,
@@ -72,7 +74,7 @@ export class RequestPasswordResetUseCase {
 
     // Enviar correo electrónico con el enlace de recuperación
     try {
-      await this.emailService.sendPasswordResetEmail(input.email, tokenPlain);
+      await this.emailService.sendPasswordResetEmail(resolvedEmail, tokenPlain);
 
       void auditLog({
         action:     'PASSWORD_RESET_EMAIL_SENT',
@@ -81,16 +83,16 @@ export class RequestPasswordResetUseCase {
         actor_type: 'SYSTEM',
         user_id:    user.id,
         ip_address: context?.ip ?? null,
-        details:    { email: input.email },
+        details:    { email: resolvedEmail },
       });
     } catch (emailErr) {
       logger.error('Error al enviar correo de recuperación', {
-        email: input.email,
+        email: resolvedEmail,
         error: emailErr instanceof Error ? emailErr.message : 'Unknown',
       });
       // No lanzar error al usuario por seguridad (no revelar si el email existe)
     }
 
-    logger.info('Reset-token generado correctamente', { email: input.email });
+    logger.info('Reset-token generado correctamente', { email: resolvedEmail });
   }
 }

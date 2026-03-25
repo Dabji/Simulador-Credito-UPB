@@ -530,6 +530,7 @@ export interface AdminListUsersParams {
   pageSize?: number;
 }
 
+
 /** GET /api/admin/users — Listar estudiantes con búsqueda y paginación */
 export async function adminListUsers(
   params: AdminListUsersParams = {},
@@ -648,8 +649,9 @@ export async function adminExportSimulationPdf(id: string): Promise<{ blob: Blob
   if (!response.ok) {
     let msg = 'Error al generar el PDF.';
     try {
-      const body = (await response.json()) as { error?: string };
-      if (body.error) msg = body.error;
+      const body = (await response.json()) as { error?: { message?: string } | string };
+      if (typeof body.error === 'string') msg = body.error;
+      else if (body.error?.message) msg = body.error.message;
     } catch { /* ignorar */ }
     throw new Error(msg);
   }
@@ -674,8 +676,9 @@ export async function adminExportSimulationCsv(id: string): Promise<{ blob: Blob
   if (!response.ok) {
     let msg = 'Error al generar el CSV.';
     try {
-      const body = (await response.json()) as { error?: string };
-      if (body.error) msg = body.error;
+      const body = (await response.json()) as { error?: { message?: string } | string };
+      if (typeof body.error === 'string') msg = body.error;
+      else if (body.error?.message) msg = body.error.message;
     } catch { /* ignorar */ }
     throw new Error(msg);
   }
@@ -786,8 +789,9 @@ export async function exportMySimulationPdf(id: string): Promise<{ blob: Blob; f
   if (!response.ok) {
     let msg = 'Error al generar el PDF.';
     try {
-      const body = (await response.json()) as { error?: string };
-      if (body.error) msg = body.error;
+      const body = (await response.json()) as { error?: { message?: string } | string };
+      if (typeof body.error === 'string') msg = body.error;
+      else if (body.error?.message) msg = body.error.message;
     } catch { /* ignorar */ }
     throw new Error(msg);
   }
