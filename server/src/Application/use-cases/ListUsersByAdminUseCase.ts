@@ -1,6 +1,8 @@
 // ============================================================
-// Use Case: ListUsersByAdminUseCase (HU-82)
-// Lista usuarios con paginación y búsqueda por filtro.
+// Use Case: ListUsersByAdminUseCase (HU-82 + HU-PV-03)
+// Lista usuarios con paginación y búsqueda multi-criterio.
+// Cada campo soporta múltiples valores separados por ";" (OR).
+// Distintos campos se combinan con AND.
 // Solo accesible por ADMIN.
 // ============================================================
 
@@ -16,11 +18,27 @@ export type UserFilterField =
   | 'phone'
   | 'createdAt';
 
+/** Criterio individual de filtro */
+export interface UserFilterCriterion {
+  field: UserFilterField;
+  /** Texto libre; múltiples valores se separan con ";" → OR */
+  value: string;
+  /** Solo para createdAt: fecha ISO YYYY-MM-DD de inicio del rango */
+  dateFrom?: string;
+  /** Solo para createdAt: fecha ISO YYYY-MM-DD de fin del rango */
+  dateTo?: string;
+}
+
 export interface ListUsersParams {
+  /** Criterios multi-campo (HU-PV-03). Si se envía, sustituye q+filter. */
+  criteria?: UserFilterCriterion[];
+  /** Compatibilidad legacy: búsqueda simple de un solo campo */
   q?: string;
   filter?: UserFilterField;
   page?: number;
   pageSize?: number;
+  /** Modo exportación: bypasea el cap de pageSize (máx UI = 50) para traer todos los registros */
+  forExport?: boolean;
 }
 
 export interface ListUsersResult {
@@ -31,47 +49,116 @@ export interface ListUsersResult {
   totalPages: number;
 }
 
+/** Divide un valor por ";" y devuelve términos no-vacíos */
+function splitTerms(value: string): string[] {
+  return value.split(';').map(v => v.trim()).filter(v => v.length > 0);
+}
+
+/** Construye condición OR para LIKE de múltiples términos sobre una columna */
+function likeOr(col: string, terms: string[]): Record<string, unknown>[] {
+  return terms.map(t => ({ [col]: { [Op.like]: `%${t}%` } }));
+}
+
 export class ListUsersByAdminUseCase {
   async execute(params: ListUsersParams): Promise<ListUsersResult> {
     const page     = Math.max(1, params.page     ?? 1);
-    const pageSize = Math.min(Math.max(1, params.pageSize ?? 10), 50);
+    const maxSize  = params.forExport ? 5000 : 50;
+    const pageSize = Math.min(Math.max(1, params.pageSize ?? 10), maxSize);
     const offset   = (page - 1) * pageSize;
-    const q        = params.q?.trim() ?? '';
 
-    // Construir condición WHERE dinámica
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const where: Record<string, any> = { role: 'STUDENT' };
+    // Condición base
+    const andConditions: Record<string, unknown>[] = [{ role: 'STUDENT' }];
 
-    if (q) {
+    if (params.criteria && params.criteria.length > 0) {
+      // ── Modo multi-criterio (HU-PV-03) ──────────────────────
+      for (const criterion of params.criteria) {
+        if (!criterion || typeof criterion !== 'object') continue;
+        const { field, value, dateFrom, dateTo } = criterion;
+        if (typeof field !== 'string') continue;
+
+        if (field === 'createdAt') {
+          // Rango de fechas
+          if (dateFrom || dateTo) {
+            const rangeCondition: Record<symbol, string> = {};
+            if (dateFrom) rangeCondition[Op.gte] = `${dateFrom} 00:00:00`;
+            if (dateTo)   rangeCondition[Op.lte] = `${dateTo} 23:59:59`;
+            andConditions.push({ created_at: rangeCondition });
+          }
+          continue;
+        }
+
+        if (typeof value !== 'string') continue;
+        const terms = splitTerms(value);
+        if (terms.length === 0) continue;
+
+        switch (field) {
+          case 'identificationNumber': {
+            const ors = likeOr('document_number', terms);
+            andConditions.push({ [Op.or]: ors });
+            break;
+          }
+          case 'documentType': {
+            const upperTerms = terms.map(t => t.toUpperCase());
+            andConditions.push({ document_type: { [Op.in]: upperTerms } });
+            break;
+          }
+          case 'email': {
+            const ors = likeOr('email', terms);
+            andConditions.push({ [Op.or]: ors });
+            break;
+          }
+          case 'phone': {
+            const ors = likeOr('phone', terms);
+            andConditions.push({ [Op.or]: ors });
+            break;
+          }
+          case 'fullName':
+          default: {
+            // Cada término busca en first_name OR last_name; los términos se combinan con OR entre sí
+            const ors: Record<string, unknown>[] = terms.flatMap(t => [
+              { first_name: { [Op.like]: `%${t}%` } },
+              { last_name:  { [Op.like]: `%${t}%` } },
+            ]);
+            andConditions.push({ [Op.or]: ors });
+            break;
+          }
+        }
+      }
+    } else if (params.q?.trim()) {
+      // ── Modo legacy: un solo campo ───────────────────────────
+      const q      = params.q.trim();
       const filter = params.filter ?? 'fullName';
+      const terms  = splitTerms(q);
+
       switch (filter) {
         case 'identificationNumber':
-          where['document_number'] = { [Op.like]: `%${q}%` };
+          andConditions.push({ document_number: { [Op.like]: `%${q}%` } });
           break;
         case 'documentType':
-          where['document_type'] = { [Op.like]: `%${q.toUpperCase()}%` };
+          andConditions.push({ document_type: { [Op.like]: `%${q.toUpperCase()}%` } });
           break;
         case 'email':
-          where['email'] = { [Op.like]: `%${q}%` };
+          andConditions.push({ email: { [Op.like]: `%${q}%` } });
           break;
         case 'phone':
-          where['phone'] = { [Op.like]: `%${q}%` };
+          andConditions.push({ phone: { [Op.like]: `%${q}%` } });
           break;
         case 'createdAt':
-          // Búsqueda por fecha en formato YYYY-MM-DD
-          where['created_at'] = { [Op.like]: `%${q}%` };
+          andConditions.push({ created_at: { [Op.like]: `%${q}%` } });
           break;
         case 'fullName':
         default: {
-          // Buscar por nombre o apellido
-          where[Op.or as unknown as string] = [
-            { first_name: { [Op.like]: `%${q}%` } },
-            { last_name:  { [Op.like]: `%${q}%` } },
-          ];
+          const ors: Record<string, unknown>[] = terms.flatMap(t => [
+            { first_name: { [Op.like]: `%${t}%` } },
+            { last_name:  { [Op.like]: `%${t}%` } },
+          ]);
+          andConditions.push({ [Op.or]: ors });
           break;
         }
       }
     }
+
+    const where = { [Op.and]: andConditions };
 
     const { rows, count } = await UserModel.findAndCountAll({
       where,

@@ -555,9 +555,19 @@ export interface AdminUserSimulationItemDTO {
   readonly createdAt: string;
 }
 
+/** Criterio individual de filtro multi-campo (HU-PV-03) */
+export interface AdminUserFilterCriterion {
+  field: AdminUserFilterField;
+  value: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
 export interface AdminListUsersParams {
   q?: string;
   filter?: AdminUserFilterField;
+  /** HU-PV-03: criterios multi-campo acumulables */
+  criteria?: AdminUserFilterCriterion[];
   page?: number;
   pageSize?: number;
 }
@@ -568,12 +578,49 @@ export async function adminListUsers(
   params: AdminListUsersParams = {},
 ): Promise<ApiResponse<{ data: AdminUsersResponseDTO }>> {
   const qs = new URLSearchParams();
-  if (params.q)        qs.set('q',        params.q);
-  if (params.filter)   qs.set('filter',   params.filter);
-  if (params.page)     qs.set('page',     String(params.page));
-  if (params.pageSize) qs.set('pageSize', String(params.pageSize));
+  if (params.q)                          qs.set('q',        params.q);
+  if (params.filter)                     qs.set('filter',   params.filter);
+  if (params.criteria && params.criteria.length > 0) qs.set('criteria', JSON.stringify(params.criteria));
+  if (params.page)                       qs.set('page',     String(params.page));
+  if (params.pageSize)                   qs.set('pageSize', String(params.pageSize));
   const query = qs.toString() ? `?${qs.toString()}` : '';
   return request<{ data: AdminUsersResponseDTO }>(`/admin/users${query}`);
+}
+
+/**
+ * GET /api/admin/users/export/csv
+ * HU-PV-03: Descarga el CSV de estudiantes respetando los filtros activos.
+ * Lanza un Error con mensaje legible si la respuesta no es OK.
+ */
+export async function adminExportStudentsCsv(
+  params: Omit<AdminListUsersParams, 'page' | 'pageSize'> = {},
+): Promise<{ blob: Blob; filename: string }> {
+  const token = localStorage.getItem('token');
+  const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
+  const qs = new URLSearchParams();
+  if (params.q)                          qs.set('q',        params.q);
+  if (params.filter)                     qs.set('filter',   params.filter);
+  if (params.criteria && params.criteria.length > 0) qs.set('criteria', JSON.stringify(params.criteria));
+  const query = qs.toString() ? `?${qs.toString()}` : '';
+
+  const response = await fetch(`${API_BASE}/admin/users/export/csv${query}`, { headers });
+
+  if (!response.ok) {
+    let msg = 'Error al generar el CSV.';
+    try {
+      const body = (await response.json()) as { error?: { message?: string } | string };
+      if (typeof body.error === 'string') msg = body.error;
+      else if (body.error?.message) msg = body.error.message;
+    } catch { /* ignorar */ }
+    throw new Error(msg);
+  }
+
+  const blob = await response.blob();
+  const cd   = response.headers.get('Content-Disposition') ?? '';
+  const match = /filename="?([^"]+)"?/.exec(cd);
+  const filename = match?.[1] ?? `estudiantes-upb-${new Date().toISOString().slice(0, 10)}.csv`;
+  return { blob, filename };
 }
 
 /** GET /api/admin/users/:id — Perfil completo de un usuario */
@@ -635,9 +682,19 @@ export interface AdminSimulationsResponseDTO {
   readonly totalPages: number;
 }
 
+/** Criterio individual de filtro multi-campo para simulaciones (HU-PV-03) */
+export interface AdminSimFilterCriterion {
+  field: AdminSimFilterField;
+  value: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
 export interface AdminListSimulationsParams {
   q?: string;
   filter?: AdminSimFilterField;
+  /** HU-PV-03: criterios multi-campo acumulables */
+  criteria?: AdminSimFilterCriterion[];
   page?: number;
   pageSize?: number;
 }
@@ -647,10 +704,11 @@ export async function adminListSimulations(
   params: AdminListSimulationsParams = {},
 ): Promise<ApiResponse<{ data: AdminSimulationsResponseDTO }>> {
   const qs = new URLSearchParams();
-  if (params.q)        qs.set('q',        params.q);
-  if (params.filter)   qs.set('filter',   params.filter);
-  if (params.page)     qs.set('page',     String(params.page));
-  if (params.pageSize) qs.set('pageSize', String(params.pageSize));
+  if (params.q)                          qs.set('q',        params.q);
+  if (params.filter)                     qs.set('filter',   params.filter);
+  if (params.criteria && params.criteria.length > 0) qs.set('criteria', JSON.stringify(params.criteria));
+  if (params.page)                       qs.set('page',     String(params.page));
+  if (params.pageSize)                   qs.set('pageSize', String(params.pageSize));
   const query = qs.toString() ? `?${qs.toString()}` : '';
   return request<{ data: AdminSimulationsResponseDTO }>(`/admin/simulations${query}`);
 }
@@ -777,9 +835,19 @@ export interface StudentHistoryResponseDTO {
   readonly totalPages: number;
 }
 
+/** Criterio individual de filtro multi-campo para historial (HU-PV-03) */
+export interface StudentHistoryFilterCriterion {
+  field: StudentHistoryFilter;
+  value: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
 export interface GetMyHistoryParams {
   q?: string;
   filter?: StudentHistoryFilter;
+  /** HU-PV-03: criterios multi-campo acumulables */
+  criteria?: StudentHistoryFilterCriterion[];
   page?: number;
   pageSize?: number;
 }
@@ -789,10 +857,11 @@ export async function getMySimulationHistory(
   params: GetMyHistoryParams = {},
 ): Promise<ApiResponse<StudentHistoryResponseDTO>> {
   const qs = new URLSearchParams();
-  if (params.q)        qs.set('q',        params.q);
-  if (params.filter) qs.set('filter', params.filter);
-  if (params.page)     qs.set('page',     String(params.page));
-  if (params.pageSize) qs.set('pageSize', String(params.pageSize));
+  if (params.q)                          qs.set('q',        params.q);
+  if (params.filter)                     qs.set('filter',   params.filter);
+  if (params.criteria && params.criteria.length > 0) qs.set('criteria', JSON.stringify(params.criteria));
+  if (params.page)                       qs.set('page',     String(params.page));
+  if (params.pageSize)                   qs.set('pageSize', String(params.pageSize));
   const query = qs.toString() ? `?${qs.toString()}` : '';
   return request<StudentHistoryResponseDTO>(`/simulator/history${query}`);
 }

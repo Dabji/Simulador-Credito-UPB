@@ -1,65 +1,78 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UpbHeader } from '@/shared/components/UpbHeader';
 import { UpbFooter } from '@/shared/components/UpbFooter';
 import { BackNavLink } from '@/shared/components/BackNavLink';
+import { FilterPanel, CriterionChip } from '@/shared/components/FilterPanel';
+import { criterionDisplayValue } from '@/shared/utils/filterPanel.types';
+import type { ActiveCriterion, FilterFieldDef } from '@/shared/utils/filterPanel.types';
 import {
   adminListUsers,
+  adminExportStudentsCsv,
   type AdminUserListItemDTO,
-  type AdminUserFilterField,
+  type AdminUserFilterCriterion,
 } from '@/shared/services/api';
 
-type FilterOption = AdminUserFilterField;
-
-/* ── Tipos ─────────────────────────────────────────────────── */
-
-const FILTER_LABELS: Record<FilterOption, string> = {
-  identificationNumber: 'Número de Documento',
-  documentType:        'Tipo de Documento',
-  fullName:            'Nombre Completo',
-  email:               'Correo Electrónico',
-  phone:               'Número Celular',
-  createdAt:           'Fecha de Registro',
-};
-
-const ALL_FILTERS: FilterOption[] = [
-  'identificationNumber', 'documentType', 'fullName', 'email', 'phone', 'createdAt',
-];
+/* ── Constantes ─────────────────────────────────────────────── */
 
 const PAGE_SIZE = 10;
+
+const STUDENT_FIELD_DEFS: ReadonlyArray<FilterFieldDef> = [
+  { key: 'identificationNumber', label: 'N° Documento',        type: 'text',  supportsMultiple: true },
+  { key: 'documentType',         label: 'Tipo de Documento',   type: 'select', options: [
+    { value: 'CC', label: 'CC — Cédula de Ciudadanía' },
+    { value: 'TI', label: 'TI — Tarjeta de Identidad' },
+  ]},
+  { key: 'fullName',             label: 'Nombre Completo',     type: 'text',  supportsMultiple: true },
+  { key: 'email',                label: 'Correo Electrónico',  type: 'text',  supportsMultiple: true },
+  { key: 'phone',                label: 'Número Celular',      type: 'text',  supportsMultiple: true },
+  { key: 'createdAt',            label: 'Fecha de Registro',   type: 'daterange' },
+];
 
 /* ── Helpers ───────────────────────────────────────────────── */
 
 function formatDate(iso: string): string {
   if (!iso) return '—';
-  const d = new Date(iso);
-  return d.toLocaleDateString('es-CO', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  return new Date(iso).toLocaleDateString('es-CO', { year: 'numeric', month: '2-digit', day: '2-digit' });
+}
+
+/** Convierte ActiveCriterion[] → AdminUserFilterCriterion[] para la API */
+function toApiCriteria(criteria: ActiveCriterion[]): AdminUserFilterCriterion[] {
+  return criteria.map(c => ({
+    field:    c.field as AdminUserFilterCriterion['field'],
+    value:    c.value,
+    dateFrom: c.dateFrom,
+    dateTo:   c.dateTo,
+  }));
 }
 
 /* ── Componente principal ───────────────────────────────────── */
 
 export function AdminStudentsPage() {
-  const navigate    = useNavigate();
+  const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
 
-  /* Estado de búsqueda / filtro */
-  const [query,         setQuery]         = useState('');
-  const [activeFilter,  setActiveFilter]  = useState<FilterOption>('identificationNumber');
-  const [filterOpen,    setFilterOpen]    = useState(false);
+  /* Filtros acumulables (HU-PV-03) */
+  const [criteria,   setCriteria]   = useState<ActiveCriterion[]>([]);
+  const [filterOpen, setFilterOpen] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
 
   /* Estado de resultados */
-  const [users,       setUsers]       = useState<AdminUserListItemDTO[]>([]);
-  const [total,       setTotal]       = useState(0);
-  const [totalPages,  setTotalPages]  = useState(1);
-  const [page,        setPage]        = useState(1);
-  const [loading,     setLoading]     = useState(false);
-  const [error,       setError]       = useState<string | null>(null);
+  const [users,      setUsers]      = useState<AdminUserListItemDTO[]>([]);
+  const [total,      setTotal]      = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [page,       setPage]       = useState(1);
+  const [loading,    setLoading]    = useState(false);
+  const [error,      setError]      = useState<string | null>(null);
 
   /* Selección de fila */
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  /* ── Fetch + debounce unificado ─────────────────────────── */
+  /* CSV export */
+  const [csvLoading, setCsvLoading] = useState(false);
+  const [csvError,   setCsvError]   = useState<string | null>(null);
+
+  /* ── Fetch ─────────────────────────────────────────────────── */
   useEffect(() => {
     let cancelled = false;
 
@@ -67,13 +80,14 @@ export function AdminStudentsPage() {
       setLoading(true);
       setError(null);
       try {
-        const res = await adminListUsers({ q: query || undefined, filter: activeFilter, page: pg, pageSize: PAGE_SIZE });
+        const res = await adminListUsers({
+          criteria: criteria.length > 0 ? toApiCriteria(criteria) : undefined,
+          page: pg,
+          pageSize: PAGE_SIZE,
+        });
         if (cancelled) return;
         setLoading(false);
-        if (res.error) {
-          setError(res.error);
-          return;
-        }
+        if (res.error) { setError(res.error); return; }
         const d = res.data?.data;
         if (d) {
           setUsers(d.items);
@@ -88,32 +102,17 @@ export function AdminStudentsPage() {
     };
 
     const t = setTimeout(() => { void run(page); }, 300);
-    return () => {
-      cancelled = true;
-      clearTimeout(t);
-    };
-  }, [query, activeFilter, page]);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [criteria, page]);
 
-  /* Cerrar dropdown al click fuera */
-  useEffect(() => {
-    function handleOutside(e: MouseEvent) {
-      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
-        setFilterOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleOutside);
-    return () => document.removeEventListener('mousedown', handleOutside);
-  }, []);
+  /* ── Handlers ───────────────────────────────────────────────── */
 
-  /* ── Handlers ───────────────────────────────────────────── */
-
-  function handleSelectFilter(f: FilterOption) {
-    setActiveFilter(f);
-    setQuery('');
+  const handleCriteriaChange = useCallback((next: ActiveCriterion[]) => {
+    setCriteria(next);
     setPage(1);
-    setFilterOpen(false);
     setSelectedId(null);
-  }
+    setCsvError(null);
+  }, []);
 
   function handleRowClick(id: string) {
     setSelectedId(prev => prev === id ? null : id);
@@ -123,8 +122,29 @@ export function AdminStudentsPage() {
     if (selectedId) navigate(`/admin/students/${selectedId}`);
   }
 
-  /* ── Render ──────────────────────────────────────────────── */
+  async function handleExportCsv() {
+    setCsvLoading(true);
+    setCsvError(null);
+    try {
+      const { blob, filename } = await adminExportStudentsCsv({
+        criteria: criteria.length > 0 ? toApiCriteria(criteria) : undefined,
+      });
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement('a');
+      a.href     = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setCsvError(err instanceof Error ? err.message : 'Error al exportar CSV.');
+    } finally {
+      setCsvLoading(false);
+    }
+  }
 
+  /* ── Render ──────────────────────────────────────────────── */
   return (
     <div
       className="min-h-screen flex flex-col font-sans bg-white"
@@ -146,112 +166,119 @@ export function AdminStudentsPage() {
         <h1 className="text-2xl sm:text-3xl font-black text-gray-900 mb-1 mt-3">
           Gestión de Estudiantes
         </h1>
-        <p className="text-gray-500 text-sm mb-7">Listado de Estudiantes</p>
+        <p className="text-gray-500 text-sm mb-6">Listado de Estudiantes</p>
 
-        {/* ── Barra de búsqueda + filtro ── */}
-        <div className="flex items-center gap-3 mb-4">
+        {/* ── Barra de filtros ── */}
+        <div className="flex items-center gap-3 mb-3">
 
-          {/* Input búsqueda */}
-          <div className="relative flex-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-              {/* Lupa SVG con animación cuando hay foco */}
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <circle cx="11" cy="11" r="7" />
-                <path strokeLinecap="round" d="M21 21l-4.35-4.35" />
-              </svg>
-            </span>
-            <input
-              type="text"
-              value={query}
-              onChange={e => { setQuery(e.target.value); setPage(1); setSelectedId(null); }}
-              placeholder={`Buscar por ${FILTER_LABELS[activeFilter].toLowerCase()}…`}
-              className="
-                w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800
-                placeholder-gray-400
-                transition-all duration-200
-                focus:outline-none focus:ring-2 focus:ring-[#A85BFF]/40 focus:border-[#A85BFF]
-                shadow-sm hover:shadow-md
-              "
-            />
+          {/* Resumen de filtros activos */}
+          <div className="flex-1 flex items-center gap-2 flex-wrap min-h-[40px] px-3 py-1.5 rounded-xl border border-gray-200 bg-gray-50/60">
+            {criteria.length === 0 ? (
+              <span className="text-sm text-gray-400">Sin filtros activos — mostrando todos los estudiantes</span>
+            ) : (
+              <>
+                <span className="text-xs text-gray-500 font-medium shrink-0">Filtros:</span>
+                {criteria.map(c => {
+                  const def = STUDENT_FIELD_DEFS.find(f => f.key === c.field);
+                  return (
+                    <CriterionChip
+                      key={c.field}
+                      label={def?.label ?? c.field}
+                      value={criterionDisplayValue(c, STUDENT_FIELD_DEFS)}
+                      onRemove={() => handleCriteriaChange(criteria.filter(x => x.field !== c.field))}
+                    />
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={() => handleCriteriaChange([])}
+                  className="text-xs text-gray-400 hover:text-red-500 transition-colors ml-1 font-medium focus:outline-none"
+                >
+                  Limpiar todo
+                </button>
+              </>
+            )}
           </div>
 
-          {/* Botón filtro (tres barras) + dropdown */}
-          <div className="relative" ref={filterRef}>
+          {/* Botón abrir FilterPanel */}
+          <div className="relative shrink-0" ref={filterRef}>
             <button
               type="button"
               onClick={() => setFilterOpen(p => !p)}
-              aria-label="Abrir filtros"
+              aria-label="Abrir panel de filtros"
               className="
                 flex items-center gap-2 px-3.5 py-2.5 rounded-xl border text-sm font-semibold
-                transition-all duration-200
-                focus:outline-none focus:ring-2 focus:ring-[#A85BFF]/40
+                transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#A85BFF]/40
                 shadow-sm hover:shadow-md
               "
               style={{
-                borderColor: filterOpen ? '#A85BFF' : '#DDD6FE',
-                backgroundColor: filterOpen ? '#F3E8FF' : '#FAFAFA',
+                borderColor:     filterOpen || criteria.length > 0 ? '#A85BFF' : '#DDD6FE',
+                backgroundColor: filterOpen || criteria.length > 0 ? '#F3E8FF' : '#FAFAFA',
                 color: '#6b21a8',
               }}
             >
-              {/* Tres barras */}
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                <path strokeLinecap="round" d="M4 6h16M4 12h16M4 18h16" />
+                <path strokeLinecap="round" d="M4 6h16M4 12h10M4 18h7" />
               </svg>
               <span className="hidden sm:inline">Filtrar</span>
+              {criteria.length > 0 && (
+                <span
+                  className="w-5 h-5 rounded-full text-xs font-black flex items-center justify-center"
+                  style={{ backgroundColor: '#6E11B0', color: '#fff' }}
+                >
+                  {criteria.length}
+                </span>
+              )}
             </button>
 
-            {/* Dropdown animado */}
-            <div
-              className={`
-                absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-gray-100 z-30
-                transition-all duration-200 origin-top-right
-                ${filterOpen
-                  ? 'opacity-100 scale-100 translate-y-0'
-                  : 'opacity-0 scale-95 -translate-y-2 pointer-events-none'}
-              `}
-            >
-              <p className="px-4 pt-3 pb-1.5 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                Filtrar por
-              </p>
-              {ALL_FILTERS.map((f) => (
-                <div key={f}>
-                  <button
-                    type="button"
-                    onClick={() => handleSelectFilter(f)}
-                    className={`
-                      w-full text-left px-4 py-2 text-sm transition-colors duration-150
-                      ${activeFilter === f
-                        ? 'bg-[#F3E8FF] text-[#6b21a8] font-semibold'
-                        : 'text-gray-700 hover:bg-gray-50'}
-                    `}
-                  >
-                    {FILTER_LABELS[f]}
-                  </button>
-                </div>
-              ))}
-            </div>
+            {filterOpen && (
+              <FilterPanel
+                fieldDefs={STUDENT_FIELD_DEFS}
+                criteria={criteria}
+                onChange={handleCriteriaChange}
+                onClose={() => setFilterOpen(false)}
+              />
+            )}
           </div>
+
+          {/* Botón Exportar CSV */}
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            disabled={csvLoading}
+            aria-label="Exportar estudiantes a CSV"
+            title={criteria.length > 0 ? 'Exportar resultado filtrado a CSV' : 'Exportar todos los estudiantes a CSV'}
+            className="
+              shrink-0 flex items-center gap-2 px-3.5 py-2.5 rounded-xl border text-sm font-semibold
+              transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-400/40
+              shadow-sm hover:shadow-md
+              disabled:opacity-50 disabled:cursor-not-allowed
+            "
+            style={{
+              borderColor:     '#BBF7D0',
+              backgroundColor: '#F0FDF4',
+              color:           '#166534',
+            }}
+          >
+            {csvLoading ? (
+              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={4} />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+            )}
+            <span className="hidden sm:inline">{csvLoading ? 'Exportando…' : 'CSV'}</span>
+          </button>
         </div>
 
-        {/* Filtro activo badge */}
-        {query && (
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-xs text-gray-500">Filtrar por:</span>
-            <span
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
-              style={{ backgroundColor: '#F3E8FF', color: '#6b21a8' }}
-            >
-              {FILTER_LABELS[activeFilter]}
-              <button
-                type="button"
-                onClick={() => setQuery('')}
-                className="hover:text-[#581c87] focus:outline-none"
-                aria-label="Limpiar búsqueda"
-              >
-                ×
-              </button>
-            </span>
-          </div>
+        {/* Error CSV */}
+        {csvError && (
+          <p className="mb-3 text-sm text-red-600 font-medium bg-red-50 px-3 py-2 rounded-xl border border-red-100">
+            {csvError}
+          </p>
         )}
 
         {/* ── Tabla ── */}
@@ -288,7 +315,7 @@ export function AdminStudentsPage() {
                 {!loading && !error && users.length === 0 && (
                   <tr>
                     <td colSpan={6} className="px-4 py-12 text-center text-gray-400 text-sm">
-                      No se encontraron estudiantes con los filtros actuales.
+                      No se encontraron estudiantes con los filtros aplicados.
                     </td>
                   </tr>
                 )}

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import LogoUpb from '@/assets/images/logo-upb-alt.png';
-import { UPB_NAV_LINKS } from '@/shared/components/upbLinks';
+import { UPB_NAV_LINKS } from '@/shared/utils/upbLinks';
 
 export function LandingHeader() {
   const [mobileOpen, setMobileOpen] = useState(false);

@@ -22,7 +22,7 @@ import { buildSimulationCsv } from '../../../Application/services/export/Simulat
 import { buildSimulationPdf } from '../../../Application/services/export/SimulationPdfBuilder';
 import { ExportLogModel } from '../../persistence/models/ExportLogModel';
 import { ListUsersByAdminUseCase } from '../../../Application/use-cases/ListUsersByAdminUseCase';
-import type { UserFilterField } from '../../../Application/use-cases/ListUsersByAdminUseCase';
+import type { UserFilterField, UserFilterCriterion } from '../../../Application/use-cases/ListUsersByAdminUseCase';
 import { GetUserByAdminUseCase } from '../../../Application/use-cases/GetUserByAdminUseCase';
 import { UpdateUserByAdminUseCase } from '../../../Application/use-cases/UpdateUserByAdminUseCase';
 import { ListUserSimulationsByAdminUseCase } from '../../../Application/use-cases/ListUserSimulationsByAdminUseCase';
@@ -604,8 +604,8 @@ const VALID_FILTERS = new Set<UserFilterField>([
 
 /**
  * GET /api/admin/users
- * HU-82: Lista estudiantes con búsqueda y paginación.
- * Query: q (texto), filter (enum), page, pageSize
+ * HU-82 + HU-PV-03: Lista estudiantes con búsqueda multi-criterio y paginación.
+ * Query: criteria (JSON), q (texto legacy), filter (enum legacy), page, pageSize
  */
 router.get('/users', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -619,7 +619,18 @@ router.get('/users', async (req: AuthenticatedRequest, res: Response, next: Next
         ? (rawFilter as UserFilterField)
         : undefined;
 
+    // HU-PV-03: criterios multi-campo enviados como JSON
+    let criteria: UserFilterCriterion[] | undefined;
+    const rawCriteria = typeof req.query['criteria'] === 'string' ? req.query['criteria'] : undefined;
+    if (rawCriteria) {
+      try {
+        const parsed: unknown = JSON.parse(rawCriteria);
+        if (Array.isArray(parsed)) criteria = parsed as UserFilterCriterion[];
+      } catch { /* criterios inválidos — ignorar */ }
+    }
+
     const result = await listUsersUseCase.execute({
+      criteria,
       q,
       filter,
       page:     Number.isNaN(rawPage)     ? 1  : rawPage,
@@ -627,6 +638,71 @@ router.get('/users', async (req: AuthenticatedRequest, res: Response, next: Next
     });
 
     res.json({ success: true, data: result });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/admin/users/export/csv
+ * HU-PV-03: Exporta estudiantes filtrados como CSV (compatible con Excel).
+ * Query: criteria (JSON), q (texto legacy), filter (enum legacy)
+ * Exporta el conjunto completo filtrado, sin paginación.
+ */
+router.get('/users/export/csv', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const adminUserId = req.user?.['userId'] as string | undefined;
+    if (!adminUserId) {
+      res.status(401).json({ error: 'Usuario no autenticado.' });
+      return;
+    }
+
+    const q         = typeof req.query['q']      === 'string' ? req.query['q']      : undefined;
+    const rawFilter = typeof req.query['filter'] === 'string' ? req.query['filter'] : undefined;
+    const filter: UserFilterField | undefined =
+      rawFilter && VALID_FILTERS.has(rawFilter as UserFilterField)
+        ? (rawFilter as UserFilterField)
+        : undefined;
+
+    let criteria: UserFilterCriterion[] | undefined;
+    const rawCriteria = typeof req.query['criteria'] === 'string' ? req.query['criteria'] : undefined;
+    if (rawCriteria) {
+      try {
+        const parsed: unknown = JSON.parse(rawCriteria);
+        if (Array.isArray(parsed)) criteria = parsed as UserFilterCriterion[];
+      } catch { /* ignorar */ }
+    }
+
+    // Traer todos los registros sin paginación (límite 5000 por seguridad)
+    const result = await listUsersUseCase.execute({
+      criteria,
+      q,
+      filter,
+      page:      1,
+      pageSize:  5000,
+      forExport: true,
+    });
+
+    // Construir CSV con BOM UTF-8 para compatibilidad Excel
+    const BOM = '\uFEFF';
+    const headers = ['N° Documento', 'Tipo Doc.', 'Nombre Completo', 'Correo Electrónico', 'Número Celular', 'Fecha Registro'];
+    const csvRows = result.items.map(u => [
+      u.identificationNumber,
+      u.documentType ?? '',
+      u.fullName,
+      u.email,
+      u.phone ?? '',
+      new Date(u.createdAt).toLocaleDateString('es-CO', { year: 'numeric', month: '2-digit', day: '2-digit' }),
+    ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
+
+    const csvContent = BOM + [headers.map(h => `"${h}"`).join(','), ...csvRows].join('\r\n');
+    const csvBuffer  = Buffer.from(csvContent, 'utf-8');
+    const filename   = `estudiantes-upb-${new Date().toISOString().slice(0, 10)}.csv`;
+
+    res.setHeader('Content-Type',        'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length',      csvBuffer.length);
+    res.send(csvBuffer);
   } catch (error) {
     next(error);
   }
@@ -726,15 +802,97 @@ type SimFilterField =
   | 'studentName'
   | 'studentEmail';
 
+/** Criterio individual para filtros de simulaciones (HU-PV-03) */
+interface SimFilterCriterion {
+  field: SimFilterField;
+  value: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
 const VALID_SIM_FILTERS = new Set<SimFilterField>([
   'createdAt', 'academicPeriod', 'interestMode',
   'educationLevel', 'studentType', 'studentName', 'studentEmail',
 ]);
 
+/** Divide un valor por ";" y devuelve términos no-vacíos */
+function splitSimTerms(value: string): string[] {
+  return value.split(';').map(v => v.trim()).filter(v => v.length > 0);
+}
+
+/**
+ * Aplica criterios de filtrado de simulaciones sobre `andConditions` modificando el arreglo in-place.
+ * No retorna ningún valor.
+ */
+async function applySimCriteria(
+  criteria: SimFilterCriterion[],
+  andConditions: Record<string, unknown>[],
+): Promise<void> {
+  for (const criterion of criteria) {
+    if (!criterion || typeof criterion !== 'object') continue;
+    const { field, value, dateFrom, dateTo } = criterion;
+    if (typeof field !== 'string') continue;
+
+    if (field === 'createdAt') {
+      const from = typeof dateFrom === 'string' ? dateFrom : undefined;
+      const to   = typeof dateTo   === 'string' ? dateTo   : undefined;
+      if (from || to) {
+        const rangeCondition: Record<symbol, string> = {};
+        if (from) rangeCondition[Op.gte] = `${from} 00:00:00`;
+        if (to)   rangeCondition[Op.lte] = `${to} 23:59:59`;
+        andConditions.push({ created_at: rangeCondition });
+      }
+      continue;
+    }
+
+    if (typeof value !== 'string') continue;
+
+    if (field === 'studentName' || field === 'studentEmail') {
+      const terms = splitSimTerms(value);
+      if (terms.length === 0) continue;
+      const userWhere: Record<string, unknown> = field === 'studentName'
+        ? { [Op.or]: terms.flatMap(t => [
+            { first_name: { [Op.like]: `%${t}%` } },
+            { last_name:  { [Op.like]: `%${t}%` } },
+          ])}
+        : { [Op.or]: terms.map(t => ({ email: { [Op.like]: `%${t}%` } })) };
+
+      const matchingUsers = await UserModel.findAll({ attributes: ['id'], where: userWhere });
+      const ids = matchingUsers.map(u => u.id);
+      andConditions.push({ user_id: { [Op.in]: ids } });
+      continue;
+    }
+
+    const terms = splitSimTerms(value);
+    if (terms.length === 0) continue;
+
+    switch (field) {
+      case 'academicPeriod':
+        andConditions.push({
+          [Op.or]: terms.map(t => ({ academic_period: { [Op.like]: `%${t}%` } })),
+        });
+        break;
+      case 'interestMode': {
+        // Mapear etiquetas amigables a valores BD
+        const modalityValues = terms.flatMap(t => {
+          const tl = t.toLowerCase();
+          if (tl.includes('sin')) return ['SIN_INTERES'];
+          if (tl.includes('con')) return ['CON_INTERES'];
+          return [t.toUpperCase()];
+        });
+        andConditions.push({ modality: { [Op.in]: modalityValues } });
+        break;
+      }
+      default:
+        break;
+    }
+  }
+}
+
 /**
  * GET /api/admin/simulations
- * HU-42: Lista paginada + filtrada de TODAS las simulaciones activas.
- * Query params: q, filter, page, pageSize
+ * HU-42 + HU-PV-03: Lista paginada + filtrada de TODAS las simulaciones activas.
+ * Query params: criteria (JSON), q, filter, page, pageSize
  */
 router.get('/simulations', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -751,13 +909,25 @@ router.get('/simulations', async (req: AuthenticatedRequest, res: Response, next
     const pageSize = Math.min(50, Math.max(1, Number.isNaN(rawPageSize) ? 10 : rawPageSize));
     const offset   = (page - 1) * pageSize;
 
+    // HU-PV-03: criterios multi-campo
+    let criteria: SimFilterCriterion[] | undefined;
+    const rawCriteria = typeof req.query['criteria'] === 'string' ? req.query['criteria'] : undefined;
+    if (rawCriteria) {
+      try {
+        const parsed: unknown = JSON.parse(rawCriteria);
+        if (Array.isArray(parsed)) criteria = parsed as SimFilterCriterion[];
+      } catch { /* ignorar */ }
+    }
+
     // Condición base: no eliminadas
-    const baseWhere: Record<string, unknown> = { deleted_at: null };
+    const andConditions: Record<string, unknown>[] = [{ deleted_at: null }];
 
-    if (q) {
+    if (criteria && criteria.length > 0) {
+      // Modo multi-criterio
+      await applySimCriteria(criteria, andConditions);
+    } else if (q) {
+      // Modo legacy: un solo campo
       const qLike = `%${q}%`;
-
-      // Filtros por nombre/correo: buscar userIds primero, luego añadir al where
       if (filter === 'studentName' || filter === 'studentEmail') {
         const userWhere = filter === 'studentName'
           ? { [Op.or]: [
@@ -765,44 +935,30 @@ router.get('/simulations', async (req: AuthenticatedRequest, res: Response, next
               { last_name:  { [Op.like]: qLike } },
             ]}
           : { email: { [Op.like]: qLike } };
-
-        const matchingUsers = await UserModel.findAll({
-          attributes: ['id'],
-          where: userWhere,
-        });
-        baseWhere['user_id'] = { [Op.in]: matchingUsers.map(u => u.id) };
+        const matchingUsers = await UserModel.findAll({ attributes: ['id'], where: userWhere });
+        andConditions.push({ user_id: { [Op.in]: matchingUsers.map(u => u.id) } });
       } else {
         switch (filter) {
-          case 'createdAt':
-            baseWhere['created_at'] = { [Op.like]: qLike };
-            break;
-          case 'academicPeriod':
-            baseWhere['academic_period'] = { [Op.like]: qLike };
-            break;
-          case 'interestMode':
-            baseWhere['modality'] = { [Op.like]: qLike };
-            break;
-          case 'educationLevel':
-            baseWhere['level'] = { [Op.like]: qLike };
-            break;
-          case 'studentType':
-            baseWhere['student_type'] = { [Op.like]: qLike };
-            break;
+          case 'createdAt':       andConditions.push({ created_at:      { [Op.like]: qLike } }); break;
+          case 'academicPeriod':  andConditions.push({ academic_period: { [Op.like]: qLike } }); break;
+          case 'interestMode':    andConditions.push({ modality:        { [Op.like]: qLike } }); break;
+          case 'educationLevel':  andConditions.push({ level:           { [Op.like]: qLike } }); break;
+          case 'studentType':     andConditions.push({ student_type:    { [Op.like]: qLike } }); break;
           default:
-            baseWhere[Op.or as unknown as string] = [
+            andConditions.push({ [Op.or]: [
               { modality:        { [Op.like]: qLike } },
               { academic_period: { [Op.like]: qLike } },
               { level:           { [Op.like]: qLike } },
               { student_type:    { [Op.like]: qLike } },
-            ];
-            break;
+            ]});
         }
       }
     }
 
-    // Una única consulta con el where ya construido correctamente
+    const where = { [Op.and]: andConditions };
+
     const { count, rows } = await SimulationModel.findAndCountAll({
-      where: baseWhere,
+      where,
       attributes: [
         'id', 'created_at', 'modality', 'level', 'student_type',
         'financed_value', 'initial_payment_value', 'first_payment_date',
@@ -813,7 +969,6 @@ router.get('/simulations', async (req: AuthenticatedRequest, res: Response, next
       offset,
     });
 
-    // Cargar datos de usuario para decorar cada fila
     const userIds = [...new Set(rows.map(r => r.user_id))];
     const users = await UserModel.findAll({
       attributes: ['id', 'first_name', 'last_name', 'email'],
