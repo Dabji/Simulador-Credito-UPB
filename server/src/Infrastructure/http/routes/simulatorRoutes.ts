@@ -107,10 +107,20 @@ router.post('/save', async (req: AuthenticatedRequest, res: Response, next: Next
   }
 });
 
+type HistoryFilterField = 'modality' | 'academicPeriod' | 'createdAt';
+
+/** Criterio individual para filtros de historial del estudiante (HU-PV-03) */
+interface HistoryFilterCriterion {
+  field: HistoryFilterField;
+  value: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
 /**
  * GET /api/simulator/history
- * HU-35: Lista paginada + filtrada de simulaciones del usuario autenticado.
- * Query params: q (texto), filter (campo), page (número), pageSize (número)
+ * HU-35 + HU-PV-03: Lista paginada + filtrada de simulaciones del usuario autenticado.
+ * Query params: criteria (JSON), q (texto legacy), filter (campo legacy), page, pageSize
  */
 router.get('/history', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -129,6 +139,16 @@ router.get('/history', async (req: AuthenticatedRequest, res: Response, next: Ne
     const pageSize = Math.min(50, Math.max(1, Number.isNaN(rawPageSize) ? 10 : rawPageSize));
     const offset   = (page - 1) * pageSize;
 
+    // HU-PV-03: criterios multi-campo
+    let criteria: HistoryFilterCriterion[] | undefined;
+    const rawCriteria = typeof req.query['criteria'] === 'string' ? req.query['criteria'] : undefined;
+    if (rawCriteria) {
+      try {
+        const parsed: unknown = JSON.parse(rawCriteria);
+        if (Array.isArray(parsed)) criteria = parsed as HistoryFilterCriterion[];
+      } catch { /* ignorar */ }
+    }
+
     // Obtener datos del usuario autenticado (nombre, email)
     const user = await UserModel.findByPk(userId, {
       attributes: ['first_name', 'last_name', 'email'],
@@ -137,34 +157,71 @@ router.get('/history', async (req: AuthenticatedRequest, res: Response, next: Ne
     const studentEmail = user?.email ?? '';
 
     // Condición base: solo del usuario, no eliminadas
-    const baseWhere: Record<string, unknown> = { user_id: userId, deleted_at: null };
+    const andConditions: Record<string, unknown>[] = [{ user_id: userId, deleted_at: null }];
 
-    // Condición de búsqueda por filtro
-    if (q) {
+    if (criteria && criteria.length > 0) {
+      // Modo multi-criterio
+      for (const criterion of criteria) {
+        const { field, value, dateFrom, dateTo } = criterion;
+
+        if (field === 'createdAt') {
+          const rangeCondition: Record<string, unknown> = {};
+          if (dateFrom) rangeCondition[Op.gte as unknown as string] = `${dateFrom} 00:00:00`;
+          if (dateTo)   rangeCondition[Op.lte as unknown as string] = `${dateTo} 23:59:59`;
+          if (Object.keys(rangeCondition).length > 0) {
+            andConditions.push({ created_at: rangeCondition });
+          }
+          continue;
+        }
+
+        const terms = value.split(';').map(v => v.trim()).filter(v => v.length > 0);
+        if (terms.length === 0) continue;
+
+        switch (field) {
+          case 'modality': {
+            const modalityValues = terms.flatMap(t => {
+              const tl = t.toLowerCase();
+              if (tl.includes('sin')) return ['SIN_INTERES'];
+              if (tl.includes('con')) return ['CON_INTERES'];
+              return [t.toUpperCase()];
+            });
+            andConditions.push({ modality: { [Op.in]: modalityValues } });
+            break;
+          }
+          case 'academicPeriod':
+            andConditions.push({
+              [Op.or as unknown as string]: terms.map(t => ({ academic_period: { [Op.like]: `%${t}%` } })),
+            });
+            break;
+          default:
+            break;
+        }
+      }
+    } else if (q) {
+      // Modo legacy: un solo campo
       const qLike = `%${q}%`;
       switch (filter) {
         case 'modality':
-          baseWhere['modality'] = { [Op.like]: qLike };
+          andConditions.push({ modality: { [Op.like]: qLike } });
           break;
         case 'academicPeriod':
-          baseWhere['academic_period'] = { [Op.like]: qLike };
+          andConditions.push({ academic_period: { [Op.like]: qLike } });
           break;
         case 'createdAt':
-          baseWhere['created_at'] = { [Op.like]: qLike };
+          andConditions.push({ created_at: { [Op.like]: qLike } });
           break;
         default:
-          // búsqueda general: modalidad, periodo académico o fecha
-          baseWhere[Op.or as unknown as string] = [
+          andConditions.push({ [Op.or as unknown as string]: [
             { modality:         { [Op.like]: qLike } },
             { academic_period:  { [Op.like]: qLike } },
             { created_at:       { [Op.like]: qLike } },
-          ];
+          ]});
           break;
       }
     }
 
     const { count, rows } = await SimulationModel.findAndCountAll({
-      where: baseWhere,
+      where: { [Op.and as unknown as string]: andConditions },
       attributes: [
         'id', 'created_at', 'modality', 'financed_value',
         'initial_payment_value', 'first_payment_date', 'total_payments', 'academic_period',
