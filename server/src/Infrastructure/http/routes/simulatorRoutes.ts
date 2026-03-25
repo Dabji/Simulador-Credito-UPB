@@ -165,10 +165,10 @@ router.get('/history', async (req: AuthenticatedRequest, res: Response, next: Ne
         const { field, value, dateFrom, dateTo } = criterion;
 
         if (field === 'createdAt') {
-          const rangeCondition: Record<string, unknown> = {};
-          if (dateFrom) rangeCondition[Op.gte as unknown as string] = `${dateFrom} 00:00:00`;
-          if (dateTo)   rangeCondition[Op.lte as unknown as string] = `${dateTo} 23:59:59`;
-          if (Object.keys(rangeCondition).length > 0) {
+          if (dateFrom || dateTo) {
+            const rangeCondition: Record<symbol, string> = {};
+            if (dateFrom) rangeCondition[Op.gte] = `${dateFrom} 00:00:00`;
+            if (dateTo)   rangeCondition[Op.lte] = `${dateTo} 23:59:59`;
             andConditions.push({ created_at: rangeCondition });
           }
           continue;
@@ -190,7 +190,7 @@ router.get('/history', async (req: AuthenticatedRequest, res: Response, next: Ne
           }
           case 'academicPeriod':
             andConditions.push({
-              [Op.or as unknown as string]: terms.map(t => ({ academic_period: { [Op.like]: `%${t}%` } })),
+              [Op.or]: terms.map(t => ({ academic_period: { [Op.like]: `%${t}%` } })),
             });
             break;
           default:
@@ -211,7 +211,7 @@ router.get('/history', async (req: AuthenticatedRequest, res: Response, next: Ne
           andConditions.push({ created_at: { [Op.like]: qLike } });
           break;
         default:
-          andConditions.push({ [Op.or as unknown as string]: [
+          andConditions.push({ [Op.or]: [
             { modality:         { [Op.like]: qLike } },
             { academic_period:  { [Op.like]: qLike } },
             { created_at:       { [Op.like]: qLike } },
@@ -221,7 +221,7 @@ router.get('/history', async (req: AuthenticatedRequest, res: Response, next: Ne
     }
 
     const { count, rows } = await SimulationModel.findAndCountAll({
-      where: { [Op.and as unknown as string]: andConditions },
+      where: { [Op.and]: andConditions },
       attributes: [
         'id', 'created_at', 'modality', 'financed_value',
         'initial_payment_value', 'first_payment_date', 'total_payments', 'academic_period',

@@ -831,10 +831,10 @@ async function applySimCriteria(
     const { field, value, dateFrom, dateTo } = criterion;
 
     if (field === 'createdAt') {
-      const rangeCondition: Record<string, unknown> = {};
-      if (dateFrom) rangeCondition[Op.gte as unknown as string] = `${dateFrom} 00:00:00`;
-      if (dateTo)   rangeCondition[Op.lte as unknown as string] = `${dateTo} 23:59:59`;
-      if (Object.keys(rangeCondition).length > 0) {
+      if (dateFrom || dateTo) {
+        const rangeCondition: Record<symbol, string> = {};
+        if (dateFrom) rangeCondition[Op.gte] = `${dateFrom} 00:00:00`;
+        if (dateTo)   rangeCondition[Op.lte] = `${dateTo} 23:59:59`;
         andConditions.push({ created_at: rangeCondition });
       }
       continue;
@@ -844,11 +844,11 @@ async function applySimCriteria(
       const terms = splitSimTerms(value);
       if (terms.length === 0) continue;
       const userWhere: Record<string, unknown> = field === 'studentName'
-        ? { [Op.or as unknown as string]: terms.flatMap(t => [
+        ? { [Op.or]: terms.flatMap(t => [
             { first_name: { [Op.like]: `%${t}%` } },
             { last_name:  { [Op.like]: `%${t}%` } },
           ])}
-        : { [Op.or as unknown as string]: terms.map(t => ({ email: { [Op.like]: `%${t}%` } })) };
+        : { [Op.or]: terms.map(t => ({ email: { [Op.like]: `%${t}%` } })) };
 
       const matchingUsers = await UserModel.findAll({ attributes: ['id'], where: userWhere });
       const ids = matchingUsers.map(u => u.id);
@@ -862,7 +862,7 @@ async function applySimCriteria(
     switch (field) {
       case 'academicPeriod':
         andConditions.push({
-          [Op.or as unknown as string]: terms.map(t => ({ academic_period: { [Op.like]: `%${t}%` } })),
+          [Op.or]: terms.map(t => ({ academic_period: { [Op.like]: `%${t}%` } })),
         });
         break;
       case 'interestMode': {
@@ -938,7 +938,7 @@ router.get('/simulations', async (req: AuthenticatedRequest, res: Response, next
           case 'educationLevel':  andConditions.push({ level:           { [Op.like]: qLike } }); break;
           case 'studentType':     andConditions.push({ student_type:    { [Op.like]: qLike } }); break;
           default:
-            andConditions.push({ [Op.or as unknown as string]: [
+            andConditions.push({ [Op.or]: [
               { modality:        { [Op.like]: qLike } },
               { academic_period: { [Op.like]: qLike } },
               { level:           { [Op.like]: qLike } },
@@ -948,7 +948,7 @@ router.get('/simulations', async (req: AuthenticatedRequest, res: Response, next
       }
     }
 
-    const where = { [Op.and as unknown as string]: andConditions };
+    const where = { [Op.and]: andConditions };
 
     const { count, rows } = await SimulationModel.findAndCountAll({
       where,

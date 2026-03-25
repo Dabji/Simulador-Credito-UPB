@@ -9,7 +9,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LogoUpb from '@/assets/images/logo-upb.png';
 import LogoUpbColor from '@/assets/images/logo-upb-color.png';
-import { UPB_NAV_LINKS } from '@/shared/components/upbLinks';
+import { UPB_NAV_LINKS } from '@/shared/utils/upbLinks';
 
 export function UpbHeaderGuest() {
   const navigate = useNavigate();

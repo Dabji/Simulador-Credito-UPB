@@ -1,34 +1,45 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UpbHeader } from '@/shared/components/UpbHeader';
 import { UpbFooter } from '@/shared/components/UpbFooter';
 import { BackNavLink } from '@/shared/components/BackNavLink';
+import { FilterPanel, CriterionChip } from '@/shared/components/FilterPanel';
+import { criterionDisplayValue } from '@/shared/utils/filterPanel.types';
+import type { ActiveCriterion, FilterFieldDef } from '@/shared/utils/filterPanel.types';
 import {
   adminListSimulations,
   adminDeleteSimulation,
   type AdminSimulationItemDTO,
-  type AdminSimFilterField,
+  type AdminSimFilterCriterion,
 } from '@/shared/services/api';
 
 // ── Constantes ───────────────────────────────────────────────
 
 const PAGE_SIZE = 10;
 
-type FilterOption = AdminSimFilterField;
+/** Genera períodos académicos dinámicos con el mismo formato y rango que el simulador.
+ *  Solo muestra año actual + año siguiente (igual que PERIOD_OPTIONS en SimulationForm).
+ *  YYYY-01 → "YYYY-01 (Dic YYYY-1 – May YYYY)"
+ *  YYYY-02 → "YYYY-02 (Jun – Nov YYYY)" */
+function buildPeriodOptions(): ReadonlyArray<{ value: string; label: string }> {
+  const currentYear = new Date().getFullYear();
+  const opts: { value: string; label: string }[] = [];
+  [currentYear, currentYear + 1].forEach(y => {
+    opts.push({ value: `${y}-01`, label: `${y}-01 (Dic ${y - 1} – May ${y})` });
+    opts.push({ value: `${y}-02`, label: `${y}-02 (Jun – Nov ${y})` });
+  });
+  return opts;
+}
 
-const FILTER_LABELS: Record<FilterOption, string> = {
-  createdAt:      'Fecha de Creación',
-  academicPeriod: 'Período Académico',
-  interestMode:   'Modalidad',
-  educationLevel: 'Nivel Formación',
-  studentType:    'Tipo Estudiante',
-  studentName:    'Estudiante (Nombre)',
-  studentEmail:   'Estudiante (Correo)',
-};
-
-const ALL_FILTERS: FilterOption[] = [
-  'createdAt', 'academicPeriod', 'interestMode',
-  'studentName', 'studentEmail',
+const SIM_FIELD_DEFS: ReadonlyArray<FilterFieldDef> = [
+  { key: 'createdAt',      label: 'Fecha de Creación',    type: 'daterange' },
+  { key: 'academicPeriod', label: 'Período Académico',    type: 'select',   options: buildPeriodOptions() },
+  { key: 'interestMode',   label: 'Modalidad',            type: 'select',   options: [
+    { value: 'SIN_INTERES', label: 'Sin intereses' },
+    { value: 'CON_INTERES', label: 'Con intereses' },
+  ]},
+  { key: 'studentName',    label: 'Estudiante (Nombre)',  type: 'text',     supportsMultiple: false },
+  { key: 'studentEmail',   label: 'Estudiante (Correo)',  type: 'text',     supportsMultiple: false },
 ];
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -54,16 +65,25 @@ function formatModality(m: 'SIN_INTERES' | 'CON_INTERES'): string {
   return m === 'SIN_INTERES' ? 'Sin interés' : 'Con interés';
 }
 
+/** Convierte ActiveCriterion[] → AdminSimFilterCriterion[] para la API */
+function toApiCriteria(criteria: ActiveCriterion[]): AdminSimFilterCriterion[] {
+  return criteria.map(c => ({
+    field:    c.field as AdminSimFilterCriterion['field'],
+    value:    c.value,
+    dateFrom: c.dateFrom,
+    dateTo:   c.dateTo,
+  }));
+}
+
 // ── Componente principal ─────────────────────────────────────
 
 export function AdminSimulationsPage() {
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
 
-  /* Búsqueda / filtro */
-  const [query,        setQuery]        = useState('');
-  const [activeFilter, setActiveFilter] = useState<FilterOption>('createdAt');
-  const [filterOpen,   setFilterOpen]   = useState(false);
+  /* Filtros acumulables (HU-PV-03) */
+  const [criteria,   setCriteria]   = useState<ActiveCriterion[]>([]);
+  const [filterOpen, setFilterOpen] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
 
   /* Resultados */
@@ -85,7 +105,7 @@ export function AdminSimulationsPage() {
   /* Toast de éxito */
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // ── Fetch con debounce ──────────────────────────────────────
+  // ── Fetch ──────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
 
@@ -94,8 +114,7 @@ export function AdminSimulationsPage() {
       setError(null);
       try {
         const res = await adminListSimulations({
-          q:        query || undefined,
-          filter:   activeFilter,
+          criteria: criteria.length > 0 ? toApiCriteria(criteria) : undefined,
           page:     pg,
           pageSize: PAGE_SIZE,
         });
@@ -115,15 +134,15 @@ export function AdminSimulationsPage() {
 
     const timer = setTimeout(() => run(page), 300);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [query, activeFilter, page]);
+  }, [criteria, page]);
 
   // ── Handlers ─────────────────────────────────────────────────
-  function handleSelectFilter(f: FilterOption) {
-    setActiveFilter(f);
-    setFilterOpen(false);
+
+  const handleCriteriaChange = useCallback((next: ActiveCriterion[]) => {
+    setCriteria(next);
     setPage(1);
     setSelectedId(null);
-  }
+  }, []);
 
   function handleRowClick(id: string) {
     setSelectedId(prev => (prev === id ? null : id));
@@ -146,7 +165,6 @@ export function AdminSimulationsPage() {
       setSelectedId(null);
       setSuccessMsg('Simulación eliminada correctamente.');
       setTimeout(() => setSuccessMsg(null), 4000);
-      // Refrescar listado manteniendo página si hay items, retroceder si era la última fila
       const newTotal = total - 1;
       const newTotalPages = Math.max(1, Math.ceil(newTotal / PAGE_SIZE));
       const targetPage = page > newTotalPages ? newTotalPages : page;
@@ -162,17 +180,6 @@ export function AdminSimulationsPage() {
       setDeleting(false);
     }
   }
-
-  // ── Cerrar dropdown al clic fuera ────────────────────────────
-  useEffect(() => {
-    function handleOutside(e: MouseEvent) {
-      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
-        setFilterOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleOutside);
-    return () => document.removeEventListener('mousedown', handleOutside);
-  }, []);
 
   const selectedItem = items.find(i => i.id === selectedId) ?? null;
 
@@ -198,13 +205,7 @@ export function AdminSimulationsPage() {
         <h1 className="text-2xl sm:text-3xl font-black text-gray-900 mb-1 mt-3">
           Gestión de Simulaciones
         </h1>
-        <p className="text-gray-500 text-sm mb-2">Listado de Simulaciones</p>
-        <p className="text-gray-400 text-xs mb-6">
-          Búsqueda de simulaciones por filtro (<span className="font-semibold text-[#6b21a8]">Fecha</span>,{' '}
-          <span className="font-semibold text-[#6b21a8]">Período Académico</span>,{' '}
-          <span className="font-semibold text-[#6b21a8]">Modalidad</span>,{' '}
-          <span className="font-semibold text-[#6b21a8]">Estudiante</span>, etc):
-        </p>
+        <p className="text-gray-500 text-sm mb-6">Listado de Simulaciones</p>
 
         {/* Toast éxito */}
         {successMsg && (
@@ -219,76 +220,77 @@ export function AdminSimulationsPage() {
           </div>
         )}
 
-        {/* Barra búsqueda + filtro */}
-        <div className="flex items-center gap-3 mb-4">
-          <div className="relative flex-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <circle cx="11" cy="11" r="7" />
-                <path strokeLinecap="round" d="M21 21l-4.35-4.35" />
-              </svg>
-            </span>
-            <input
-              type="text"
-              value={query}
-              onChange={e => { setQuery(e.target.value); setPage(1); setSelectedId(null); }}
-              placeholder={`Buscar por ${FILTER_LABELS[activeFilter].toLowerCase()}…`}
-              className="
-                w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm
-                focus:outline-none focus:ring-2 focus:ring-[#A85BFF]/40 focus:border-[#A85BFF]
-                bg-white text-gray-800 placeholder-gray-400 transition-all duration-200
-              "
-            />
+        {/* ── Barra de filtros ── */}
+        <div className="flex items-center gap-3 mb-3">
+
+          {/* Resumen de filtros activos */}
+          <div className="flex-1 flex items-center gap-2 flex-wrap min-h-[40px] px-3 py-1.5 rounded-xl border border-gray-200 bg-gray-50/60">
+            {criteria.length === 0 ? (
+              <span className="text-sm text-gray-400">Sin filtros activos — mostrando todas las simulaciones</span>
+            ) : (
+              <>
+                <span className="text-xs text-gray-500 font-medium shrink-0">Filtros:</span>
+                {criteria.map(c => {
+                  const def = SIM_FIELD_DEFS.find(f => f.key === c.field);
+                  return (
+                    <CriterionChip
+                      key={c.field}
+                      label={def?.label ?? c.field}
+                      value={criterionDisplayValue(c, SIM_FIELD_DEFS)}
+                      onRemove={() => handleCriteriaChange(criteria.filter(x => x.field !== c.field))}
+                    />
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={() => handleCriteriaChange([])}
+                  className="text-xs text-gray-400 hover:text-red-500 transition-colors ml-1 font-medium focus:outline-none"
+                >
+                  Limpiar todo
+                </button>
+              </>
+            )}
           </div>
 
-          {/* Botón filtros */}
-          <div className="relative" ref={filterRef}>
+          {/* Botón abrir FilterPanel */}
+          <div className="relative shrink-0" ref={filterRef}>
             <button
               type="button"
               onClick={() => setFilterOpen(p => !p)}
-              aria-label="Abrir filtros"
+              aria-label="Abrir panel de filtros"
               className="
-                w-10 h-10 flex items-center justify-center rounded-xl border border-gray-200
-                text-gray-500 hover:border-[#A85BFF] hover:text-[#6b21a8] hover:bg-[#F3E8FF]
-                transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[#A85BFF]/40
+                flex items-center gap-2 px-3.5 py-2.5 rounded-xl border text-sm font-semibold
+                transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#A85BFF]/40
+                shadow-sm hover:shadow-md
               "
+              style={{
+                borderColor:     filterOpen || criteria.length > 0 ? '#A85BFF' : '#DDD6FE',
+                backgroundColor: filterOpen || criteria.length > 0 ? '#F3E8FF' : '#FAFAFA',
+                color: '#6b21a8',
+              }}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" d="M4 6h16M4 12h10M4 18h7" />
               </svg>
+              <span className="hidden sm:inline">Filtrar</span>
+              {criteria.length > 0 && (
+                <span
+                  className="w-5 h-5 rounded-full text-xs font-black flex items-center justify-center"
+                  style={{ backgroundColor: '#6E11B0', color: '#fff' }}
+                >
+                  {criteria.length}
+                </span>
+              )}
             </button>
 
-            {/* Dropdown filtros */}
-            <div
-              className={`
-                absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 z-30
-                transition-all duration-200 origin-top-right
-                ${filterOpen
-                  ? 'opacity-100 scale-100 translate-y-0'
-                  : 'opacity-0 scale-95 -translate-y-2 pointer-events-none'}
-              `}
-            >
-              <p className="px-4 pt-3 pb-1.5 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                Filtrar por
-              </p>
-              {ALL_FILTERS.map(f => (
-                <div key={f}>
-                  <button
-                    type="button"
-                    onClick={() => handleSelectFilter(f)}
-                    className={`
-                      w-full text-left px-4 py-2 text-sm transition-colors duration-150
-                      ${activeFilter === f
-                        ? 'bg-[#F3E8FF] text-[#6b21a8] font-semibold'
-                        : 'text-gray-700 hover:bg-gray-50'}
-                    `}
-                  >
-                    {FILTER_LABELS[f]}
-                  </button>
-                </div>
-              ))}
-              <div className="pb-2" />
-            </div>
+            {filterOpen && (
+              <FilterPanel
+                fieldDefs={SIM_FIELD_DEFS}
+                criteria={criteria}
+                onChange={handleCriteriaChange}
+                onClose={() => setFilterOpen(false)}
+              />
+            )}
           </div>
         </div>
 
@@ -336,7 +338,7 @@ export function AdminSimulationsPage() {
                 {!loading && !error && items.length === 0 && (
                   <tr>
                     <td colSpan={9} className="px-4 py-12 text-center text-gray-400 text-sm">
-                      No hay simulaciones que coincidan con el filtro.
+                      No hay simulaciones que coincidan con los filtros aplicados.
                     </td>
                   </tr>
                 )}
@@ -398,13 +400,12 @@ export function AdminSimulationsPage() {
             </table>
           </div>
 
-          {/* Nota 90 días */}
+          {/* Nota 90 días + paginación */}
           <div className="px-4 py-2 border-t border-gray-100 bg-gray-50 flex items-center justify-between flex-wrap gap-2">
             <p className="text-xs text-gray-400 italic">
               &quot;El sistema elimina automáticamente simulaciones con antigüedad mayor a 90 días.&quot;
             </p>
 
-            {/* Paginación */}
             <div className="flex items-center gap-2">
               <p className="text-xs text-gray-500 mr-2">
                 {total > 0
@@ -496,18 +497,15 @@ export function AdminSimulationsPage() {
           aria-modal="true"
           aria-labelledby="delete-modal-title"
         >
-          {/* Overlay */}
           <div
             className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={() => { if (!deleting) setShowDeleteModal(false); }}
           />
 
-          {/* Card */}
           <div
             className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 flex flex-col gap-5"
             style={{ animation: 'fadeScaleIn 0.2s ease-out' }}
           >
-            {/* Icono */}
             <div className="flex justify-center">
               <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center">
                 <svg className="w-7 h-7 text-red-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -516,7 +514,6 @@ export function AdminSimulationsPage() {
               </div>
             </div>
 
-            {/* Texto */}
             <div className="text-center">
               <h2 id="delete-modal-title" className="text-xl font-black text-gray-900 mb-2">
                 Eliminar Simulación
@@ -530,14 +527,12 @@ export function AdminSimulationsPage() {
               </p>
             </div>
 
-            {/* Error */}
             {deleteError && (
               <p className="text-sm text-red-600 text-center font-medium bg-red-50 rounded-xl px-3 py-2">
                 {deleteError}
               </p>
             )}
 
-            {/* Botones */}
             <div className="flex gap-3">
               <button
                 type="button"

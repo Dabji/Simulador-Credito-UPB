@@ -1,33 +1,48 @@
 // ============================================================
-// PÁGINA: StudentHistoryPage  (HU-35 — Historial de Simulaciones)
-// Lista paginada + filtrada de simulaciones del estudiante autenticado.
-// Diseño idéntico al patrón AdminStudentsPage del sistema.
+// PÁGINA: StudentHistoryPage  (HU-35 + HU-PV-03)
+// Lista paginada + filtros avanzados acumulables (Outlook-style).
 // ============================================================
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UpbHeader } from '@/shared/components/UpbHeader';
 import { UpbFooter } from '@/shared/components/UpbFooter';
 import { BackNavLink } from '@/shared/components/BackNavLink';
+import { FilterPanel, CriterionChip } from '@/shared/components/FilterPanel';
+import { criterionDisplayValue } from '@/shared/utils/filterPanel.types';
+import type { ActiveCriterion, FilterFieldDef } from '@/shared/utils/filterPanel.types';
 import {
   getMySimulationHistory,
   type StudentHistoryItemDTO,
-  type StudentHistoryFilter,
+  type StudentHistoryFilterCriterion,
 } from '@/shared/services/api';
 
 // ── Constantes ───────────────────────────────────────────────
 
 const PAGE_SIZE = 10;
 
-type FilterOption = StudentHistoryFilter;
+/** Genera períodos académicos dinámicos con el mismo formato y rango que el simulador.
+ *  Solo muestra año actual + año siguiente (igual que PERIOD_OPTIONS en SimulationForm).
+ *  YYYY-01 → "YYYY-01 (Dic YYYY-1 – May YYYY)"
+ *  YYYY-02 → "YYYY-02 (Jun – Nov YYYY)" */
+function buildPeriodOptions(): ReadonlyArray<{ value: string; label: string }> {
+  const currentYear = new Date().getFullYear();
+  const opts: { value: string; label: string }[] = [];
+  [currentYear, currentYear + 1].forEach(y => {
+    opts.push({ value: `${y}-01`, label: `${y}-01 (Dic ${y - 1} – May ${y})` });
+    opts.push({ value: `${y}-02`, label: `${y}-02 (Jun – Nov ${y})` });
+  });
+  return opts;
+}
 
-const FILTER_LABELS: Record<FilterOption, string> = {
-  modality:       'Modalidad',
-  academicPeriod: 'Período Académico',
-  createdAt:      'Fecha de Creación',
-};
-
-const ALL_FILTERS: FilterOption[] = ['modality', 'academicPeriod', 'createdAt'];
+const HISTORY_FIELD_DEFS: ReadonlyArray<FilterFieldDef> = [
+  { key: 'modality',       label: 'Modalidad',          type: 'select', options: [
+    { value: 'SIN_INTERES', label: 'Sin intereses' },
+    { value: 'CON_INTERES', label: 'Con intereses' },
+  ]},
+  { key: 'academicPeriod', label: 'Período Académico',  type: 'select', options: buildPeriodOptions() },
+  { key: 'createdAt',      label: 'Fecha de Creación',  type: 'daterange' },
+];
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -54,30 +69,39 @@ function formatModality(m: 'SIN_INTERES' | 'CON_INTERES'): string {
   return m === 'SIN_INTERES' ? 'Sin interés' : 'Con interés';
 }
 
+/** Convierte ActiveCriterion[] → StudentHistoryFilterCriterion[] para la API */
+function toApiCriteria(criteria: ActiveCriterion[]): StudentHistoryFilterCriterion[] {
+  return criteria.map(c => ({
+    field:    c.field as StudentHistoryFilterCriterion['field'],
+    value:    c.value,
+    dateFrom: c.dateFrom,
+    dateTo:   c.dateTo,
+  }));
+}
+
 // ── Componente principal ─────────────────────────────────────
 
 export function StudentHistoryPage() {
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
 
-  /* Búsqueda / filtro */
-  const [query,        setQuery]        = useState('');
-  const [activeFilter, setActiveFilter] = useState<FilterOption>('modality');
-  const [filterOpen,   setFilterOpen]   = useState(false);
+  /* Filtros acumulables (HU-PV-03) */
+  const [criteria,   setCriteria]   = useState<ActiveCriterion[]>([]);
+  const [filterOpen, setFilterOpen] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
 
   /* Resultados */
-  const [items,       setItems]       = useState<StudentHistoryItemDTO[]>([]);
-  const [total,       setTotal]       = useState(0);
-  const [totalPages,  setTotalPages]  = useState(1);
-  const [page,        setPage]        = useState(1);
-  const [loading,     setLoading]     = useState(false);
-  const [error,       setError]       = useState<string | null>(null);
+  const [items,      setItems]      = useState<StudentHistoryItemDTO[]>([]);
+  const [total,      setTotal]      = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [page,       setPage]       = useState(1);
+  const [loading,    setLoading]    = useState(false);
+  const [error,      setError]      = useState<string | null>(null);
 
   /* Selección */
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  /* ── Fetch con debounce ──────────────────────────────────── */
+  /* ── Fetch ──────────────────────────────────────────────── */
   useEffect(() => {
     let cancelled = false;
 
@@ -86,8 +110,7 @@ export function StudentHistoryPage() {
       setError(null);
       try {
         const res = await getMySimulationHistory({
-          q:        query || undefined,
-          filter:   activeFilter,
+          criteria: criteria.length > 0 ? toApiCriteria(criteria) : undefined,
           page:     pg,
           pageSize: PAGE_SIZE,
         });
@@ -108,28 +131,15 @@ export function StudentHistoryPage() {
 
     const t = setTimeout(() => { void run(page); }, 300);
     return () => { cancelled = true; clearTimeout(t); };
-  }, [query, activeFilter, page]);
-
-  /* Cerrar dropdown al click fuera */
-  useEffect(() => {
-    function handleOutside(e: MouseEvent) {
-      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
-        setFilterOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleOutside);
-    return () => document.removeEventListener('mousedown', handleOutside);
-  }, []);
+  }, [criteria, page]);
 
   /* ── Handlers ────────────────────────────────────────────── */
 
-  function handleSelectFilter(f: FilterOption) {
-    setActiveFilter(f);
-    setQuery('');
+  const handleCriteriaChange = useCallback((next: ActiveCriterion[]) => {
+    setCriteria(next);
     setPage(1);
-    setFilterOpen(false);
     setSelectedId(null);
-  }
+  }, []);
 
   function handleRowClick(id: string) {
     setSelectedId(prev => prev === id ? null : id);
@@ -138,7 +148,6 @@ export function StudentHistoryPage() {
   function handleVerSimulacion() {
     if (selectedId) navigate(`/student/history/${selectedId}`);
   }
-
 
   /* ── Render ──────────────────────────────────────────────── */
 
@@ -163,112 +172,81 @@ export function StudentHistoryPage() {
         <h1 className="text-2xl sm:text-3xl font-black text-gray-900 mb-1 mt-3">
           Historial de Simulaciones
         </h1>
-        <p className="text-gray-500 text-sm mb-2">Mis Simulaciones</p>
-        <p className="text-gray-400 text-xs mb-6">
-          Filtra tus simulaciones por: <span className="font-semibold text-[#6b21a8]">Modalidad</span>,{' '}
-          <span className="font-semibold text-[#6b21a8]">Período Académico</span> o{' '}
-          <span className="font-semibold text-[#6b21a8]">Fecha de Creación</span>.
-        </p>
+        <p className="text-gray-500 text-sm mb-6">Mis Simulaciones</p>
 
-        {/* ── Barra búsqueda + filtro ── */}
-        <div className="flex items-center gap-3 mb-4">
+        {/* ── Barra de filtros ── */}
+        <div className="flex items-center gap-3 mb-3">
 
-          <div className="relative flex-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <circle cx="11" cy="11" r="7" />
-                <path strokeLinecap="round" d="M21 21l-4.35-4.35" />
-              </svg>
-            </span>
-            <input
-              type="text"
-              value={query}
-              onChange={e => { setQuery(e.target.value); setPage(1); setSelectedId(null); }}
-              placeholder={`Buscar por ${FILTER_LABELS[activeFilter].toLowerCase()}…`}
-              className="
-                w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-800
-                placeholder-gray-400 transition-all duration-200
-                focus:outline-none focus:ring-2 focus:ring-[#A85BFF]/40 focus:border-[#A85BFF]
-                shadow-sm hover:shadow-md
-              "
-            />
+          {/* Resumen de filtros activos */}
+          <div className="flex-1 flex items-center gap-2 flex-wrap min-h-[40px] px-3 py-1.5 rounded-xl border border-gray-200 bg-gray-50/60">
+            {criteria.length === 0 ? (
+              <span className="text-sm text-gray-400">Sin filtros activos — mostrando todas mis simulaciones</span>
+            ) : (
+              <>
+                <span className="text-xs text-gray-500 font-medium shrink-0">Filtros:</span>
+                {criteria.map(c => {
+                  const def = HISTORY_FIELD_DEFS.find(f => f.key === c.field);
+                  return (
+                    <CriterionChip
+                      key={c.field}
+                      label={def?.label ?? c.field}
+                      value={criterionDisplayValue(c, HISTORY_FIELD_DEFS)}
+                      onRemove={() => handleCriteriaChange(criteria.filter(x => x.field !== c.field))}
+                    />
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={() => handleCriteriaChange([])}
+                  className="text-xs text-gray-400 hover:text-red-500 transition-colors ml-1 font-medium focus:outline-none"
+                >
+                  Limpiar todo
+                </button>
+              </>
+            )}
           </div>
 
-          {/* Botón tres barras + dropdown */}
-          <div className="relative" ref={filterRef}>
+          {/* Botón abrir FilterPanel */}
+          <div className="relative shrink-0" ref={filterRef}>
             <button
               type="button"
               onClick={() => setFilterOpen(p => !p)}
-              aria-label="Abrir filtros"
+              aria-label="Abrir panel de filtros"
               className="
                 flex items-center gap-2 px-3.5 py-2.5 rounded-xl border text-sm font-semibold
-                transition-all duration-200
-                focus:outline-none focus:ring-2 focus:ring-[#A85BFF]/40
+                transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#A85BFF]/40
                 shadow-sm hover:shadow-md
               "
               style={{
-                borderColor:     filterOpen ? '#A85BFF' : '#DDD6FE',
-                backgroundColor: filterOpen ? '#F3E8FF' : '#FAFAFA',
+                borderColor:     filterOpen || criteria.length > 0 ? '#A85BFF' : '#DDD6FE',
+                backgroundColor: filterOpen || criteria.length > 0 ? '#F3E8FF' : '#FAFAFA',
                 color: '#6b21a8',
               }}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                <path strokeLinecap="round" d="M4 6h16M4 12h16M4 18h16" />
+                <path strokeLinecap="round" d="M4 6h16M4 12h10M4 18h7" />
               </svg>
               <span className="hidden sm:inline">Filtrar</span>
+              {criteria.length > 0 && (
+                <span
+                  className="w-5 h-5 rounded-full text-xs font-black flex items-center justify-center"
+                  style={{ backgroundColor: '#6E11B0', color: '#fff' }}
+                >
+                  {criteria.length}
+                </span>
+              )}
             </button>
 
-            {/* Dropdown animado */}
-            <div
-              className={`
-                absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-gray-100 z-30
-                transition-all duration-200 origin-top-right
-                ${filterOpen
-                  ? 'opacity-100 scale-100 translate-y-0'
-                  : 'opacity-0 scale-95 -translate-y-2 pointer-events-none'}
-              `}
-            >
-              <p className="px-4 pt-3 pb-1.5 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                Filtrar por
-              </p>
-              {ALL_FILTERS.map((f) => (
-                <div key={f}>
-                  <button
-                    type="button"
-                    onClick={() => handleSelectFilter(f)}
-                    className={`
-                      w-full text-left px-4 py-2 text-sm transition-colors duration-150
-                      ${activeFilter === f
-                        ? 'bg-[#F3E8FF] text-[#6b21a8] font-semibold'
-                        : 'text-gray-700 hover:bg-gray-50'}
-                    `}
-                  >
-                    {FILTER_LABELS[f]}
-                  </button>
-                </div>
-              ))}
-            </div>
+            {filterOpen && (
+              <FilterPanel
+                fieldDefs={HISTORY_FIELD_DEFS}
+                criteria={criteria}
+                onChange={handleCriteriaChange}
+                onClose={() => setFilterOpen(false)}
+              />
+            )}
           </div>
         </div>
-
-        {/* Badge filtro activo */}
-        {query && (
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-xs text-gray-500">Filtrar por:</span>
-            <span
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
-              style={{ backgroundColor: '#F3E8FF', color: '#6b21a8' }}
-            >
-              {FILTER_LABELS[activeFilter]}
-              <button
-                type="button"
-                onClick={() => setQuery('')}
-                className="hover:text-[#581c87] focus:outline-none"
-                aria-label="Limpiar búsqueda"
-              >×</button>
-            </span>
-          </div>
-        )}
 
         {/* ── Tabla ── */}
         <div className="rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
@@ -299,22 +277,24 @@ export function StudentHistoryPage() {
               <tbody>
                 {loading && (
                   <tr>
-                    <td colSpan={9} className="px-4 py-10 text-center text-gray-400 text-sm"> 
+                    <td colSpan={9} className="px-4 py-10 text-center text-gray-400 text-sm">
                       <span className="inline-block animate-pulse">Cargando simulaciones…</span>
                     </td>
                   </tr>
                 )}
                 {!loading && error && (
                   <tr>
-                    <td colSpan={9} className="px-4 py-8 text-center"> 
+                    <td colSpan={9} className="px-4 py-8 text-center">
                       <span className="text-red-600 text-sm font-medium">{error}</span>
                     </td>
                   </tr>
                 )}
                 {!loading && !error && items.length === 0 && (
                   <tr>
-                    <td colSpan={9} className="px-4 py-12 text-center text-gray-400 text-sm"> 
-                      No tienes simulaciones guardadas aún.
+                    <td colSpan={9} className="px-4 py-12 text-center text-gray-400 text-sm">
+                      {criteria.length > 0
+                        ? 'No hay simulaciones que coincidan con los filtros aplicados.'
+                        : 'No tienes simulaciones guardadas aún.'}
                     </td>
                   </tr>
                 )}
@@ -383,9 +363,8 @@ export function StudentHistoryPage() {
           {/* Mensaje 90 días */}
           <div className="px-4 py-2 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
             <p className="text-xs text-gray-400 italic">
-              "El sistema elimina automáticamente simulaciones con antigüedad mayor a 90 días."
+              &quot;El sistema elimina automáticamente simulaciones con antigüedad mayor a 90 días.&quot;
             </p>
-            {/* Ícono decorativo (código) */}
             <svg className="w-5 h-5 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l-3 3 3 3m8-6l3 3-3 3M14 5l-4 14" />
             </svg>
@@ -464,7 +443,6 @@ export function StudentHistoryPage() {
             >
               Ver Simulación
             </button>
-
           </div>
         </div>
 

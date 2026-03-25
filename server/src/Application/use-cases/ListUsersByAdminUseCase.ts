@@ -73,10 +73,10 @@ export class ListUsersByAdminUseCase {
 
         if (field === 'createdAt') {
           // Rango de fechas
-          const rangeCondition: Record<string, unknown> = {};
-          if (dateFrom) rangeCondition[Op.gte as unknown as string] = `${dateFrom} 00:00:00`;
-          if (dateTo)   rangeCondition[Op.lte as unknown as string] = `${dateTo} 23:59:59`;
-          if (Object.keys(rangeCondition).length > 0) {
+          if (dateFrom || dateTo) {
+            const rangeCondition: Record<symbol, string> = {};
+            if (dateFrom) rangeCondition[Op.gte] = `${dateFrom} 00:00:00`;
+            if (dateTo)   rangeCondition[Op.lte] = `${dateTo} 23:59:59`;
             andConditions.push({ created_at: rangeCondition });
           }
           continue;
@@ -88,7 +88,7 @@ export class ListUsersByAdminUseCase {
         switch (field) {
           case 'identificationNumber': {
             const ors = likeOr('document_number', terms);
-            andConditions.push({ [Op.or as unknown as string]: ors });
+            andConditions.push({ [Op.or]: ors });
             break;
           }
           case 'documentType': {
@@ -98,12 +98,12 @@ export class ListUsersByAdminUseCase {
           }
           case 'email': {
             const ors = likeOr('email', terms);
-            andConditions.push({ [Op.or as unknown as string]: ors });
+            andConditions.push({ [Op.or]: ors });
             break;
           }
           case 'phone': {
             const ors = likeOr('phone', terms);
-            andConditions.push({ [Op.or as unknown as string]: ors });
+            andConditions.push({ [Op.or]: ors });
             break;
           }
           case 'fullName':
@@ -113,7 +113,7 @@ export class ListUsersByAdminUseCase {
               { first_name: { [Op.like]: `%${t}%` } },
               { last_name:  { [Op.like]: `%${t}%` } },
             ]);
-            andConditions.push({ [Op.or as unknown as string]: ors });
+            andConditions.push({ [Op.or]: ors });
             break;
           }
         }
@@ -146,13 +146,13 @@ export class ListUsersByAdminUseCase {
             { first_name: { [Op.like]: `%${t}%` } },
             { last_name:  { [Op.like]: `%${t}%` } },
           ]);
-          andConditions.push({ [Op.or as unknown as string]: ors });
+          andConditions.push({ [Op.or]: ors });
           break;
         }
       }
     }
 
-    const where = { [Op.and as unknown as string]: andConditions };
+    const where = { [Op.and]: andConditions };
 
     const { rows, count } = await UserModel.findAndCountAll({
       where,
