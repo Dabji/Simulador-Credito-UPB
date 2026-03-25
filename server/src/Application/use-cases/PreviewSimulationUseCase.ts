@@ -6,6 +6,7 @@ import { SimulationService } from '../services/SimulationService';
 import type { IParameterVersionRepository } from '../../Core/repositories/IParameterVersionRepository';
 import type { SimulationInput } from '../dtos/SimulationInput';
 import type { SimulationSummary } from '../dtos/SimulationSummary';
+import { LEVEL_MAP } from '../dtos/constants';
 
 export class PreviewSimulationUseCase {
   private readonly simulationService: SimulationService;
@@ -17,6 +18,21 @@ export class PreviewSimulationUseCase {
   // Ejecuta la validación y cálculo; retorna el summary con tabla de amortización
   async execute(input: SimulationInput): Promise<SimulationSummary> {
     const activeVersion = await this.paramRepo.findActive();
+
+    // HU-PV-01: Validar que el nivel académico no esté desactivado
+    if (activeVersion) {
+      const dbLevel = LEVEL_MAP[input.educationLevel];
+      if (dbLevel) {
+        const cfgs = activeVersion.levelConfigs.filter(c => c.levelScope === dbLevel);
+        if (cfgs.length > 0 && cfgs.every(c => !c.isActive)) {
+          throw new Error(
+            `El nivel de formación "${input.educationLevel}" se encuentra temporalmente ` +
+            'deshabilitado por lineamientos institucionales. Estará disponible nuevamente más adelante.',
+          );
+        }
+      }
+    }
+
     return this.simulationService.calculate(input, activeVersion ?? undefined);
   }
 }

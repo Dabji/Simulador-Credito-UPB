@@ -17,10 +17,20 @@ export class FrenchAmortizationStrategy implements InterestStrategy {
     }
 
     const dbLevel = LEVEL_MAP[input.educationLevel];
-    const rateEntry = dbLevel
-      ? activeVersion.interestRates.find(r => r.levelScope === dbLevel)
-      : undefined;
+    if (!dbLevel) {
+      throw new Error('No se puede calcular: nivel educativo no reconocido.');
+    }
 
+    // HU-PV-02: Buscar tasa desde levelConfigs por paymentCount
+    const cfgs = activeVersion.levelConfigs.filter(c => c.levelScope === dbLevel);
+    if (cfgs.length > 0) {
+      const cfg = cfgs.find(c => c.paymentCount === input.numberOfPayments);
+      if (cfg) return cfg.rateMonthly;
+      return 0;
+    }
+
+    // Fallback: usar interestRates (comportamiento original)
+    const rateEntry = activeVersion.interestRates.find(r => r.levelScope === dbLevel);
     if (rateEntry?.rateMonthly == null) {
       throw new Error(
         'No se puede calcular: la versión de parámetros activa no define una tasa de interés para este nivel.',

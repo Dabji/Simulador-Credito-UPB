@@ -54,6 +54,7 @@ function makeActiveVersion(rates: ActiveInterestRate[] = []): ActiveParameterVer
     ],
     modalityRules: [],
     initialPaymentRules: [],
+    levelConfigs: [],
   };
 }
 

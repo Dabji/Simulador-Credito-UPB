@@ -386,24 +386,26 @@ export function AdminStudentsPage() {
             </button>
           </div>
 
-          {/* Botón Ver Perfil */}
-          <button
-            type="button"
-            disabled={!selectedId}
-            onClick={handleVerPerfil}
-            className="
-              px-6 py-2.5 rounded-xl text-sm font-bold text-white
-              transition-all duration-200
-              focus:outline-none focus:ring-2 focus:ring-[#A85BFF]/40
-              disabled:opacity-40 disabled:cursor-not-allowed
-            "
-            style={{
-              backgroundColor: selectedId ? '#6E11B0' : '#9CA3AF',
-              boxShadow: selectedId ? '0 4px 14px rgba(110,17,176,0.3)' : undefined,
-            }}
-          >
-            Ver Perfil
-          </button>
+          {/* Botón: Ver Perfil */}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              disabled={!selectedId}
+              onClick={handleVerPerfil}
+              className="
+                px-6 py-2.5 rounded-xl text-sm font-bold text-white
+                transition-all duration-200
+                focus:outline-none focus:ring-2 focus:ring-[#A85BFF]/40
+                disabled:opacity-40 disabled:cursor-not-allowed
+              "
+              style={{
+                backgroundColor: selectedId ? '#6E11B0' : '#9CA3AF',
+                boxShadow: selectedId ? '0 4px 14px rgba(110,17,176,0.3)' : undefined,
+              }}
+            >
+              Ver Perfil
+            </button>
+          </div>
         </div>
 
       </main>

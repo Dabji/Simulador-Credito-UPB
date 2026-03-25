@@ -44,6 +44,15 @@ export class SaveSimulationUseCase {
     const dbLevel = LEVEL_MAP[input.educationLevel];
     if (!dbLevel) throw new BadRequestError(`Nivel educativo inválido: ${input.educationLevel}`);
 
+    // HU-PV-01: Validar que el nivel académico no esté desactivado
+    const lvlCfgs = activeVersion.levelConfigs.filter(c => c.levelScope === dbLevel);
+    if (lvlCfgs.length > 0 && lvlCfgs.every(c => !c.isActive)) {
+      throw new BadRequestError(
+        `El nivel de formación "${input.educationLevel}" se encuentra temporalmente ` +
+        'deshabilitado por lineamientos institucionales.',
+      );
+    }
+
     const rateEntry = activeVersion.interestRates.find(r => r.levelScope === dbLevel);
     if (input.interestMode === 'con_interes' && (!rateEntry || rateEntry.rateMonthly == null)) {
       throw new NotFoundError(

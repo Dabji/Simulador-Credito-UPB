@@ -263,7 +263,17 @@ router.get('/history/:id/export/pdf', async (req: AuthenticatedRequest, res: Res
       return;
     }
 
-    const pdfBuffer = await buildSimulationPdf(simulation);
+    let pdfBuffer: Buffer;
+    try {
+      pdfBuffer = await buildSimulationPdf(simulation);
+    } catch (pdfErr) {
+      logger.error('buildSimulationPdf falló', {
+        simulation_id: simId,
+        error: pdfErr instanceof Error ? pdfErr.message : String(pdfErr),
+        stack: pdfErr instanceof Error ? pdfErr.stack : undefined,
+      });
+      throw pdfErr;
+    }
 
     let safeName = `${simulation.student.firstName} ${simulation.student.lastName}`
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')

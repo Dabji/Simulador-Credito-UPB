@@ -81,11 +81,16 @@ function drawPieSlice(
 
 export function buildSimulationPdf(sim: PersistedSimulationWithUser): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: 'A4', margin: 45, bufferPages: true });
+    const doc = new PDFDocument({ size: 'A4', margin: 45, autoFirstPage: false });
     const chunks: Buffer[] = [];
-    doc.on('data', (c: Buffer) => chunks.push(c));
-    doc.on('end',  ()         => resolve(Buffer.concat(chunks)));
+    doc.on('data',  (c: Buffer) => chunks.push(c));
+    doc.on('end',   ()          => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
+
+    const now = new Date();
+
+    // Primera página
+    doc.addPage();
 
     const s   = sim.summary;
     const stu = sim.student;
@@ -93,7 +98,6 @@ export function buildSimulationPdf(sim: PersistedSimulationWithUser): Promise<Bu
     const MR  = 45;
     const PW  = doc.page.width - ML - MR;   // ~505 pt en A4
     const PAGE_H = doc.page.height - 55;    // margen inferior útil
-    const now = new Date();
 
     // ── Logo desde caché de módulo ──────────────────────────────
     const logoBuffer = getLogo();
@@ -190,8 +194,8 @@ export function buildSimulationPdf(sim: PersistedSimulationWithUser): Promise<Bu
       doc.addPage();
       // Mini-cabecera en continuación
       doc.fontSize(7).fillColor(LIGHT_GRAY).font('Helvetica')
-         .text('Simulador de Crédito Educativo — UPB', ML, 28, { align: 'left' })
-         .text(`Generado: ${now.toLocaleString('es-CO')}`, ML, 28, { align: 'right', width: PW });
+         .text('Simulador de Crédito Educativo — UPB', ML, 28, { align: 'left', lineBreak: false })
+         .text(`Generado: ${now.toLocaleString('es-CO')}`, ML, 28, { align: 'right', width: PW, lineBreak: false });
       doc.moveTo(ML, 40).lineTo(ML + PW, 40)
          .strokeColor(RULE_GRAY).lineWidth(0.5).stroke();
       y = 50;
@@ -418,18 +422,6 @@ export function buildSimulationPdf(sim: PersistedSimulationWithUser): Promise<Bu
          'Universidad Pontificia Bolivariana.',
          ML + 7, y + 5, { width: PW - 14 },
        );
-
-    // ── Numeración de páginas ─────────────────────────────────
-    const totalPages = doc.bufferedPageRange().count;
-    for (let i = 0; i < totalPages; i++) {
-      doc.switchToPage(i);
-      doc.fontSize(6.5).fillColor(LIGHT_GRAY).font('Helvetica')
-         .text(
-           `Página ${i + 1} de ${totalPages}`,
-           ML, doc.page.height - 28,
-           { width: PW, align: 'right' },
-         );
-    }
 
     doc.end();
   });

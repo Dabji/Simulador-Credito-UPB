@@ -8,3 +8,4 @@ export { SimulationModel } from './SimulationModel';
 export { AmortizationRowModel } from './AmortizationRowModel';
 export { AuditLogModel } from './AuditLogModel';
 export { ExportLogModel } from './ExportLogModel';
+export { LevelConfigModel } from './LevelConfigModel';
