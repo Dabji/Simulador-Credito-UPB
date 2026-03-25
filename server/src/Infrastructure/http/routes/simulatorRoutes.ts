@@ -162,18 +162,23 @@ router.get('/history', async (req: AuthenticatedRequest, res: Response, next: Ne
     if (criteria && criteria.length > 0) {
       // Modo multi-criterio
       for (const criterion of criteria) {
+        if (!criterion || typeof criterion !== 'object') continue;
         const { field, value, dateFrom, dateTo } = criterion;
+        if (typeof field !== 'string') continue;
 
         if (field === 'createdAt') {
-          if (dateFrom || dateTo) {
+          const from = typeof dateFrom === 'string' ? dateFrom : undefined;
+          const to   = typeof dateTo   === 'string' ? dateTo   : undefined;
+          if (from || to) {
             const rangeCondition: Record<symbol, string> = {};
-            if (dateFrom) rangeCondition[Op.gte] = `${dateFrom} 00:00:00`;
-            if (dateTo)   rangeCondition[Op.lte] = `${dateTo} 23:59:59`;
+            if (from) rangeCondition[Op.gte] = `${from} 00:00:00`;
+            if (to)   rangeCondition[Op.lte] = `${to} 23:59:59`;
             andConditions.push({ created_at: rangeCondition });
           }
           continue;
         }
 
+        if (typeof value !== 'string') continue;
         const terms = value.split(';').map(v => v.trim()).filter(v => v.length > 0);
         if (terms.length === 0) continue;
 

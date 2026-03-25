@@ -37,6 +37,8 @@ export interface ListUsersParams {
   filter?: UserFilterField;
   page?: number;
   pageSize?: number;
+  /** Modo exportación: bypasea el cap de pageSize (máx UI = 50) para traer todos los registros */
+  forExport?: boolean;
 }
 
 export interface ListUsersResult {
@@ -60,7 +62,8 @@ function likeOr(col: string, terms: string[]): Record<string, unknown>[] {
 export class ListUsersByAdminUseCase {
   async execute(params: ListUsersParams): Promise<ListUsersResult> {
     const page     = Math.max(1, params.page     ?? 1);
-    const pageSize = Math.min(Math.max(1, params.pageSize ?? 10), 50);
+    const maxSize  = params.forExport ? 5000 : 50;
+    const pageSize = Math.min(Math.max(1, params.pageSize ?? 10), maxSize);
     const offset   = (page - 1) * pageSize;
 
     // Condición base
@@ -69,7 +72,9 @@ export class ListUsersByAdminUseCase {
     if (params.criteria && params.criteria.length > 0) {
       // ── Modo multi-criterio (HU-PV-03) ──────────────────────
       for (const criterion of params.criteria) {
+        if (!criterion || typeof criterion !== 'object') continue;
         const { field, value, dateFrom, dateTo } = criterion;
+        if (typeof field !== 'string') continue;
 
         if (field === 'createdAt') {
           // Rango de fechas
@@ -82,6 +87,7 @@ export class ListUsersByAdminUseCase {
           continue;
         }
 
+        if (typeof value !== 'string') continue;
         const terms = splitTerms(value);
         if (terms.length === 0) continue;
 

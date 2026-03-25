@@ -678,8 +678,9 @@ router.get('/users/export/csv', async (req: AuthenticatedRequest, res: Response,
       criteria,
       q,
       filter,
-      page:     1,
-      pageSize: 5000,
+      page:      1,
+      pageSize:  5000,
+      forExport: true,
     });
 
     // Construir CSV con BOM UTF-8 para compatibilidad Excel
@@ -820,25 +821,31 @@ function splitSimTerms(value: string): string[] {
 }
 
 /**
- * Aplica criterios multi-campo sobre baseWhere y devuelve userIds a filtrar si aplica.
- * Retorna null si no necesita filtro por userIds, o un array de ids.
+ * Aplica criterios de filtrado de simulaciones sobre `andConditions` modificando el arreglo in-place.
+ * No retorna ningún valor.
  */
 async function applySimCriteria(
   criteria: SimFilterCriterion[],
   andConditions: Record<string, unknown>[],
 ): Promise<void> {
   for (const criterion of criteria) {
+    if (!criterion || typeof criterion !== 'object') continue;
     const { field, value, dateFrom, dateTo } = criterion;
+    if (typeof field !== 'string') continue;
 
     if (field === 'createdAt') {
-      if (dateFrom || dateTo) {
+      const from = typeof dateFrom === 'string' ? dateFrom : undefined;
+      const to   = typeof dateTo   === 'string' ? dateTo   : undefined;
+      if (from || to) {
         const rangeCondition: Record<symbol, string> = {};
-        if (dateFrom) rangeCondition[Op.gte] = `${dateFrom} 00:00:00`;
-        if (dateTo)   rangeCondition[Op.lte] = `${dateTo} 23:59:59`;
+        if (from) rangeCondition[Op.gte] = `${from} 00:00:00`;
+        if (to)   rangeCondition[Op.lte] = `${to} 23:59:59`;
         andConditions.push({ created_at: rangeCondition });
       }
       continue;
     }
+
+    if (typeof value !== 'string') continue;
 
     if (field === 'studentName' || field === 'studentEmail') {
       const terms = splitSimTerms(value);
