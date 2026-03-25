@@ -9,6 +9,7 @@ import { z } from 'zod';
 export const ForgotPasswordByIdSchema = z.object({
   identificationNumber: z
     .string()
+    .trim()
     .min(5, 'El número de identificación debe tener al menos 5 caracteres')
     .max(20, 'El número de identificación no puede exceder 20 caracteres')
     .regex(/^\d+$/, 'El número de identificación solo debe contener dígitos'),

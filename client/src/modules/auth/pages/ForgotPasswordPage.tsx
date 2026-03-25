@@ -17,6 +17,7 @@ const emailSchema = z.object({
 const idSchema = z.object({
   identificationNumber: z
     .string()
+    .trim()
     .min(5, 'Debe tener al menos 5 dígitos')
     .max(20, 'No puede exceder 20 dígitos')
     .regex(/^\d+$/, 'Solo se permiten dígitos'),

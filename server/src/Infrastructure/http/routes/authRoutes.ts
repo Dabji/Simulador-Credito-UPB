@@ -273,9 +273,9 @@ router.post(
       void auditLog({
         action:     'RECOVER_HINT_REQUESTED',
         entity:     'USER',
-        entity_id:  'N/A',
+        entity_id:  result.userId,
         actor_type: 'SYSTEM',
-        user_id:    null,
+        user_id:    result.userId,
         ip_address: extractIp(req),
         details:    { identificationNumber: data.identificationNumber },
       });
@@ -335,6 +335,16 @@ router.post(
       } else {
         logger.warn('Intento de recuperación por ID no registrado', {
           identificationNumber: data.identificationNumber,
+        });
+
+        void auditLog({
+          action:     'PASSWORD_RESET_BY_ID_NOT_FOUND',
+          entity:     'USER',
+          entity_id:  'N/A',
+          actor_type: 'SYSTEM',
+          user_id:    null,
+          ip_address: extractIp(req),
+          details:    { identificationNumber: data.identificationNumber },
         });
       }
 

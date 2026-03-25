@@ -14,6 +14,7 @@ export interface GetEmailHintInput {
 
 export interface GetEmailHintOutput {
   readonly maskedEmail: string;
+  readonly userId: string;
 }
 
 /**
@@ -56,6 +57,6 @@ export class GetEmailHintUseCase {
       userId: user.id,
     });
 
-    return { maskedEmail };
+    return { maskedEmail, userId: user.id };
   }
 }
