@@ -8,10 +8,13 @@ import { ZodError } from 'zod';
 import type { z } from 'zod';
 import { AuthenticateUserUseCase } from '../../../Application/use-cases/AuthenticateUserUseCase';
 import { RegisterUserUseCase } from '../../../Application/use-cases/RegisterUserUseCase';
+import { GetEmailHintUseCase } from '../../../Application/use-cases/GetEmailHintUseCase';
 import { RegisterUserSchema, RegisterUserInputSchema } from '../../../Application/dtos/RegisterUserInput';
 import { LoginUserSchema, LoginUserInputSchema } from '../../../Application/dtos/LoginUserInput';
 import { ForgotPasswordSchema, ForgotPasswordInputSchema } from '../../../Application/dtos/ForgotPasswordInput';
 import { ResetPasswordSchema, ResetPasswordInputSchema } from '../../../Application/dtos/ResetPasswordInput';
+import { RecoverHintSchema, RecoverHintInputSchema } from '../../../Application/dtos/RecoverHintInput';
+import { ForgotPasswordByIdSchema, ForgotPasswordByIdInputSchema } from '../../../Application/dtos/ForgotPasswordByIdInput';
 import { validateRequest } from '../middlewares/validateRequest';
 import { RequestPasswordResetUseCase } from '../../../Application/use-cases/RequestPasswordResetUseCase';
 import { ResetPasswordUseCase } from '../../../Application/use-cases/ResetPasswordUseCase';
@@ -23,6 +26,7 @@ import { LdapAuthService } from '../../auth/LdapAuthService';
 import { JwtTokenService } from '../../auth/JwtTokenService';
 import { logger } from '../../logger';
 import { auditLog, extractIp } from '../../../Application/services/AuditService';
+import { recoverHintLimiter } from '../middlewares/rateLimitGuard';
 
 const router = Router();
 
@@ -37,6 +41,7 @@ const authenticateUseCase = new AuthenticateUserUseCase(
 const registerUseCase = new RegisterUserUseCase(userRepository);
 const requestPasswordResetUseCase = new RequestPasswordResetUseCase(userRepository);
 const resetPasswordUseCase = new ResetPasswordUseCase(userRepository);
+const getEmailHintUseCase = new GetEmailHintUseCase(userRepository);
 
 /**
  * Middleware que valida el payload de login con Zod y,
@@ -247,6 +252,99 @@ router.post('/reset-password', validateRequest(ResetPasswordInputSchema), async 
     next(error);
   }
 });
+
+/**
+ * POST /api/auth/recover-hint (HU-PV-04)
+ * Retorna el correo enmascarado asociado a un número de identificación.
+ * Rate limit: 5 req / 15 min por IP para prevenir enumeración de usuarios.
+ */
+router.post(
+  '/recover-hint',
+  recoverHintLimiter,
+  validateRequest(RecoverHintInputSchema),
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const data = req.body as z.infer<typeof RecoverHintSchema>;
+
+      const result = await getEmailHintUseCase.execute({
+        identificationNumber: data.identificationNumber,
+      });
+
+      void auditLog({
+        action:     'RECOVER_HINT_REQUESTED',
+        entity:     'USER',
+        entity_id:  'N/A',
+        actor_type: 'SYSTEM',
+        user_id:    null,
+        ip_address: extractIp(req),
+        details:    { identificationNumber: data.identificationNumber },
+      });
+
+      res.json({ success: true, maskedEmail: result.maskedEmail });
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        void auditLog({
+          action:     'RECOVER_HINT_NOT_FOUND',
+          entity:     'USER',
+          entity_id:  'N/A',
+          actor_type: 'SYSTEM',
+          user_id:    null,
+          ip_address: extractIp(req),
+          details:    { identificationNumber: req.body?.identificationNumber ?? 'unknown' },
+        });
+      }
+      next(error);
+    }
+  },
+);
+
+/**
+ * POST /api/auth/forgot-password-by-id (HU-PV-04)
+ * Inicia el flujo de recuperación de contraseña usando el número de identificación.
+ * Busca el correo real en BD y delega al caso de uso existente.
+ * Rate limit: hereda el recoverHintLimiter (5 req / 15 min).
+ */
+router.post(
+  '/forgot-password-by-id',
+  recoverHintLimiter,
+  validateRequest(ForgotPasswordByIdInputSchema),
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const data = req.body as z.infer<typeof ForgotPasswordByIdSchema>;
+
+      const user = await userRepository.findByIdentification(data.identificationNumber);
+
+      if (user) {
+        await requestPasswordResetUseCase.execute(
+          { email: user.email },
+          {
+            ip: req.ip,
+            userAgent: typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : undefined,
+          },
+        );
+
+        void auditLog({
+          action:     'PASSWORD_RESET_REQUESTED_BY_ID',
+          entity:     'USER',
+          entity_id:  user.id,
+          actor_type: 'SYSTEM',
+          user_id:    user.id,
+          ip_address: extractIp(req),
+          details:    { identificationNumber: data.identificationNumber },
+        });
+      } else {
+        logger.warn('Intento de recuperación por ID no registrado', {
+          identificationNumber: data.identificationNumber,
+        });
+      }
+
+      // Siempre retornar éxito (no revelar si la identificación existe)
+      res.json({ message: 'Si el número de identificación está registrado, recibirás un enlace de recuperación.' });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 /**
  * GET /api/auth/me

@@ -217,12 +217,44 @@ export async function logoutUser(): Promise<ApiResponse<{ message: string }>> {
 
 // ── Funciones de recuperación de contraseña ──────────────────────────────
 
+export interface RecoveryHintResponse {
+  readonly success: boolean;
+  readonly maskedEmail: string;
+}
+
+/**
+ * POST /api/auth/recover-hint (HU-PV-04)
+ * Retorna el correo enmascarado asociado a un número de identificación.
+ */
+export async function getRecoveryHint(
+  identificationNumber: string,
+): Promise<ApiResponse<RecoveryHintResponse>> {
+  return request<RecoveryHintResponse>('/auth/recover-hint', {
+    method: 'POST',
+    body: JSON.stringify({ identificationNumber }),
+  });
+}
+
 export async function forgotPassword(
   email: string,
 ): Promise<ApiResponse<{ message: string }>> {
   return request<{ message: string }>('/auth/forgot-password', {
     method: 'POST',
     body: JSON.stringify({ email }),
+  });
+}
+
+/**
+ * POST /api/auth/forgot-password-by-id (HU-PV-04)
+ * Inicia recuperación de contraseña usando el número de identificación.
+ * El backend localiza el correo real y envía el enlace sin exponerlo al cliente.
+ */
+export async function forgotPasswordById(
+  identificationNumber: string,
+): Promise<ApiResponse<{ message: string }>> {
+  return request<{ message: string }>('/auth/forgot-password-by-id', {
+    method: 'POST',
+    body: JSON.stringify({ identificationNumber }),
   });
 }
 

@@ -25,6 +25,25 @@ export const authLimiter = rateLimit({
 });
 
 /**
+ * Limita los intentos de recuperación por identificación (HU-PV-04).
+ * 5 solicitudes por ventana de 15 minutos por IP.
+ * Más estricto que authLimiter para prevenir enumeración de usuarios.
+ */
+export const recoverHintLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: {
+      message: 'Demasiados intentos. Intente de nuevo en 15 minutos.',
+      statusCode: 429,
+    },
+  },
+});
+
+/**
  * Limita las solicitudes de simulación (preview público).
  * 30 solicitudes por ventana de 1 minuto por IP.
  */
