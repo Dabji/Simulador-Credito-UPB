@@ -176,9 +176,7 @@ router.post('/forgot-password', validateRequest(ForgotPasswordInputSchema), asyn
   try {
     const data = req.body as z.infer<typeof ForgotPasswordSchema>;
 
-    await requestPasswordResetUseCase.execute({
-      email: data.email,
-    }, {
+    await requestPasswordResetUseCase.execute(data, {
       ip: req.ip,
       userAgent: typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : undefined,
     });

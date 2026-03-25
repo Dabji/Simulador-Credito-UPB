@@ -7,26 +7,36 @@ import { forgotPassword } from '@/shared/services/api';
 import LogoUpb from '@/assets/images/logo-upb.png';
 import { UpbFooter } from '@/shared/components/UpbFooter';
 
-const schema = z.object({
+// ── Zod Schema ──────────────────────────────────────────────────────────────
+
+const forgotPasswordSchema = z.object({
   email: z.string().email('El correo electrónico no es válido'),
 });
 
-type FormData = z.infer<typeof schema>;
+type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
+
+// ── Clases CSS alineadas con SimulationForm ─────────────────────────────────
 
 const INPUT_BASE =
   'w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none transition-all duration-200 bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-purple-400 focus:border-purple-400';
 const LABEL_CLASS = 'block text-sm font-semibold text-gray-700 mb-1.5';
 
-export function ForgotPasswordPage() {
-  const [apiError,    setApiError]    = useState('');
-  const [successMsg,  setSuccessMsg]  = useState('');
+// ── Component ───────────────────────────────────────────────────────────────
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
-    resolver: zodResolver(schema),
+export function ForgotPasswordPage() {
+  const [apiError, setApiError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<ForgotPasswordFormData>({
+    resolver: zodResolver(forgotPasswordSchema),
     defaultValues: { email: '' },
   });
 
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = async (data: ForgotPasswordFormData) => {
     setApiError('');
     setSuccessMsg('');
     const result = await forgotPassword(data.email);
@@ -44,13 +54,13 @@ export function ForgotPasswordPage() {
       {/* Contenido centrado */}
       <div className="flex-1 flex flex-col items-center px-6 pt-8">
         {/* Título */}
-        <h1 className="text-4xl sm:text-5xl font-black italic text-gray-900 mb-6 text-center">
+        <h1 className="text-4xl sm:text-5xl font-black italic text-gray-900 mb-10 text-center">
           Restablecer Contraseña
         </h1>
 
         {/* Subtítulo */}
-        <p className="text-sm text-gray-500 mb-8 text-center max-w-lg">
-          Digite el correo electrónico al cual quiere recibir el enlace para restablecer su contraseña.
+        <p className="text-sm text-gray-500 mb-10 text-center max-w-lg">
+          Digite el correo electrónico al cual quiere recibir el código para restablecer contraseña
         </p>
 
         {/* Mensajes de error / éxito */}
@@ -93,6 +103,8 @@ export function ForgotPasswordPage() {
               </p>
             )}
           </div>
+
+          {/* Botón Enviar */}
           <div className="flex justify-center">
             <button
               type="submit"
