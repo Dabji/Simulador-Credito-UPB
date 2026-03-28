@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: 📥 Descargar último código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # --- INYECCIÓN DE VARIABLES Y SECRETOS ---
       - name: 🔐 Crear .env para Frontend
@@ -30,8 +30,14 @@ jobs:
           LDAP_BIND_PASSWORD: ${{ secrets.LDAP_BIND_PASSWORD }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          DB_CA_CERT: ${{ secrets.DB_CA_CERT }}
         run: |
           cd server
+
+          # Certificado SSL para Aiven (obligatorio para evitar ataques MITM)
+          mkdir -p certs
+          echo "$DB_CA_CERT" > certs/ca.pem
+          chmod 600 certs/ca.pem
           cat > .env <<'STATIC_EOF'
           PORT=3000
           NODE_ENV=production
@@ -70,8 +76,8 @@ jobs:
       # --- DESPLIEGUE FINAL ---
       - name: 🚀 Desplegar Frontend (Nginx)
         run: |
-          sudo rm -rf /usr/share/nginx/html/*
-          sudo cp -r client/dist/* /usr/share/nginx/html/
+          rm -rf /usr/share/nginx/html/* # Sin sudo
+          cp -r client/dist/* /usr/share/nginx/html/ # Sin sudo
 
       - name: 🔄 Reiniciar Backend (PM2)
         run: |
@@ -82,6 +88,7 @@ jobs:
 
       - name: ✅ Health Check
         run: |
-          sleep 5
+          # Esperar a que Sequelize sincronice tablas y el servidor esté listo
+          sleep 15
           curl --fail --silent --max-time 10 http://localhost:3000/api/health \
             || { echo "⚠️ Health check falló — verificar logs con: pm2 logs simulador-backend"; exit 1; }
