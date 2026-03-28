@@ -88,16 +88,7 @@ function makeActiveVersionWithLevelConfigs(
 }
 
 function makeActiveVersion(): ActiveParameterVersion {
-  return {
-    id: 'test-version-id',
-    validFrom: '2026-01-01',
-    validTo: null,
-    installmentsWindowFrom: '2026-01-01',
-    installmentsWindowTo: '2026-06-30',
-    paymentPeriodDays: 30,
-    initialPaymentRules: [],
-    levelConfigs: [],
-  };
+  return makeActiveVersionWithLevelConfigs('PREGRADO', 3, 6, 0.009);
 }
 
 // ── Tests ────────────────────────────────────────────────────

@@ -263,7 +263,7 @@ describe('HU-25 — Audit Log (Transversal)', () => {
       created_at: new Date('2026-03-01T10:00:00Z'),
       details: JSON.stringify({
         adminEmail: 'admin@upb.edu.co',
-        changeSummary: 'Campos modificados: initialPaymentRules',
+        changeSummary: 'Campos modificados: initialPaymentRules, interestRates',
         previousSnapshot: { initialPaymentRules: [] },
         newSnapshot:      { initialPaymentRules: [{ level: 'PREGRADO', modality: 'CON_INTERES', extraInstallments: 3, initialPctRequired: 0.25 }] },
       }),
