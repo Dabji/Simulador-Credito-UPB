@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import LogoUpb from '@/assets/images/logo-upb.png';
 import LogoUpbColor from '@/assets/images/logo-upb-color.png';
-import { useAuth } from '@/modules/auth/context/AuthContext';
+import { useAuth } from '@/modules/auth/context/useAuth';
 import { UPB_NAV_LINKS } from '@/shared/utils/upbLinks';
 
 interface UpbHeaderProps {

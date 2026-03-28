@@ -1,6 +1,6 @@
 import { Navigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
-import { useAuth } from '@/modules/auth/context/AuthContext';
+import { useAuth } from '@/modules/auth/context/useAuth';
 import { FullPageSpinner } from './FullPageSpinner';
 
 type Role = 'STUDENT' | 'ADMIN';

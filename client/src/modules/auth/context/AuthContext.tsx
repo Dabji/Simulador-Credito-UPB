@@ -1,11 +1,11 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useEffect, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { getCurrentUser, logoutUser, NETWORK_ERROR_MESSAGE } from '@/shared/services/api';
 import type { UserData } from '@/shared/services/api';
 
 // ── Tipos del contexto ─────────────────────────────────────────────────────
 
-interface AuthContextValue {
+export interface AuthContextValue {
   user: UserData | null;
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -13,7 +13,7 @@ interface AuthContextValue {
   logout: () => void;
 }
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 // ── Provider ───────────────────────────────────────────────────────────────
 
@@ -90,14 +90,3 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// ── Hook personalizado ─────────────────────────────────────────────────────
-
-export function useAuth(): AuthContextValue {
-  const context = useContext(AuthContext);
-
-  if (!context) {
-    throw new Error('useAuth debe usarse dentro de un <AuthProvider>');
-  }
-
-  return context;
-}

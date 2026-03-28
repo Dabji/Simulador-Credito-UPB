@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate, Link } from 'react-router-dom';
 import { loginUser, NETWORK_ERROR_MESSAGE } from '@/shared/services/api';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import LogoUpb from '@/assets/images/logo-upb.png';
 import fondoLogin from '@/assets/images/login-bg.png';
 

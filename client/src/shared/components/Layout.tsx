@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/modules/auth/context/AuthContext';
+import { useAuth } from '@/modules/auth/context/useAuth';
 
 interface NavLinkItem {
   to: string;
