@@ -4,7 +4,6 @@
 // /save     → calcula + persiste en BD (simulations + amortization_rows)
 // /history  → lista simulaciones guardadas del usuario autenticado
 // ============================================================
-
 import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import { Op } from 'sequelize';
@@ -21,7 +20,9 @@ import { auditLog, extractIp } from '../../../Application/services/AuditService'
 import { buildSimulationPdf } from '../../../Application/services/export/SimulationPdfBuilder';
 import { ExportLogModel } from '../../persistence/models/ExportLogModel';
 
+
 const router = Router();
+
 
 // ── Instancias ───────────────────────────────────────────────
 const simulationRepo = new SequelizeSimulationRepository();
@@ -41,10 +42,12 @@ router.post('/preview', async (req: Request, res: Response): Promise<void> => {
       res.status(400).json({ error: 'studentType y educationLevel son requeridos.' });
       return;
     }
+
     if (!input.tuitionGross || input.tuitionGross <= 0) {
       res.status(400).json({ error: 'tuitionGross debe ser un número positivo.' });
       return;
     }
+
     if (!input.academicPeriod || !input.firstPaymentMonth || !input.numberOfPayments) {
       res.status(400).json({ error: 'academicPeriod, firstPaymentMonth y numberOfPayments son requeridos.' });
       return;
@@ -68,10 +71,12 @@ router.post('/save', async (req: AuthenticatedRequest, res: Response, next: Next
     const input  = req.body as SimulationInput;
     const userId = req.user?.userId as string | undefined;
 
+
     if (!userId) {
       res.status(401).json({ error: 'Usuario no autenticado.' });
       return;
     }
+
 
     const result = await saveUseCase.execute(input, userId);
 
@@ -96,6 +101,7 @@ router.post('/save', async (req: AuthenticatedRequest, res: Response, next: Next
       },
     });
 
+
     res.json({
       id: result.id,
       savedAt: result.savedAt,
@@ -118,10 +124,12 @@ interface HistoryFilterCriterion {
 }
 
 /**
+
  * GET /api/simulator/history
  * HU-35 + HU-PV-03: Lista paginada + filtrada de simulaciones del usuario autenticado.
  * Query params: criteria (JSON), q (texto legacy), filter (campo legacy), page, pageSize
  */
+
 router.get('/history', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user?.userId as string | undefined;
@@ -130,8 +138,10 @@ router.get('/history', async (req: AuthenticatedRequest, res: Response, next: Ne
       return;
     }
 
+
     const q      = typeof req.query['q']      === 'string' ? req.query['q'].trim() : '';
     const filter  = typeof req.query['filter'] === 'string' ? req.query['filter']   : '';
+
 
     const rawPage     = parseInt(String(req.query['page']     ?? ''), 10);
     const rawPageSize = parseInt(String(req.query['pageSize'] ?? ''), 10);
@@ -153,12 +163,13 @@ router.get('/history', async (req: AuthenticatedRequest, res: Response, next: Ne
     const user = await UserModel.findByPk(userId, {
       attributes: ['first_name', 'last_name', 'email'],
     });
+
     const studentName  = user ? `${user.first_name} ${user.last_name}`.trim() : '';
     const studentEmail = user?.email ?? '';
 
+
     // Condición base: solo del usuario, no eliminadas
     const andConditions: Record<string, unknown>[] = [{ user_id: userId, deleted_at: null }];
-
     if (criteria && criteria.length > 0) {
       // Modo multi-criterio
       for (const criterion of criteria) {
@@ -205,16 +216,20 @@ router.get('/history', async (req: AuthenticatedRequest, res: Response, next: Ne
     } else if (q) {
       // Modo legacy: un solo campo
       const qLike = `%${q}%`;
+
       switch (filter) {
         case 'modality':
           andConditions.push({ modality: { [Op.like]: qLike } });
           break;
+
         case 'academicPeriod':
           andConditions.push({ academic_period: { [Op.like]: qLike } });
           break;
+
         case 'createdAt':
           andConditions.push({ created_at: { [Op.like]: qLike } });
           break;
+
         default:
           andConditions.push({ [Op.or]: [
             { modality:         { [Op.like]: qLike } },
@@ -222,32 +237,41 @@ router.get('/history', async (req: AuthenticatedRequest, res: Response, next: Ne
             { created_at:       { [Op.like]: qLike } },
           ]});
           break;
+
       }
+
     }
+
+
 
     const { count, rows } = await SimulationModel.findAndCountAll({
       where: { [Op.and]: andConditions },
       attributes: [
+
         'id', 'created_at', 'modality', 'financed_value',
         'initial_payment_value', 'first_payment_date', 'total_payments', 'academic_period',
+
       ],
+
       order: [['created_at', 'DESC']],
       limit: pageSize,
       offset,
     });
 
+
     const items = rows.map((sim) => ({
-      id:                  sim.id,
-      createdAt:           sim.created_at,
+      id: sim.id,
+      createdAt: sim.created_at,
       studentName,
       studentEmail,
-      modality:            sim.modality,
-      financedValue:       Number(sim.financed_value),
+      modality: sim.modality,
+      financedValue: Number(sim.financed_value),
       initialPaymentValue: Number(sim.initial_payment_value),
-      firstPaymentDate:    sim.first_payment_date,
-      numberOfPayments:    sim.total_payments,
-      academicPeriod:      sim.academic_period ?? '',
+      firstPaymentDate: sim.first_payment_date,
+      numberOfPayments: sim.total_payments,
+      academicPeriod: sim.academic_period ?? '',
     }));
+
 
     res.json({
       items,
@@ -256,10 +280,13 @@ router.get('/history', async (req: AuthenticatedRequest, res: Response, next: Ne
       total: count,
       totalPages: Math.ceil(count / pageSize),
     });
+
   } catch (error) {
     next(error);
   }
+
 });
+
 
 // ══════════════════════════════════════════════════════════════
 // HU-36: Detalle de una simulación guardada (ESTUDIANTE)
@@ -270,6 +297,7 @@ router.get('/history', async (req: AuthenticatedRequest, res: Response, next: Ne
  * HU-36: Retorna el detalle completo de una simulación con datos del estudiante.
  * Solo accesible por el dueño de la simulación.
  */
+
 router.get('/history/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user?.userId as string | undefined;
@@ -278,11 +306,13 @@ router.get('/history/:id', async (req: AuthenticatedRequest, res: Response, next
       return;
     }
 
+
     const simId = String(req.params['id'] ?? '').trim();
     if (!simId) {
       res.status(400).json({ error: 'ID de simulación requerido.' });
       return;
     }
+
 
     const simulation = await simulationRepo.findByIdWithUser(simId);
     if (!simulation || simulation.userId !== userId) {
@@ -290,21 +320,25 @@ router.get('/history/:id', async (req: AuthenticatedRequest, res: Response, next
       return;
     }
 
+
     res.json(simulation);
   } catch (error) {
     next(error);
   }
 });
 
+
 // ══════════════════════════════════════════════════════════════
 // HU-36 / HU-40: Exportar simulación como PDF (ESTUDIANTE)
 // ══════════════════════════════════════════════════════════════
+
 
 /**
  * GET /api/simulator/history/:id/export/pdf
  * HU-36: Genera y descarga el PDF de una simulación.
  * Solo accesible por el dueño de la simulación.
  */
+
 router.get('/history/:id/export/pdf', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.user?.userId as string | undefined;
@@ -325,6 +359,7 @@ router.get('/history/:id/export/pdf', async (req: AuthenticatedRequest, res: Res
       return;
     }
 
+
     let pdfBuffer: Buffer;
     try {
       pdfBuffer = await buildSimulationPdf(simulation);
@@ -341,38 +376,41 @@ router.get('/history/:id/export/pdf', async (req: AuthenticatedRequest, res: Res
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-zA-Z0-9 ]/g, '').trim().replace(/\s+/g, '-');
     if (!safeName) safeName = 'estudiante';
+
     let safeId = String(simulation.student.identificationNumber ?? '').replace(/[^a-zA-Z0-9]/g, '');
     if (!safeId) safeId = simId.slice(0, 8);
+
     const filename = `simulacion-upb-${safeName}-${safeId}.pdf`;
 
     const contentFlags = { summary: true, amortizationTable: true, charts: true };
 
     // Registrar en export_logs (HU-40)
     void ExportLogModel.create({
-      format:        'PDF',
+      format: 'PDF',
       simulation_id: simId,
-      user_id:       userId,
-      ip_address:    extractIp(req) ?? null,
-      file_name:     filename,
+      user_id: userId,
+      ip_address: extractIp(req) ?? null,
+      file_name: filename,
       content_flags: JSON.stringify(contentFlags),
     }).catch((err: unknown) => {
       logger.warn('Failed to persist export log', { error: err, simulation_id: simId, format: 'PDF', user_id: userId });
     });
 
+
     void auditLog({
-      action:     'SIMULATION_EXPORTED_PDF',
-      entity:     'SIMULATION',
-      entity_id:  simId,
-      actor_type: 'STUDENT',
-      user_id:    userId,
+      action: 'SIMULATION_EXPORTED_PDF',
+      entity: 'SIMULATION',
+      entity_id: simId,
+      actor_type:'STUDENT',
+      user_id: userId,
       ip_address: extractIp(req),
-      details:    {
-        simulation_id:            simId,
-        format:                   'PDF',
-        include_summary:          contentFlags.summary,
+      details:{
+        simulation_id: simId,
+        format: 'PDF',
+        include_summary: contentFlags.summary,
         include_amortization_table: contentFlags.amortizationTable,
-        include_charts:           contentFlags.charts,
-        file_name:                filename,
+        include_charts: contentFlags.charts,
+        file_name: filename,
       },
     });
 
@@ -380,53 +418,6 @@ router.get('/history/:id/export/pdf', async (req: AuthenticatedRequest, res: Res
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Content-Length',      pdfBuffer.length);
     res.send(pdfBuffer);
-  } catch (error) {
-    next(error);
-  }
-});
-
-/**
- * GET /api/simulator/:id/export
- * Exporta los datos de una simulación en formato JSON.
- * Registra SIMULATION_EXPORTED en auditoría.
- */
-router.get('/:id/export', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const userId = req.user?.userId as string | undefined;
-    if (!userId) {
-      res.status(401).json({ error: 'Usuario no autenticado.' });
-      return;
-    }
-
-    const simId = req.params['id'] as string;
-    const format = (req.query['format'] as string) ?? 'json';
-
-    const simulation = await simulationRepo.findById(simId);
-    if (!simulation || simulation.userId !== userId) {
-      res.status(404).json({ error: 'Simulación no encontrada.' });
-      return;
-    }
-
-    await auditLog({
-      action:     'SIMULATION_EXPORTED',
-      entity:     'SIMULATION',
-      entity_id:  simId,
-      actor_type: 'STUDENT',
-      user_id:    userId,
-      ip_address: extractIp(req),
-      details:    {
-        simulation_id: simId,
-        format,
-        interest_mode:   simulation.summary.interestMode,
-        total_paid:      simulation.summary.totalPaid,
-      },
-    });
-
-    logger.info('Simulación exportada', { id: simId, userId, format });
-
-    res.setHeader('Content-Disposition', `attachment; filename="simulacion-${simId}.json"`);
-    res.setHeader('Content-Type', 'application/json');
-    res.json({ success: true, data: simulation.summary });
   } catch (error) {
     next(error);
   }

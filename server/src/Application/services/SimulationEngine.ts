@@ -69,15 +69,15 @@ export class SimulationEngine {
     // HU-PV-02: Derivar modalidad desde la parametrización por nivel (levelConfigs)
     const dbLevel = LEVEL_MAP[input.educationLevel];
     const cfgs = activeVersion && dbLevel
-      ? activeVersion.levelConfigs.filter(c => c.levelScope === dbLevel)
+      ? activeVersion.levelConfigs.filter(c => c.levelScope === dbLevel && c.isActive)
       : [];
 
     if (cfgs.length > 0) {
-      const cfg = cfgs.find(c => c.paymentCount === input.numberOfPayments);
-      if (cfg) {
-        effectiveMode = cfg.rateMonthly > 0 ? 'con_interes' : 'sin_interes';
-      } else {
+      const activeCfg = cfgs[0]; // a lo mucho una config activa por (version, levelScope)
+      if (input.numberOfPayments <= activeCfg.maxPaymentsSinInteres) {
         effectiveMode = 'sin_interes';
+      } else if (input.numberOfPayments <= activeCfg.maxPaymentsConInteres) {
+        effectiveMode = 'con_interes';
       }
     } else {
       // Fallback #59: regla legacy si no hay levelConfigs configurados

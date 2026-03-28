@@ -46,7 +46,7 @@ function cop(value: number): string {
 const LEVEL_SCOPE_MAP: Record<string, string> = {
   pregrado: 'PREGRADO',
   posgrado: 'POSGRADO',
-  upbTech:  'UPB_TEC',
+  upbTech:  'UPB_Tech',
 };
 
 /** HU-PV-02: Tasa dinámica por nivel y número de pagos desde levelConfigs */
@@ -66,11 +66,8 @@ function dynamicRateDisplay(
       }
     }
   }
-  // Fallback: tasa de interestRates para PREGRADO
-  if (!params) return '0.9';
-  const entry = params.interestRates.find(r => r.levelScope === 'PREGRADO');
-  const rate = entry?.rateMonthly ?? 0.009;
-  return (rate * 100).toFixed(1).replace(/\.0$/, '');
+  // Fallback cuando no hay levelConfigs configurados
+  return '0.9';
 }
 
 /* Formatea fecha ISO "YYYY-MM-DD" a "Agosto 2026" (mes + año, sin día) */

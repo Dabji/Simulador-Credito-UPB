@@ -46,7 +46,7 @@ function levelLabel(level: string): string {
   const map: Record<string, string> = {
     PREGRADO: 'Pregrado',
     POSGRADO: 'Posgrado',
-    UPB_TEC: 'UPB Tec',
+    UPB_Tech: 'UPB Tec',
   };
   return map[level] ?? level;
 }

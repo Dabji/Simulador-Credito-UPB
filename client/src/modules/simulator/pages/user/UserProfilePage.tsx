@@ -543,7 +543,7 @@ export function UserProfilePage() {
         <div className="mt-8 flex justify-center">
           <button
             type="button"
-            onClick={() => navigate('/student/main')}
+            onClick={() => { window.scrollTo({ top: 0 }); navigate('/student/main'); }}
             className="inline-flex items-center gap-2 px-8 py-2.5 rounded-full font-semibold text-sm text-gray-700 border border-gray-300 hover:bg-gray-100 transition-all focus:outline-none focus:ring-2 focus:ring-gray-400"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">

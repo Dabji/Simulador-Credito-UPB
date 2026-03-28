@@ -7,7 +7,7 @@
 import { SimulationEngine } from '../services/SimulationEngine';
 import { ParameterVersion } from '../../Core/entities/ParameterVersion';
 import type { SimulationInput } from '../dtos/SimulationInput';
-import type { ActiveParameterVersion, ActiveInterestRate } from '../../Core/repositories/IParameterVersionRepository';
+import type { ActiveParameterVersion, ActiveLevelConfig } from '../../Core/repositories/IParameterVersionRepository';
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -39,7 +39,42 @@ function makeDummyParams(): ParameterVersion {
   );
 }
 
-function makeActiveVersion(rates: ActiveInterestRate[] = []): ActiveParameterVersion {
+/** Construye una entrada plana ActiveLevelConfig para un (levelScope × paymentCount). */
+function makeFlatLevelConfig(
+  levelScope: 'PREGRADO' | 'POSGRADO' | 'UPB_Tech',
+  paymentCount: number,
+  rateMonthly: number,
+  maxPaymentsSinInteres = 3,
+  maxPaymentsConInteres = 6,
+  isActive = true,
+): ActiveLevelConfig {
+  return {
+    id: `lc-${levelScope}-${paymentCount}`,
+    levelScope,
+    isActive,
+    validFrom: '2026-01-01',
+    validTo: null,
+    maxPaymentsSinInteres,
+    maxPaymentsConInteres,
+    paymentCount,
+    rateMonthly,
+  };
+}
+
+/**
+ * Genera un ActiveParameterVersion con levelConfigs planos (1 fila por paymentCount 1..maxCon).
+ * paymentCount <= maxSin → rateMonthly=0 (sin_interes); > maxSin → rateForCon.
+ */
+function makeActiveVersionWithLevelConfigs(
+  levelScope: 'PREGRADO' | 'POSGRADO' | 'UPB_Tech' = 'PREGRADO',
+  maxSin = 3,
+  maxCon = 6,
+  rateForCon = 0.009,
+): ActiveParameterVersion {
+  const configs: ActiveLevelConfig[] = [];
+  for (let pc = 1; pc <= maxCon; pc++) {
+    configs.push(makeFlatLevelConfig(levelScope, pc, pc <= maxSin ? 0 : rateForCon, maxSin, maxCon));
+  }
   return {
     id: 'test-version-id',
     validFrom: '2026-01-01',
@@ -47,15 +82,13 @@ function makeActiveVersion(rates: ActiveInterestRate[] = []): ActiveParameterVer
     installmentsWindowFrom: '2026-01-01',
     installmentsWindowTo: '2026-06-30',
     paymentPeriodDays: 30,
-    interestRates: rates.length > 0 ? rates : [
-      { levelScope: 'PREGRADO', rateMonthly: 0.009 },
-      { levelScope: 'POSGRADO', rateMonthly: 0.012 },
-      { levelScope: 'UPB_TEC',  rateMonthly: 0.009 },
-    ],
-    modalityRules: [],
     initialPaymentRules: [],
-    levelConfigs: [],
+    levelConfigs: configs,
   };
+}
+
+function makeActiveVersion(): ActiveParameterVersion {
+  return makeActiveVersionWithLevelConfigs('PREGRADO', 3, 6, 0.009);
 }
 
 // ── Tests ────────────────────────────────────────────────────
@@ -201,14 +234,58 @@ describe('SimulationEngine', () => {
         interestMode: 'con_interes',
         numberOfPayments: 4,
       });
-      const activeVersion = makeActiveVersion([
-        { levelScope: 'PREGRADO', rateMonthly: 0.009 },
-        { levelScope: 'POSGRADO', rateMonthly: 0.015 },
-      ]);
+      const activeVersion = makeActiveVersionWithLevelConfigs('POSGRADO', 3, 6, 0.015);
       const summary = engine.computeSummary(input, dummyParams, activeVersion);
-      // Verify first row interest uses posgrado rate
+      // Verify first row interest uses posgrado rate from levelConfigs
       const expectedFirstInterest = Math.round(summary.financedValue * 0.015);
       expect(summary.schedule[0].interest).toBe(expectedFirstInterest);
+    });
+  });
+
+  // ── HU-PV-02: modalidad y tasa desde levelConfigs ─────────
+
+  describe('HU-PV-02 — Modalidad derivada desde levelConfigs', () => {
+    it('debe forzar sin_interes cuando numberOfPayments <= maxPaymentsSinInteres', () => {
+      const input = makeInput({ interestMode: 'con_interes', numberOfPayments: 3 });
+      const av = makeActiveVersionWithLevelConfigs();
+      const summary = engine.computeSummary(input, dummyParams, av);
+      expect(summary.interestMode).toBe('sin_interes');
+      expect(summary.totalInterest).toBe(0);
+    });
+
+    it('debe forzar con_interes cuando numberOfPayments > maxPaymentsSinInteres', () => {
+      const input = makeInput({ interestMode: 'sin_interes', numberOfPayments: 4 });
+      const av = makeActiveVersionWithLevelConfigs();
+      const summary = engine.computeSummary(input, dummyParams, av);
+      expect(summary.interestMode).toBe('con_interes');
+      expect(summary.totalInterest).toBeGreaterThan(0);
+    });
+
+    it('debe usar la tasa de levelConfigs en lugar de interestRates', () => {
+      const rateLC = 0.012; // distinta a interestRates (0.009)
+      const P = 8_000_000;
+      const n = 3; // planN = numberOfPayments(4) - 1
+      const factor = Math.pow(1 + rateLC, n);
+      const expectedM = (P * rateLC * factor) / (factor - 1);
+
+      const input = makeInput({ numberOfPayments: 4, interestMode: 'con_interes' });
+      const av = makeActiveVersionWithLevelConfigs('PREGRADO', 3, 6, rateLC);
+      const summary = engine.computeSummary(input, dummyParams, av);
+      expect(summary.periodicPayment).toBe(Math.round(expectedM));
+    });
+
+    it('debe ignorar configs inactivos y caer en fallback legacy (sin_interes <= 3)', () => {
+      const input = makeInput({ numberOfPayments: 4, interestMode: 'con_interes' });
+      const avInactive: ActiveParameterVersion = {
+        ...makeActiveVersion(),
+        levelConfigs: [
+          makeFlatLevelConfig('PREGRADO', 4, 0.999, 3, 6, false), // isActive=false
+        ],
+      };
+      // Solo hay cfg inactivo → cfgs.filter(isActive) = [] → fallback #59: numberOfPayments(4) > 3 → con_interes
+      // El motor usa r=0 (rateMonthly del cfg inactivo no se aplica) → interest = 0
+      const summary = engine.computeSummary(input, dummyParams, avInactive);
+      expect(summary.interestMode).toBe('con_interes');
     });
   });
 

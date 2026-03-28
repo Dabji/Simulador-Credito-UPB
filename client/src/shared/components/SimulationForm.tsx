@@ -192,7 +192,7 @@ const HELPER_COLOR = { color: '#4A5565' } as const;
 const LEVEL_SCOPE_MAP: Record<string, string> = {
   pregrado: 'PREGRADO',
   posgrado: 'POSGRADO',
-  upbTech:  'UPB_TEC',
+  upbTech:  'UPB_Tech',
 };
 
 /** HU-PV-02: Obtiene la tasa dinámica por nivel y número de pagos desde levelConfigs */
@@ -234,6 +234,20 @@ function isLevelInactive(params: AdminParameterVersion | null, educationLevel: s
   return cfgs.every(c => !c.isActive);
 }
 
+/** HU-PV-02: Obtiene el máximo de pagos sin interés para un nivel desde levelConfigs */
+function getSinInteresMax(
+  params: AdminParameterVersion | null,
+  educationLevel: string,
+): number | null {
+  if (!params) return null;
+  const scope = LEVEL_SCOPE_MAP[educationLevel];
+  if (!scope) return null;
+  const cfgs = (params.levelConfigs ?? []).filter(c => c.levelScope === scope && c.isActive);
+  if (cfgs.length === 0) return null;
+  const maxSin = cfgs[0].maxPaymentsSinInteres;
+  return maxSin != null ? maxSin : null;
+}
+
 /** HU-PV-02: Deriva la modalidad efectiva según la parametrización real */
 function deriveEffectiveMode(
   params: AdminParameterVersion | null,
@@ -241,9 +255,10 @@ function deriveEffectiveMode(
   numberOfPayments: number,
   currentMode: string,
 ): string {
-  const rate = getDynamicRate(params, educationLevel, numberOfPayments);
-  if (rate !== null) {
-    return rate > 0 ? 'con_interes' : 'sin_interes';
+  const sinMax = getSinInteresMax(params, educationLevel);
+  if (sinMax !== null) {
+    // La modalidad se determina por el límite sin interés, no por la tasa
+    return numberOfPayments <= sinMax ? 'sin_interes' : 'con_interes';
   }
   // Fallback #59: regla legacy si no hay levelConfigs
   if (currentMode === 'con_interes' && numberOfPayments >= 1 && numberOfPayments <= 3) {
@@ -252,37 +267,40 @@ function deriveEffectiveMode(
   return currentMode;
 }
 
-/** Cuota inicial mínima (%) según nivel y modalidad desde params activos */
+/** Cuota inicial mínima (%) según nivel y modalidad desde params activos.
+ *  Se deriva de initialPaymentRules: el initialPctRequired de la fila con mayor
+ *  extraInstallments para ese (level, modality) es el porcentaje mínimo exigido. */
 function getMinInitialPct(
   params: AdminParameterVersion | null,
   educationLevel: string,
   interestMode: string,
 ): number {
-  if (!params) return educationLevel === 'upbTech' ? 15 : 20; // fallback
+  const fallback = educationLevel === 'upbTech' ? 15 : 20;
+  if (!params) return fallback;
   const scope = LEVEL_SCOPE_MAP[educationLevel];
-  if (!scope) return 20;
-  // Usar modalidad efectiva para la regla
+  if (!scope) return fallback;
   const dbModality = interestMode === 'con_interes' ? 'CON_INTERES' : 'SIN_INTERES';
-  const rule = params.modalityRules.find(
-    r => r.level === scope && r.modality === dbModality,
-  );
-  return rule ? Math.round(rule.minInitialPct * 100) : (educationLevel === 'upbTech' ? 15 : 20);
+  const matches = params.initialPaymentRules.filter(r => r.level === scope && r.modality === dbModality);
+  if (matches.length === 0) return fallback;
+  const last = matches.reduce((a, b) => a.extraInstallments > b.extraInstallments ? a : b);
+  return Math.round(last.initialPctRequired * 100);
 }
 
-/** Máximo de cuotas totales por modalidad desde params activos */
+/** Máximo de cuotas totales por modalidad desde el levelConfig activo del nivel. */
 function getMaxPaymentsByMode(
   params: AdminParameterVersion | null,
   educationLevel: string,
   interestMode: string,
 ): number {
-  if (!params) return interestMode === 'sin_interes' ? 3 : 6; // fallback
+  const fallback = interestMode === 'sin_interes' ? 3 : 6;
+  if (!params) return fallback;
   const scope = LEVEL_SCOPE_MAP[educationLevel];
-  if (!scope) return interestMode === 'sin_interes' ? 3 : 6;
-  const dbModality = interestMode === 'con_interes' ? 'CON_INTERES' : 'SIN_INTERES';
-  const rule = params.modalityRules.find(
-    r => r.level === scope && r.modality === dbModality,
-  );
-  return rule?.maxTotalPayments ?? (interestMode === 'sin_interes' ? 3 : 6);
+  if (!scope) return fallback;
+  const activeCfg = (params.levelConfigs ?? []).find(c => c.levelScope === scope && c.isActive);
+  if (!activeCfg) return fallback;
+  return interestMode === 'sin_interes'
+    ? (activeCfg.maxPaymentsSinInteres ?? fallback)
+    : (activeCfg.maxPaymentsConInteres ?? fallback);
 }
 
 interface SimulationFormProps {
@@ -329,15 +347,28 @@ export function SimulationForm({ onResult, mode = 'student' }: SimulationFormPro
   const [apiError, setApiError]       = useState<string | null>(null);
 
   /* ── Parámetros activos desde BD (tasa, cuota mínima, límites) ── */
-  const [activeParams, setActiveParams] = useState<AdminParameterVersion | null>(null);
-  const [paramsLoading, setParamsLoading] = useState(true);
+  const PARAMS_CACHE_KEY = 'sim_active_params';
+
+  function readCachedParams(): AdminParameterVersion | null {
+    try {
+      const raw = sessionStorage.getItem(PARAMS_CACHE_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw) as AdminParameterVersion;
+    } catch { return null; }
+  }
+
+  const [activeParams, setActiveParams] = useState<AdminParameterVersion | null>(readCachedParams);
+  const [paramsLoading, setParamsLoading] = useState(!readCachedParams());
 
   useEffect(() => {
     let cancelled = false;
     async function loadConfig() {
       const res = await getSimulatorConfig();
       if (cancelled) return;
-      if (res.data?.data) setActiveParams(res.data.data);
+      if (res.data?.data) {
+        setActiveParams(res.data.data);
+        try { sessionStorage.setItem(PARAMS_CACHE_KEY, JSON.stringify(res.data.data)); } catch { /* ignorar */ }
+      }
       setParamsLoading(false);
     }
     void loadConfig();
@@ -777,6 +808,16 @@ export function SimulationForm({ onResult, mode = 'student' }: SimulationFormPro
               onChange={(e: ChangeEvent<HTMLInputElement>) =>
                 set('scholarshipPercent', clampPct(parsePctInput(e.target.value)))
               }
+              onFocus={(e) => e.target.select()}
+              onKeyDown={(e) => {
+                const el = e.currentTarget;
+                if (e.key === 'Backspace' && el.selectionStart === el.value.length && el.value.endsWith('%')) {
+                  e.preventDefault();
+                  const pos = el.value.length - 1;
+                  el.setSelectionRange(pos, pos);
+                  set('scholarshipPercent', clampPct(parsePctInput(el.value.slice(0, -2))));
+                }
+              }}
               disabled={fields.educationLevel === 'upbTech'}
               className={INPUT_BASE}
               style={fields.educationLevel === 'upbTech'
@@ -811,6 +852,16 @@ export function SimulationForm({ onResult, mode = 'student' }: SimulationFormPro
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
                   set('downPaymentPercent', clampPct(parsePctInput(e.target.value)))
                 }
+                onFocus={(e) => e.target.select()}
+                onKeyDown={(e) => {
+                  const el = e.currentTarget;
+                  if (e.key === 'Backspace' && el.selectionStart === el.value.length && el.value.endsWith('%')) {
+                    e.preventDefault();
+                    const pos = el.value.length - 1;
+                    el.setSelectionRange(pos, pos);
+                    set('downPaymentPercent', clampPct(parsePctInput(el.value.slice(0, -2))));
+                  }
+                }}
                 disabled={fields.numberOfPayments === '1'}
                 className={INPUT_BASE}
                 style={fields.numberOfPayments === '1'

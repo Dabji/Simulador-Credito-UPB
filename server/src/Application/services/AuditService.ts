@@ -21,6 +21,19 @@ export interface AuditEntry {
   transaction?: Transaction;
 }
 
+/** Hora actual en zona America/Bogota (UTC-5). */
+function nowInBogota(): Date {
+  // Construye el string con la hora local bogotana y lo parsea como Date.
+  const bogotaStr = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'America/Bogota',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour12: false,
+  }).format(new Date());
+  // 'sv-SE' produce "YYYY-MM-DD HH:MM:SS" — parseable como Date local
+  return new Date(bogotaStr.replace(' ', 'T') + '-05:00');
+}
+
 /**
  * Registra un evento de auditoría en la tabla audit_logs.
  * Nunca lanza excepciones — los fallos se registran en el logger.
@@ -36,6 +49,7 @@ export async function auditLog(entry: AuditEntry): Promise<void> {
         user_id:    entry.user_id ?? null,
         ip_address: entry.ip_address ?? null,
         details:    JSON.stringify(entry.details),
+        created_at: nowInBogota(),
       },
       entry.transaction ? { transaction: entry.transaction } : undefined,
     );

@@ -145,9 +145,8 @@ const fakeVersion = {
   validFrom: '2026-01-01',
   validTo: null,
   notes: 'Versión de prueba',
-  interestRates: [{ levelScope: 'PREGRADO', rateMonthly: 0.009 }],
-  modalityRules: [],
   initialPaymentRules: [],
+  levelConfigs: [],
 };
 
 // ── Tests ─────────────────────────────────────────────────────
@@ -160,24 +159,24 @@ describe('HU-25 — Audit Log (Transversal)', () => {
   // ── PUT /parameters/:id — escritura de auditoría ──
 
   describe('PUT /api/admin/parameters/:id — crea registro de auditoría', () => {
-    it('llama a auditLog con campos correctos al actualizar interestRates', async () => {
+    it('llama a auditLog con campos correctos al actualizar initialPaymentRules', async () => {
       mockFindById.mockResolvedValue(fakeVersion);
       mockHasOverlap.mockResolvedValue(false);
+      const updatedRule = { level: 'PREGRADO', modality: 'CON_INTERES', extraInstallments: 3, initialPctRequired: 0.25 };
       mockUpdateVersion.mockResolvedValue({
         ...fakeVersion,
-        interestRates: [{ levelScope: 'PREGRADO', rateMonthly: 0.01 }],
+        initialPaymentRules: [updatedRule],
       });
 
       const app = buildApp();
       const res = await request(app)
         .put(`/api/admin/parameters/${FAKE_VERSION_ID}`)
-        .send({ interestRates: [{ levelScope: 'PREGRADO', rateMonthly: 0.01 }] });
+        .send({ initialPaymentRules: [updatedRule] });
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.message).toContain('registrado');
 
-      // Verificamos por action, sin depender de conteo fijo ni orden
       const auditEntries = mockAuditLogFn.mock.calls.map(
         (call: unknown[]) => call[0] as Record<string, unknown>,
       );
@@ -191,16 +190,12 @@ describe('HU-25 — Audit Log (Transversal)', () => {
 
       const details = mainEntry!.details as Record<string, unknown>;
       expect(details.adminEmail).toBe('admin@upb.edu.co');
-      expect((details.changeSummary as string)).toContain('interestRates');
+      expect((details.changeSummary as string)).toContain('initialPaymentRules');
       expect(details.previousSnapshot).toBeDefined();
       expect(details.newSnapshot).toBeDefined();
-
-      const ruleEntry = auditEntries.find(e => e.action === 'PARAMETER_RULE_UPDATED');
-      expect(ruleEntry).toBeDefined();
-      expect((ruleEntry!.details as Record<string, unknown>).ruleType).toBe('interestRates');
     });
 
-    it('registra múltiples campos modificados en changeSummary + PARAMETER_RULE_UPDATED', async () => {
+    it('registra múltiples campos modificados en changeSummary', async () => {
       mockFindById.mockResolvedValue(fakeVersion);
       mockHasOverlap.mockResolvedValue(false);
       mockUpdateVersion.mockResolvedValue({ ...fakeVersion, notes: 'Nuevo nota' });
@@ -210,7 +205,7 @@ describe('HU-25 — Audit Log (Transversal)', () => {
         .put(`/api/admin/parameters/${FAKE_VERSION_ID}`)
         .send({
           notes: 'Nuevo nota',
-          interestRates: [{ levelScope: 'PREGRADO', rateMonthly: 0.01 }],
+          initialPaymentRules: [{ level: 'PREGRADO', modality: 'CON_INTERES', extraInstallments: 3, initialPctRequired: 0.25 }],
         });
 
       expect(res.status).toBe(200);
@@ -223,11 +218,7 @@ describe('HU-25 — Audit Log (Transversal)', () => {
       expect(mainEntry).toBeDefined();
       const details = mainEntry!.details as Record<string, unknown>;
       expect(details.changeSummary).toContain('notes');
-      expect(details.changeSummary).toContain('interestRates');
-
-      const ruleEntry = auditEntries.find(e => e.action === 'PARAMETER_RULE_UPDATED');
-      expect(ruleEntry).toBeDefined();
-      expect((ruleEntry!.details as Record<string, unknown>).ruleType).toBe('interestRates');
+      expect(details.changeSummary).toContain('initialPaymentRules');
     });
 
     it('registra changeSummary "Sin cambios" cuando el body está vacío', async () => {
@@ -272,9 +263,9 @@ describe('HU-25 — Audit Log (Transversal)', () => {
       created_at: new Date('2026-03-01T10:00:00Z'),
       details: JSON.stringify({
         adminEmail: 'admin@upb.edu.co',
-        changeSummary: 'Campos modificados: interestRates',
-        previousSnapshot: { interestRates: [{ levelScope: 'PREGRADO', rateMonthly: 0.009 }] },
-        newSnapshot:      { interestRates: [{ levelScope: 'PREGRADO', rateMonthly: 0.01  }] },
+        changeSummary: 'Campos modificados: initialPaymentRules, interestRates',
+        previousSnapshot: { initialPaymentRules: [] },
+        newSnapshot:      { initialPaymentRules: [{ level: 'PREGRADO', modality: 'CON_INTERES', extraInstallments: 3, initialPctRequired: 0.25 }] },
       }),
     };
 

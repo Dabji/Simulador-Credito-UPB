@@ -16,7 +16,7 @@ interface SimulationAttributes {
   deleted_by: string | null;
   delete_reason: string | null;
   student_type: 'NUEVO' | 'CONTINUO';
-  level: 'PREGRADO' | 'POSGRADO' | 'UPB_TEC';
+  level: 'PREGRADO' | 'POSGRADO' | 'UPB_Tech';
   modality: 'SIN_INTERES' | 'CON_INTERES';
   tuition_gross: number;              // bigint unsigned
   scholar_pct: number;                // decimal(5,4)
@@ -52,7 +52,7 @@ export class SimulationModel
   declare deleted_by: string | null;
   declare delete_reason: string | null;
   declare student_type: 'NUEVO' | 'CONTINUO';
-  declare level: 'PREGRADO' | 'POSGRADO' | 'UPB_TEC';
+  declare level: 'PREGRADO' | 'POSGRADO' | 'UPB_Tech';
   declare modality: 'SIN_INTERES' | 'CON_INTERES';
   declare tuition_gross: number;
   declare scholar_pct: number;
@@ -108,7 +108,7 @@ SimulationModel.init(
       allowNull: false,
     },
     level: {
-      type: DataTypes.ENUM('PREGRADO', 'POSGRADO', 'UPB_TEC'),
+      type: DataTypes.ENUM('PREGRADO', 'POSGRADO', 'UPB_Tech'),
       allowNull: false,
     },
     modality: {

@@ -7,32 +7,45 @@
 import { Router } from 'express';
 import type { Response, NextFunction } from 'express';
 import { Op } from 'sequelize';
+
 import { SequelizeParameterVersionRepository } from '../../persistence/repositories/SequelizeParameterVersionRepository';
 import { SequelizeUserRepository } from '../../persistence/repositories/SequelizeUserRepository';
 import { SequelizeSimulationRepository } from '../../persistence/repositories/SequelizeSimulationRepository';
+
 import { SimulationModel } from '../../persistence/models/SimulationModel';
 import { UserModel } from '../../persistence/models/UserModel';
-import { BadRequestError, NotFoundError, UnauthorizedError } from '../../../Core/errors';
-import type { UpdateParameterVersionData, CreateParameterVersionData } from '../../../Core/repositories/IParameterVersionRepository';
 import { AuditLogModel } from '../../persistence/models/AuditLogModel';
+import { ExportLogModel } from '../../persistence/models/ExportLogModel';
+
+import { BadRequestError, NotFoundError, UnauthorizedError } from '../../../Core/errors';
+import type {
+  UpdateParameterVersionData,
+  CreateParameterVersionData,
+} from '../../../Core/repositories/IParameterVersionRepository';
+
 import type { AuthenticatedRequest } from '../middlewares/authGuard';
 import { auditLog, extractIp } from '../../../Application/services/AuditService';
 import { logger } from '../../logger';
+
 import { buildSimulationCsv } from '../../../Application/services/export/SimulationCsvBuilder';
 import { buildSimulationPdf } from '../../../Application/services/export/SimulationPdfBuilder';
-import { ExportLogModel } from '../../persistence/models/ExportLogModel';
+
 import { ListUsersByAdminUseCase } from '../../../Application/use-cases/ListUsersByAdminUseCase';
 import type { UserFilterField, UserFilterCriterion } from '../../../Application/use-cases/ListUsersByAdminUseCase';
 import { GetUserByAdminUseCase } from '../../../Application/use-cases/GetUserByAdminUseCase';
 import { UpdateUserByAdminUseCase } from '../../../Application/use-cases/UpdateUserByAdminUseCase';
 import { ListUserSimulationsByAdminUseCase } from '../../../Application/use-cases/ListUserSimulationsByAdminUseCase';
 import { GetSimulationByIdAdminUseCase } from '../../../Application/use-cases/GetSimulationByIdAdminUseCase';
-import { UpdateUserByAdminSchema, UpdateUserByAdminInputSchema } from '../../../Application/dtos/UpdateUserByAdminInput';
+
+import {
+  UpdateUserByAdminSchema,
+  UpdateUserByAdminInputSchema,
+} from '../../../Application/dtos/UpdateUserByAdminInput';
 import { validateRequest } from '../middlewares/validateRequest';
 
 const router = Router();
-const paramRepo      = new SequelizeParameterVersionRepository();
-const userRepo       = new SequelizeUserRepository();
+const paramRepo = new SequelizeParameterVersionRepository();
+const userRepo = new SequelizeUserRepository();
 const simulationRepo = new SequelizeSimulationRepository();
 
 // ── Helpers de validación ────────────────────────────────────────────────
@@ -50,9 +63,9 @@ function isValidDate(str: string): boolean {
  */
 router.get('/parameters/audit', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const rawLimit  = Number.parseInt(String(req.query['limit']  ?? '50'), 10);
-    const rawOffset = Number.parseInt(String(req.query['offset'] ?? '0'),  10);
-    const limit  = Math.min(Math.max(Number.isNaN(rawLimit)  ? 50 : rawLimit,  1), 200);
+    const rawLimit = Number.parseInt(String(req.query['limit'] ?? '50'), 10);
+    const rawOffset = Number.parseInt(String(req.query['offset'] ?? '0'), 10);
+    const limit = Math.min(Math.max(Number.isNaN(rawLimit) ? 50 : rawLimit, 1), 200);
     const offset = Math.max(Number.isNaN(rawOffset) ? 0 : rawOffset, 0);
 
     const { rows, count } = await AuditLogModel.findAndCountAll({
@@ -68,33 +81,35 @@ router.get('/parameters/audit', async (req: AuthenticatedRequest, res: Response,
         total: count,
         limit,
         offset,
-        logs: rows.map(r => {
-          // Lógica robusta: Si ya es un objeto, lo usamos; si es string, lo parseamos.
-          let parsed: { changeSummary: string; previousSnapshot: any; newSnapshot: any; adminEmail?: string };
-          
+        logs: rows.map((r) => {
+          let parsed: {
+            changeSummary: string;
+            previousSnapshot: any;
+            newSnapshot: any;
+            adminEmail?: string;
+          };
+
           try {
-            parsed = typeof r.details === 'string' 
-              ? JSON.parse(r.details) 
-              : r.details;
+            parsed = typeof r.details === 'string' ? JSON.parse(r.details) : r.details;
           } catch (e) {
-            parsed = { 
-              changeSummary: 'Error al procesar detalles', 
-              previousSnapshot: {}, 
-              newSnapshot: {} 
+            parsed = {
+              changeSummary: 'Error al procesar detalles',
+              previousSnapshot: {},
+              newSnapshot: {},
             };
           }
 
           return {
-            id:                 r.id,
+            id: r.id,
             parameterVersionId: r.entity_id,
-            adminUserId:        r.user_id,
-            adminEmail:         parsed?.adminEmail ?? undefined,
-            action:             r.action,
-            ipAddress:          r.ip_address,
-            changedAt:          r.created_at,
-            changeSummary:      parsed?.changeSummary || 'Sin resumen',
-            previousSnapshot:   parsed?.previousSnapshot || {},
-            newSnapshot:        parsed?.newSnapshot || {},
+            adminUserId: r.user_id,
+            adminEmail: parsed?.adminEmail ?? undefined,
+            action: r.action,
+            ipAddress: r.ip_address,
+            changedAt: r.created_at,
+            changeSummary: parsed?.changeSummary || 'Sin resumen',
+            previousSnapshot: parsed?.previousSnapshot || {},
+            newSnapshot: parsed?.newSnapshot || {},
           };
         }),
       },
@@ -132,6 +147,7 @@ router.get('/parameters/active', async (_req: AuthenticatedRequest, res: Respons
     if (!version) {
       return next(new NotFoundError('No existe una versión de parámetros activa para la fecha actual'));
     }
+
     res.json({ success: true, data: version });
   } catch (error) {
     next(error);
@@ -163,9 +179,11 @@ router.get('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
   try {
     const id = req.params['id'] as string;
     const version = await paramRepo.findById(id);
+
     if (!version) {
       return next(new NotFoundError(`Versión de parámetros con id '${id}' no encontrada`));
     }
+
     res.json({ success: true, data: version });
   } catch (error) {
     next(error);
@@ -177,7 +195,7 @@ router.get('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
 /**
  * POST /api/admin/parameters
  * Crea una nueva versión de parámetros (opción inactiva).
- * Body: { validFrom, validTo?, notes?, interestRates, modalityRules, initialPaymentRules }
+ * Body: { validFrom, validTo?, notes?, initialPaymentRules }
  */
 router.post('/parameters', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -185,42 +203,33 @@ router.post('/parameters', async (req: AuthenticatedRequest, res: Response, next
       validFrom: string;
       validTo?: string | null;
       notes?: string | null;
-      interestRates: { levelScope: string; rateMonthly: number }[];
-      modalityRules: { modality: string; level: string; maxTotalPayments: number; minInitialPct: number }[];
       initialPaymentRules: { level: string; modality: string; extraInstallments: number; initialPctRequired: number }[];
     };
 
     if (!body.validFrom || !isValidDate(body.validFrom)) {
       return next(new BadRequestError('validFrom es obligatorio y debe tener formato YYYY-MM-DD'));
     }
+
     if (body.validTo !== undefined && body.validTo !== null && !isValidDate(body.validTo)) {
       return next(new BadRequestError('validTo debe tener formato YYYY-MM-DD'));
     }
-    if (!Array.isArray(body.interestRates) || body.interestRates.length === 0) {
-      return next(new BadRequestError('interestRates es obligatorio y debe tener al menos un elemento'));
-    }
-    if (!Array.isArray(body.modalityRules) || body.modalityRules.length === 0) {
-      return next(new BadRequestError('modalityRules es obligatorio'));
-    }
+
     if (!Array.isArray(body.initialPaymentRules) || body.initialPaymentRules.length === 0) {
       return next(new BadRequestError('initialPaymentRules es obligatorio'));
     }
 
-    // Validar que validFrom sea anterior a validTo (si se especifica)
-    if (
-      body.validTo &&
-      new Date(body.validFrom) >= new Date(body.validTo)
-    ) {
+    if (body.validTo && new Date(body.validFrom) >= new Date(body.validTo)) {
       return next(new BadRequestError('validFrom debe ser anterior a validTo'));
     }
 
-    // Verificar superposición de vigencias con versiones existentes
     const overlaps = await paramRepo.hasOverlap(body.validFrom, body.validTo ?? null);
     if (overlaps) {
-      return next(new BadRequestError(
-        'La vigencia especificada se superpone con otra versión de parámetros existente. ' +
-        'Ajuste las fechas para evitar conflictos.',
-      ));
+      return next(
+        new BadRequestError(
+          'La vigencia especificada se superpone con otra versión de parámetros existente. ' +
+            'Ajuste las fechas para evitar conflictos.',
+        ),
+      );
     }
 
     const adminUserId = req.user?.['userId'] as string | undefined;
@@ -233,18 +242,8 @@ router.post('/parameters', async (req: AuthenticatedRequest, res: Response, next
       validFrom: body.validFrom,
       validTo: body.validTo ?? null,
       notes: body.notes ?? null,
-      interestRates: body.interestRates.map(r => ({
-        levelScope: r.levelScope as 'PREGRADO' | 'POSGRADO' | 'UPB_TEC',
-        rateMonthly: r.rateMonthly,
-      })),
-      modalityRules: body.modalityRules.map(r => ({
-        modality: r.modality as 'SIN_INTERES' | 'CON_INTERES',
-        level: r.level as 'PREGRADO' | 'POSGRADO' | 'UPB_TEC',
-        maxTotalPayments: r.maxTotalPayments,
-        minInitialPct: r.minInitialPct,
-      })),
-      initialPaymentRules: body.initialPaymentRules.map(r => ({
-        level: r.level as 'PREGRADO' | 'POSGRADO' | 'UPB_TEC',
+      initialPaymentRules: body.initialPaymentRules.map((r) => ({
+        level: r.level as 'PREGRADO' | 'POSGRADO' | 'UPB_Tech',
         modality: r.modality as 'SIN_INTERES' | 'CON_INTERES',
         extraInstallments: r.extraInstallments,
         initialPctRequired: r.initialPctRequired,
@@ -254,13 +253,13 @@ router.post('/parameters', async (req: AuthenticatedRequest, res: Response, next
     const created = await paramRepo.createVersion(createData);
 
     await auditLog({
-      action:     'CREATE_PARAMETER_VERSION',
-      entity:     'PARAMETER_VERSION',
-      entity_id:  created.id,
+      action: 'CREATE_PARAMETER_VERSION',
+      entity: 'PARAMETER_VERSION',
+      entity_id: created.id,
       actor_type: 'ADMIN',
-      user_id:    adminUserId,
+      user_id: adminUserId,
       ip_address: extractIp(req),
-      details:    { validFrom: body.validFrom, validTo: body.validTo ?? null },
+      details: { validFrom: body.validFrom, validTo: body.validTo ?? null },
     });
 
     res.status(201).json({ success: true, data: created, message: 'Versión de parámetros creada.' });
@@ -287,13 +286,13 @@ router.patch('/parameters/:id/activate', async (req: AuthenticatedRequest, res: 
     const adminUserId = String(req.user?.['userId'] ?? 'unknown');
 
     await auditLog({
-      action:     'ACTIVATE_PARAMETER_VERSION',
-      entity:     'PARAMETER_VERSION',
-      entity_id:  id,
+      action: 'ACTIVATE_PARAMETER_VERSION',
+      entity: 'PARAMETER_VERSION',
+      entity_id: id,
       actor_type: 'ADMIN',
-      user_id:    adminUserId !== 'unknown' ? adminUserId : null,
+      user_id: adminUserId !== 'unknown' ? adminUserId : null,
       ip_address: extractIp(req),
-      details:    { activatedVersionId: id },
+      details: { activatedVersionId: id },
     });
 
     res.json({ success: true, data: activated, message: 'Versión activada correctamente.' });
@@ -313,8 +312,6 @@ router.patch('/parameters/:id/activate', async (req: AuthenticatedRequest, res: 
  *   validFrom?: "YYYY-MM-DD",
  *   validTo?: "YYYY-MM-DD" | null,
  *   notes?: string,
- *   interestRates?: [{ levelScope, rateMonthly }],
- *   modalityRules?: [{ modality, level, maxTotalPayments, minInitialPct }],
  *   initialPaymentRules?: [{ level, modality, extraInstallments, initialPctRequired }]
  * }
  *
@@ -331,68 +328,21 @@ router.put('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
       validFrom?: string;
       validTo?: string | null;
       notes?: string | null;
-      interestRates?: { levelScope: string; rateMonthly: number }[];
-      modalityRules?: { modality: string; level: string; maxTotalPayments: number; minInitialPct: number }[];
       initialPaymentRules?: { level: string; modality: string; extraInstallments: number; initialPctRequired: number }[];
-      levelConfigs?: { levelScope: string; isActive: boolean; validFrom: string; paymentCount: number; rateMonthly: number }[];
+      levelConfigs?: { levelScope: string; isActive: boolean; validFrom: string; maxPaymentsSinInteres?: number; maxPaymentsConInteres?: number; paymentCount: number; rateMonthly: number }[];
     };
 
     // ── Validación de fechas ─────────────────────────────────
     if (body.validFrom !== undefined && !isValidDate(body.validFrom)) {
       return next(new BadRequestError('validFrom debe tener el formato YYYY-MM-DD'));
     }
+
     if (body.validTo !== undefined && body.validTo !== null && !isValidDate(body.validTo)) {
       return next(new BadRequestError('validTo debe tener el formato YYYY-MM-DD'));
     }
-    if (
-      body.validFrom && body.validTo &&
-      new Date(body.validFrom) >= new Date(body.validTo)
-    ) {
+
+    if (body.validFrom && body.validTo && new Date(body.validFrom) >= new Date(body.validTo)) {
       return next(new BadRequestError('validFrom debe ser anterior a validTo'));
-    }
-
-    // ── Validación de tasas de interés ───────────────────────
-    if (body.interestRates !== undefined) {
-      if (!Array.isArray(body.interestRates)) {
-        return next(new BadRequestError('interestRates debe ser un arreglo'));
-      }
-      const validLevels = ['PREGRADO', 'POSGRADO', 'UPB_TEC'];
-      for (const rate of body.interestRates) {
-        if (!validLevels.includes(rate.levelScope)) {
-          return next(new BadRequestError(`levelScope '${rate.levelScope}' inválido. Valores válidos: ${validLevels.join(', ')}`));
-        }
-        if (!Number.isFinite(rate.rateMonthly) || rate.rateMonthly <= 0 || rate.rateMonthly > 1) {
-          return next(new BadRequestError(`rateMonthly para ${rate.levelScope} debe ser un número mayor que 0 y menor o igual a 1 (ej: 0.009 para 0.9%)`));
-        }
-      }
-      // Verificar que no haya niveles duplicados
-      const levels = body.interestRates.map(r => r.levelScope);
-      if (new Set(levels).size !== levels.length) {
-        return next(new BadRequestError('No se pueden registrar dos tasas para el mismo nivel educativo'));
-      }
-    }
-
-    // ── Validación de reglas de modalidad ────────────────────
-    if (body.modalityRules !== undefined) {
-      if (!Array.isArray(body.modalityRules)) {
-        return next(new BadRequestError('modalityRules debe ser un arreglo'));
-      }
-      const validModalities = ['SIN_INTERES', 'CON_INTERES'];
-      const validLevels = ['PREGRADO', 'POSGRADO', 'UPB_TEC'];
-      for (const rule of body.modalityRules) {
-        if (!validModalities.includes(rule.modality)) {
-          return next(new BadRequestError(`modality '${rule.modality}' inválida`));
-        }
-        if (!validLevels.includes(rule.level)) {
-          return next(new BadRequestError(`level '${rule.level}' inválido`));
-        }
-        if (!Number.isInteger(rule.maxTotalPayments) || rule.maxTotalPayments < 1 || rule.maxTotalPayments > 12) {
-          return next(new BadRequestError('maxTotalPayments debe ser un entero entre 1 y 12'));
-        }
-        if (!Number.isFinite(rule.minInitialPct) || rule.minInitialPct < 0 || rule.minInitialPct > 1) {
-          return next(new BadRequestError('minInitialPct debe ser entre 0 y 1 (ej: 0.20 para 20%)'));
-        }
-      }
     }
 
     // ── Validación de reglas de cuota inicial ─────────────────
@@ -400,19 +350,28 @@ router.put('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
       if (!Array.isArray(body.initialPaymentRules)) {
         return next(new BadRequestError('initialPaymentRules debe ser un arreglo'));
       }
-      const validLevelsPmt = ['PREGRADO', 'POSGRADO', 'UPB_TEC'];
+
+      const validLevelsPmt = ['PREGRADO', 'POSGRADO', 'UPB_Tech'];
       const validModalitiesPmt = ['SIN_INTERES', 'CON_INTERES'];
+
       for (const rule of body.initialPaymentRules) {
         if (!validLevelsPmt.includes(rule.level)) {
           return next(new BadRequestError(`level '${rule.level}' inválido en initialPaymentRules`));
         }
+
         if (!validModalitiesPmt.includes(rule.modality)) {
           return next(new BadRequestError(`modality '${rule.modality}' inválida en initialPaymentRules`));
         }
+
         if (!Number.isInteger(rule.extraInstallments) || rule.extraInstallments < 0) {
           return next(new BadRequestError('extraInstallments debe ser un entero mayor o igual a 0'));
         }
-        if (!Number.isFinite(rule.initialPctRequired) || rule.initialPctRequired < 0 || rule.initialPctRequired > 1) {
+
+        if (
+          !Number.isFinite(rule.initialPctRequired) ||
+          rule.initialPctRequired < 0 ||
+          rule.initialPctRequired > 1
+        ) {
           return next(new BadRequestError('initialPctRequired debe ser entre 0 y 1 (ej: 0.20 para 20%)'));
         }
       }
@@ -423,7 +382,7 @@ router.put('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
       if (!Array.isArray(body.levelConfigs)) {
         return next(new BadRequestError('levelConfigs debe ser un arreglo'));
       }
-      const validLevelsCfg = ['PREGRADO', 'POSGRADO', 'UPB_TEC'];
+      const validLevelsCfg = ['PREGRADO', 'POSGRADO', 'UPB_Tech'];
       for (const cfg of body.levelConfigs) {
         if (!validLevelsCfg.includes(cfg.levelScope)) {
           return next(new BadRequestError(`levelScope '${cfg.levelScope}' inválido en levelConfigs`));
@@ -431,8 +390,20 @@ router.put('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
         if (typeof cfg.isActive !== 'boolean') {
           return next(new BadRequestError('isActive debe ser booleano en levelConfigs'));
         }
-        if (!isValidDate(cfg.validFrom)) {
+        if (cfg.isActive && !isValidDate(cfg.validFrom)) {
           return next(new BadRequestError('validFrom de levelConfig debe tener formato YYYY-MM-DD'));
+        }
+        if (cfg.maxPaymentsSinInteres !== undefined &&
+            (!Number.isInteger(cfg.maxPaymentsSinInteres) || cfg.maxPaymentsSinInteres < 1 || cfg.maxPaymentsSinInteres > 6)) {
+          return next(new BadRequestError('maxPaymentsSinInteres debe ser entero entre 1 y 6'));
+        }
+        if (cfg.maxPaymentsConInteres !== undefined &&
+            (!Number.isInteger(cfg.maxPaymentsConInteres) || cfg.maxPaymentsConInteres < 1 || cfg.maxPaymentsConInteres > 6)) {
+          return next(new BadRequestError('maxPaymentsConInteres debe ser entero entre 1 y 6'));
+        }
+        if (cfg.maxPaymentsSinInteres !== undefined && cfg.maxPaymentsConInteres !== undefined &&
+            cfg.maxPaymentsSinInteres > cfg.maxPaymentsConInteres) {
+          return next(new BadRequestError('maxPaymentsSinInteres no puede superar maxPaymentsConInteres'));
         }
         if (!Number.isInteger(cfg.paymentCount) || cfg.paymentCount < 1 || cfg.paymentCount > 6) {
           return next(new BadRequestError('paymentCount en levelConfigs debe ser un entero entre 1 y 6'));
@@ -452,8 +423,7 @@ router.put('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
     // ── Verificación de superposición de vigencias ───────────
     if (body.validFrom !== undefined || body.validTo !== undefined) {
       const fromToCheck = body.validFrom ?? previous.validFrom;
-      const toToCheck   = body.validTo !== undefined ? body.validTo : previous.validTo;
-
+      const toToCheck = body.validTo !== undefined ? body.validTo : previous.validTo;
       const overlaps = await paramRepo.hasOverlap(fromToCheck, toToCheck, id);
       if (overlaps) {
         return next(new BadRequestError(
@@ -468,23 +438,9 @@ router.put('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
       ...(body.validFrom !== undefined && { validFrom: body.validFrom }),
       ...(body.validTo !== undefined && { validTo: body.validTo }),
       ...(body.notes !== undefined && { notes: body.notes }),
-      ...(body.interestRates && {
-        interestRates: body.interestRates.map(r => ({
-          levelScope: r.levelScope as 'PREGRADO' | 'POSGRADO' | 'UPB_TEC',
-          rateMonthly: r.rateMonthly,
-        })),
-      }),
-      ...(body.modalityRules && {
-        modalityRules: body.modalityRules.map(r => ({
-          modality: r.modality as 'SIN_INTERES' | 'CON_INTERES',
-          level: r.level as 'PREGRADO' | 'POSGRADO' | 'UPB_TEC',
-          maxTotalPayments: r.maxTotalPayments,
-          minInitialPct: r.minInitialPct,
-        })),
-      }),
       ...(body.initialPaymentRules && {
         initialPaymentRules: body.initialPaymentRules.map(r => ({
-          level: r.level as 'PREGRADO' | 'POSGRADO' | 'UPB_TEC',
+          level: r.level as 'PREGRADO' | 'POSGRADO' | 'UPB_Tech',
           modality: r.modality as 'SIN_INTERES' | 'CON_INTERES',
           extraInstallments: r.extraInstallments,
           initialPctRequired: r.initialPctRequired,
@@ -492,13 +448,18 @@ router.put('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
       }),
       ...(body.levelConfigs && {
         levelConfigs: body.levelConfigs.map(c => ({
-          levelScope: c.levelScope as 'PREGRADO' | 'POSGRADO' | 'UPB_TEC',
+          levelScope: c.levelScope as 'PREGRADO' | 'POSGRADO' | 'UPB_Tech',
           isActive: c.isActive,
           validFrom: c.validFrom,
+          maxPaymentsSinInteres: c.maxPaymentsSinInteres,
+          maxPaymentsConInteres: c.maxPaymentsConInteres,
           paymentCount: c.paymentCount,
           rateMonthly: c.rateMonthly,
         })),
+        createdBy: String(req.user?.['userId'] ?? 'SYSTEM'),
       }),
+      actorUserId: req.user?.['userId'] ? String(req.user['userId']) : null,
+      actorIpAddress: extractIp(req),
     };
 
     const updated = await paramRepo.updateVersion(id, updateData);
@@ -508,24 +469,16 @@ router.put('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
 
     // ── Persistir registro de auditoría ─────────────────────────
     const adminUserId = String(req.user?.['userId'] ?? 'unknown');
-    const adminEmail  = String(req.user?.['email']  ?? 'unknown');
-
+    const adminEmail = String(req.user?.['email'] ?? 'unknown');
     const changedFields: string[] = [];
-    if (updateData.validFrom       !== undefined) changedFields.push('validFrom');
-    if (updateData.validTo         !== undefined) changedFields.push('validTo');
-    if (updateData.notes           !== undefined) changedFields.push('notes');
-    if (updateData.interestRates   !== undefined) changedFields.push('interestRates');
-    if (updateData.modalityRules   !== undefined) changedFields.push('modalityRules');
+    if (updateData.validFrom !== undefined) changedFields.push('validFrom');
+    if (updateData.validTo !== undefined) changedFields.push('validTo');
+    if (updateData.notes !== undefined) changedFields.push('notes');
     if (updateData.initialPaymentRules !== undefined) changedFields.push('initialPaymentRules');
-    if (updateData.levelConfigs    !== undefined) changedFields.push('levelConfigs');
-
-    const changeSummary = changedFields.length > 0
-      ? `Campos modificados: ${changedFields.join(', ')}`
-      : 'Sin cambios';
-
+    if (updateData.levelConfigs !== undefined) changedFields.push('levelConfigs');
+    const changeSummary = changedFields.length > 0 ? `Campos modificados: ${changedFields.join(', ')}` : 'Sin cambios';
     const ipAddress = extractIp(req);
     const auditUserId = adminUserId !== 'unknown' ? adminUserId : null;
-
     await auditLog({
       action:     'UPDATE_PARAMETER_VERSION',
       entity:     'PARAMETER_VERSION',
@@ -533,39 +486,16 @@ router.put('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
       actor_type: 'ADMIN',
       user_id:    auditUserId,
       ip_address: ipAddress,
-      details:    {
+      details: {
         adminEmail,
         changeSummary,
         previousSnapshot: previous,
         newSnapshot:      updated,
       },
     });
-
-    // Granular PARAMETER_RULE_UPDATED per rule type
-    const ruleTypes = ['interestRates', 'modalityRules', 'initialPaymentRules'] as const;
-    for (const ruleType of ruleTypes) {
-      if (updateData[ruleType] !== undefined) {
-        void auditLog({
-          action:     'PARAMETER_RULE_UPDATED',
-          entity:     'PARAMETER_VERSION',
-          entity_id:  id,
-          actor_type: 'ADMIN',
-          user_id:    auditUserId,
-          ip_address: ipAddress,
-          details:    {
-            adminEmail,
-            ruleType,
-            previousValue: (previous as unknown as Record<string, unknown>)[ruleType],
-            newValue:      (updated  as unknown as Record<string, unknown>)[ruleType],
-          },
-        });
-      }
-    }
-
-    // Detect if this version became the active one after the update
     const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date());
     const isNowActive = updated.validFrom <= today && (updated.validTo === null || updated.validTo >= today);
-    const wasActive   = previous.validFrom <= today && (previous.validTo === null || previous.validTo >= today);
+    const wasActive = previous.validFrom <= today && (previous.validTo === null || previous.validTo >= today);
     if (isNowActive && !wasActive) {
       void auditLog({
         action:     'PARAMETER_VERSION_ACTIVATED',
@@ -577,7 +507,6 @@ router.put('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
         details:    { adminEmail, validFrom: updated.validFrom, validTo: updated.validTo },
       });
     }
-
     res.json({
       success: true,
       message: 'Parámetros actualizados correctamente. El cambio ha quedado registrado y aplicará a simulaciones futuras.',
@@ -589,17 +518,187 @@ router.put('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
 });
 
 // ══════════════════════════════════════════════════════════════
+// CRUD temporal de level_configs (HU-PV-01)
+// ══════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/admin/parameters/:versionId/level-configs
+ * Retorna todas las cabeceras level_config de una versión (activas e históricas).
+ */
+router.get('/parameters/:versionId/level-configs', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { versionId } = req.params as { versionId: string };
+    const configs = await paramRepo.findLevelConfigsByVersion(versionId);
+    res.json({ success: true, data: configs });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/admin/parameters/:versionId/level-configs
+ * Crea una nueva cabecera level_config con sus reglas de tasa.
+ */
+router.post('/parameters/:versionId/level-configs', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { versionId } = req.params as { versionId: string };
+    const body = req.body as {
+      levelScope: string;
+      validFrom: string;
+      maxPaymentsSinInteres: number;
+      maxPaymentsConInteres: number;
+      rateRules: { paymentCount: number; rateMonthly: number }[];
+    };
+    const validLevels = ['PREGRADO', 'POSGRADO', 'UPB_Tech'];
+    if (!validLevels.includes(body.levelScope)) return next(new BadRequestError('levelScope inválido'));
+    if (!isValidDate(body.validFrom)) return next(new BadRequestError('validFrom debe tener formato YYYY-MM-DD'));
+    if (!Number.isInteger(body.maxPaymentsSinInteres) || body.maxPaymentsSinInteres < 1 || body.maxPaymentsSinInteres > 6)
+      return next(new BadRequestError('maxPaymentsSinInteres debe ser entero entre 1 y 6'));
+    if (!Number.isInteger(body.maxPaymentsConInteres) || body.maxPaymentsConInteres < 1 || body.maxPaymentsConInteres > 6)
+      return next(new BadRequestError('maxPaymentsConInteres debe ser entero entre 1 y 6'));
+    if (body.maxPaymentsSinInteres > body.maxPaymentsConInteres)
+      return next(new BadRequestError('maxPaymentsSinInteres no puede superar maxPaymentsConInteres'));
+    if (!Array.isArray(body.rateRules) || body.rateRules.length === 0)
+      return next(new BadRequestError('rateRules es obligatorio'));
+    const adminUserId = String(req.user?.['userId'] ?? '');
+    if (!adminUserId) return next(new UnauthorizedError('No se pudo determinar el usuario administrador'));
+    const created = await paramRepo.createLevelConfig({
+      parameterVersionId: versionId,
+      levelScope: body.levelScope as 'PREGRADO' | 'POSGRADO' | 'UPB_Tech',
+      validFrom: body.validFrom,
+      maxPaymentsSinInteres: body.maxPaymentsSinInteres,
+      maxPaymentsConInteres: body.maxPaymentsConInteres,
+      createdBy: adminUserId,
+      rateRules: body.rateRules,
+    });
+    await auditLog({
+      action:     'LEVEL_CONFIG_CREATED',
+      entity:     'LEVEL_CONFIG',
+      entity_id:  created.id,
+      actor_type: 'ADMIN',
+      user_id:    adminUserId,
+      ip_address: extractIp(req),
+      details:    { levelScope: created.levelScope, validFrom: created.validFrom, parameterVersionId: versionId },
+    });
+    res.status(201).json({ success: true, data: created, message: 'Configuración de nivel creada.' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * PATCH /api/admin/level-configs/:id/deactivate
+ * Desactiva una cabecera level_config (is_active=0, valid_to=hoy).
+ */
+router.patch('/level-configs/:id/deactivate', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { id } = req.params as { id: string };
+    const adminUserId = String(req.user?.['userId'] ?? '');
+    const deactivated = await paramRepo.deactivateLevelConfig(id);
+    if (!deactivated) return next(new NotFoundError('Configuración no encontrada o ya desactivada'));
+    await auditLog({
+      action:     'LEVEL_CONFIG_DEACTIVATED',
+      entity:     'LEVEL_CONFIG',
+      entity_id:  id,
+      actor_type: 'ADMIN',
+      user_id:    adminUserId || null,
+      ip_address: extractIp(req),
+      details:    { levelScope: deactivated.levelScope, validTo: deactivated.validTo },
+    });
+    res.json({ success: true, data: deactivated, message: 'Configuración desactivada.' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/admin/level-configs/:id/reactivate
+ * Crea un nuevo período activo para el mismo (version, levelScope). Reactivar = INSERT.
+ */
+router.post('/level-configs/:id/reactivate', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { id } = req.params as { id: string };
+    const body = req.body as {
+      validFrom: string;
+      maxPaymentsSinInteres: number;
+      maxPaymentsConInteres: number;
+      rateRules: { paymentCount: number; rateMonthly: number }[];
+    };
+    if (!isValidDate(body.validFrom)) return next(new BadRequestError('validFrom debe tener formato YYYY-MM-DD'));
+    if (!Array.isArray(body.rateRules) || body.rateRules.length === 0)
+      return next(new BadRequestError('rateRules es obligatorio'));
+    const adminUserId = String(req.user?.['userId'] ?? '');
+    if (!adminUserId) return next(new UnauthorizedError('No se pudo determinar el usuario administrador'));
+    const reactivated = await paramRepo.reactivateLevelConfig(id, {
+      validFrom: body.validFrom,
+      maxPaymentsSinInteres: body.maxPaymentsSinInteres,
+      maxPaymentsConInteres: body.maxPaymentsConInteres,
+      createdBy: adminUserId,
+      rateRules: body.rateRules,
+    });
+    await auditLog({
+      action:     'LEVEL_CONFIG_REACTIVATED',
+      entity:     'LEVEL_CONFIG',
+      entity_id:  reactivated.id,
+      actor_type: 'ADMIN',
+      user_id:    adminUserId,
+      ip_address: extractIp(req),
+      details:    { levelScope: reactivated.levelScope, validFrom: reactivated.validFrom, previousId: id },
+    });
+    res.status(201).json({ success: true, data: reactivated, message: 'Nueva configuración de nivel creada (reactivación).' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * PATCH /api/admin/level-configs/:configId/rates/:paymentCount
+ * Actualiza la tasa mensual de una regla de cuota específica.
+ */
+router.patch('/level-configs/:configId/rates/:paymentCount', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { configId, paymentCount: pcStr } = req.params as { configId: string; paymentCount: string };
+    const paymentCount = Number.parseInt(pcStr, 10);
+    const body = req.body as { rateMonthly: number };
+    if (Number.isNaN(paymentCount) || paymentCount < 1 || paymentCount > 6)
+      return next(new BadRequestError('paymentCount debe ser un entero entre 1 y 6'));
+    if (!Number.isFinite(body.rateMonthly) || body.rateMonthly < 0 || body.rateMonthly > 1)
+      return next(new BadRequestError('rateMonthly debe ser entre 0 y 1'));
+    const adminUserId = String(req.user?.['userId'] ?? '');
+    const updated = await paramRepo.updateLevelRateRule(configId, paymentCount, body.rateMonthly);
+    if (!updated) return next(new NotFoundError('Regla de tasa no encontrada'));
+    await auditLog({
+      action:     'LEVEL_RATE_RULE_UPDATED',
+      entity:     'LEVEL_RATE_RULE',
+      entity_id:  updated.id,
+      actor_type: 'ADMIN',
+      user_id:    adminUserId || null,
+      ip_address: extractIp(req),
+      details:    { configId, paymentCount, newRate: body.rateMonthly },
+    });
+    res.json({ success: true, data: updated, message: 'Tasa actualizada.' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
 // HU-82: Gestión administrativa de usuarios
 // ══════════════════════════════════════════════════════════════
 
-const listUsersUseCase        = new ListUsersByAdminUseCase();
-const getUserUseCase          = new GetUserByAdminUseCase(userRepo);
-const updateUserUseCase       = new UpdateUserByAdminUseCase(userRepo);
-const listUserSimsUseCase     = new ListUserSimulationsByAdminUseCase(userRepo, simulationRepo);
-const getSimByIdAdminUseCase  = new GetSimulationByIdAdminUseCase(simulationRepo);
+const listUsersUseCase = new ListUsersByAdminUseCase();
+const getUserUseCase = new GetUserByAdminUseCase(userRepo);
+const updateUserUseCase = new UpdateUserByAdminUseCase(userRepo);
+const listUserSimsUseCase = new ListUserSimulationsByAdminUseCase(userRepo, simulationRepo);
+const getSimByIdAdminUseCase = new GetSimulationByIdAdminUseCase(simulationRepo);
 
 const VALID_FILTERS = new Set<UserFilterField>([
-  'identificationNumber', 'documentType', 'fullName', 'email', 'phone', 'createdAt',
+  'identificationNumber',
+  'documentType',
+  'fullName',
+  'email',
+  'phone',
+  'createdAt',
 ]);
 
 /**
@@ -609,10 +708,10 @@ const VALID_FILTERS = new Set<UserFilterField>([
  */
 router.get('/users', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const rawPage     = Number.parseInt(String(req.query['page']     ?? '1'),  10);
+    const rawPage = Number.parseInt(String(req.query['page'] ?? '1'), 10);
     const rawPageSize = Number.parseInt(String(req.query['pageSize'] ?? '10'), 10);
-    const q           = typeof req.query['q']      === 'string' ? req.query['q']      : undefined;
-    const rawFilter   = typeof req.query['filter'] === 'string' ? req.query['filter'] : undefined;
+    const q = typeof req.query['q'] === 'string' ? req.query['q'] : undefined;
+    const rawFilter = typeof req.query['filter'] === 'string' ? req.query['filter'] : undefined;
 
     const filter: UserFilterField | undefined =
       rawFilter && VALID_FILTERS.has(rawFilter as UserFilterField)
@@ -633,7 +732,7 @@ router.get('/users', async (req: AuthenticatedRequest, res: Response, next: Next
       criteria,
       q,
       filter,
-      page:     Number.isNaN(rawPage)     ? 1  : rawPage,
+      page: Number.isNaN(rawPage) ? 1 : rawPage,
       pageSize: Number.isNaN(rawPageSize) ? 10 : rawPageSize,
     });
 
@@ -702,6 +801,17 @@ router.get('/users/export/csv', async (req: AuthenticatedRequest, res: Response,
     res.setHeader('Content-Type',        'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Content-Length',      csvBuffer.length);
+
+    void auditLog({
+      action:     'STUDENTS_EXPORTED_CSV',
+      entity:     'USER',
+      entity_id:  adminUserId,
+      actor_type: 'ADMIN',
+      user_id:    adminUserId,
+      ip_address: extractIp(req),
+      details:    { totalExported: result.items.length, filename },
+    });
+
     res.send(csvBuffer);
   } catch (error) {
     next(error);
@@ -718,6 +828,7 @@ router.get('/users/:id', async (req: AuthenticatedRequest, res: Response, next: 
     if (!profile || (profile as { role?: string }).role !== 'STUDENT') {
       return next(new NotFoundError('Usuario no encontrado.'));
     }
+
     res.json({ success: true, data: profile });
   } catch (error) {
     next(error);
@@ -745,17 +856,17 @@ router.patch(
       }
 
       const updated = await updateUserUseCase.execute(targetUserId, payload);
-
       const changedFields = Object.keys(payload);
+
       await auditLog({
-        action:     'ADMIN_USER_UPDATED',
-        entity:     'USER',
-        entity_id:  targetUserId,
+        action: 'ADMIN_USER_UPDATED',
+        entity: 'USER',
+        entity_id: targetUserId,
         actor_type: 'ADMIN',
-        user_id:    adminId,
+        user_id: adminId,
         ip_address: extractIp(req),
         details: {
-          admin_id:       adminId,
+          admin_id: adminId,
           target_user_id: targetUserId,
           changed_fields: changedFields,
           old_values: changedFields.reduce<Record<string, unknown>>((acc, f) => {
@@ -811,8 +922,13 @@ interface SimFilterCriterion {
 }
 
 const VALID_SIM_FILTERS = new Set<SimFilterField>([
-  'createdAt', 'academicPeriod', 'interestMode',
-  'educationLevel', 'studentType', 'studentName', 'studentEmail',
+  'createdAt',
+  'academicPeriod',
+  'interestMode',
+  'educationLevel',
+  'studentType',
+  'studentName',
+  'studentEmail',
 ]);
 
 /** Divide un valor por ";" y devuelve términos no-vacíos */
@@ -896,18 +1012,18 @@ async function applySimCriteria(
  */
 router.get('/simulations', async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const q          = typeof req.query['q']      === 'string' ? req.query['q'].trim() : '';
-    const rawFilter  = typeof req.query['filter'] === 'string' ? req.query['filter']   : '';
+    const q = typeof req.query['q'] === 'string' ? req.query['q'].trim() : '';
+    const rawFilter = typeof req.query['filter'] === 'string' ? req.query['filter'] : '';
     const filter: SimFilterField | '' =
       rawFilter && VALID_SIM_FILTERS.has(rawFilter as SimFilterField)
         ? (rawFilter as SimFilterField)
         : '';
 
-    const rawPage     = Number.parseInt(String(req.query['page']     ?? ''), 10);
+    const rawPage = Number.parseInt(String(req.query['page'] ?? ''), 10);
     const rawPageSize = Number.parseInt(String(req.query['pageSize'] ?? ''), 10);
-    const page     = Math.max(1, Number.isNaN(rawPage)     ? 1  : rawPage);
+    const page = Math.max(1, Number.isNaN(rawPage) ? 1 : rawPage);
     const pageSize = Math.min(50, Math.max(1, Number.isNaN(rawPageSize) ? 10 : rawPageSize));
-    const offset   = (page - 1) * pageSize;
+    const offset = (page - 1) * pageSize;
 
     // HU-PV-03: criterios multi-campo
     let criteria: SimFilterCriterion[] | undefined;
@@ -960,9 +1076,17 @@ router.get('/simulations', async (req: AuthenticatedRequest, res: Response, next
     const { count, rows } = await SimulationModel.findAndCountAll({
       where,
       attributes: [
-        'id', 'created_at', 'modality', 'level', 'student_type',
-        'financed_value', 'initial_payment_value', 'first_payment_date',
-        'total_payments', 'academic_period', 'user_id',
+        'id',
+        'created_at',
+        'modality',
+        'level',
+        'student_type',
+        'financed_value',
+        'initial_payment_value',
+        'first_payment_date',
+        'total_payments',
+        'academic_period',
+        'user_id',
       ],
       order: [['created_at', 'DESC']],
       limit: pageSize,
@@ -974,23 +1098,24 @@ router.get('/simulations', async (req: AuthenticatedRequest, res: Response, next
       attributes: ['id', 'first_name', 'last_name', 'email'],
       where: { id: { [Op.in]: userIds } },
     });
-    const userMap = new Map(users.map(u => [u.id, u]));
 
-    const items = rows.map(sim => {
+    const userMap = new Map(users.map((u) => [u.id, u]));
+
+    const items = rows.map((sim) => {
       const u = userMap.get(sim.user_id);
       return {
-        id:                  sim.id,
-        createdAt:           sim.created_at,
-        studentName:         u ? `${u.first_name} ${u.last_name}`.trim() : '',
-        studentEmail:        u?.email ?? '',
-        modality:            sim.modality,
-        educationLevel:      sim.level,
-        studentType:         sim.student_type,
-        financedValue:       Number(sim.financed_value),
+        id: sim.id,
+        createdAt: sim.created_at,
+        studentName: u ? `${u.first_name} ${u.last_name}`.trim() : '',
+        studentEmail: u?.email ?? '',
+        modality: sim.modality,
+        educationLevel: sim.level,
+        studentType: sim.student_type,
+        financedValue: Number(sim.financed_value),
         initialPaymentValue: Number(sim.initial_payment_value),
-        firstPaymentDate:    sim.first_payment_date,
-        numberOfPayments:    sim.total_payments,
-        academicPeriod:      sim.academic_period ?? '',
+        firstPaymentDate: sim.first_payment_date,
+        numberOfPayments: sim.total_payments,
+        academicPeriod: sim.academic_period ?? '',
       };
     });
 
@@ -1049,6 +1174,7 @@ router.delete('/simulations/:id', async (req: AuthenticatedRequest, res: Respons
     const body = req.body as { reason?: unknown };
     const defaultReason = 'Eliminado por administrador';
     let reason: string;
+
     if (body.reason === undefined || body.reason === null) {
       reason = defaultReason;
     } else if (typeof body.reason !== 'string') {
@@ -1060,7 +1186,6 @@ router.delete('/simulations/:id', async (req: AuthenticatedRequest, res: Respons
       if (reason.length > 255) reason = reason.slice(0, 255);
     }
 
-    // Obtener datos de la simulación antes del soft-delete para la auditoría
     const simRecord = await SimulationModel.findOne({
       attributes: ['user_id', 'modality', 'level', 'financed_value'],
       where: { id: simId, deleted_at: null },
@@ -1073,20 +1198,20 @@ router.delete('/simulations/:id', async (req: AuthenticatedRequest, res: Respons
     }
 
     await auditLog({
-      action:     'SIMULATION_DELETED',
-      entity:     'SIMULATION',
-      entity_id:  simId,
+      action: 'SIMULATION_DELETED',
+      entity: 'SIMULATION',
+      entity_id: simId,
       actor_type: 'ADMIN',
-      user_id:    adminUserId,
+      user_id: adminUserId,
       ip_address: extractIp(req),
-      details:    {
-        simulation_id:   simId,
+      details: {
+        simulation_id: simId,
         affected_user_id: simRecord?.user_id ?? null,
         reason,
         previous_status: 'ACTIVE',
-        modality:        simRecord?.modality ?? null,
-        level:           simRecord?.level ?? null,
-        financed_value:  simRecord ? Number(simRecord.financed_value) : null,
+        modality: simRecord?.modality ?? null,
+        level: simRecord?.level ?? null,
+        financed_value: simRecord ? Number(simRecord.financed_value) : null,
       },
     });
 
@@ -1119,51 +1244,59 @@ router.get('/simulations/:id/export/pdf', async (req: AuthenticatedRequest, res:
     }
 
     const simulation = await getSimByIdAdminUseCase.execute(simId);
-
     const pdfBuffer = await buildSimulationPdf(simulation);
 
     let safeName = `${simulation.student.firstName} ${simulation.student.lastName}`
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-zA-Z0-9 ]/g, '').trim().replace(/\s+/g, '-');
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9 ]/g, '')
+      .trim()
+      .replace(/\s+/g, '-');
+
     if (!safeName) safeName = 'estudiante';
+
     let safeId = String(simulation.student.identificationNumber ?? '').replace(/[^a-zA-Z0-9]/g, '');
     if (!safeId) safeId = simId.slice(0, 8);
-    const filename = `simulacion-upb-${safeName}-${safeId}.pdf`;
 
+    const filename = `simulacion-upb-${safeName}-${safeId}.pdf`;
     const pdfContentFlags = { summary: true, amortizationTable: true, charts: true };
 
-    // Registrar en export_logs (HU-40)
     void ExportLogModel.create({
-      format:        'PDF',
+      format: 'PDF',
       simulation_id: simId,
-      user_id:       adminUserId,
-      ip_address:    extractIp(req) ?? null,
-      file_name:     filename,
+      user_id: adminUserId,
+      ip_address: extractIp(req) ?? null,
+      file_name: filename,
       content_flags: JSON.stringify(pdfContentFlags),
     }).catch((err: unknown) => {
-      logger.warn('Failed to persist export log', { error: err, simulation_id: simId, format: 'PDF', user_id: adminUserId });
+      logger.warn('Failed to persist export log', {
+        error: err,
+        simulation_id: simId,
+        format: 'PDF',
+        user_id: adminUserId,
+      });
     });
 
     void auditLog({
-      action:     'SIMULATION_EXPORTED_PDF',
-      entity:     'SIMULATION',
-      entity_id:  simId,
+      action: 'SIMULATION_EXPORTED_PDF',
+      entity: 'SIMULATION',
+      entity_id: simId,
       actor_type: 'ADMIN',
-      user_id:    adminUserId,
+      user_id: adminUserId,
       ip_address: extractIp(req),
-      details:    {
-        simulation_id:              simId,
-        format:                     'PDF',
-        include_summary:            pdfContentFlags.summary,
+      details: {
+        simulation_id: simId,
+        format: 'PDF',
+        include_summary: pdfContentFlags.summary,
         include_amortization_table: pdfContentFlags.amortizationTable,
-        include_charts:             pdfContentFlags.charts,
-        file_name:                  filename,
+        include_charts: pdfContentFlags.charts,
+        file_name: filename,
       },
     });
 
-    res.setHeader('Content-Type',        'application/pdf');
+    res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.setHeader('Content-Length',      pdfBuffer.length);
+    res.setHeader('Content-Length', pdfBuffer.length);
     res.send(pdfBuffer);
   } catch (error) {
     next(error);
@@ -1189,51 +1322,59 @@ router.get('/simulations/:id/export/csv', async (req: AuthenticatedRequest, res:
     }
 
     const simulation = await getSimByIdAdminUseCase.execute(simId);
-
     const csvContent = buildSimulationCsv(simulation);
-    const csvBuffer  = Buffer.from(csvContent, 'utf-8');
+    const csvBuffer = Buffer.from(csvContent, 'utf-8');
 
     let safeName = `${simulation.student.firstName} ${simulation.student.lastName}`
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-zA-Z0-9 ]/g, '').trim().replace(/\s+/g, '-');
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9 ]/g, '')
+      .trim()
+      .replace(/\s+/g, '-');
+
     if (!safeName) safeName = 'estudiante';
+
     let safeId = String(simulation.student.identificationNumber ?? '').replace(/[^a-zA-Z0-9]/g, '');
     if (!safeId) safeId = simId.slice(0, 8);
-    const filename = `simulacion-upb-${safeName}-${safeId}.csv`;
 
+    const filename = `simulacion-upb-${safeName}-${safeId}.csv`;
     const csvContentFlags = { summary: true, amortizationTable: true };
 
-    // Registrar en export_logs (HU-41)
     void ExportLogModel.create({
-      format:        'CSV',
+      format: 'CSV',
       simulation_id: simId,
-      user_id:       adminUserId,
-      ip_address:    extractIp(req) ?? null,
-      file_name:     filename,
+      user_id: adminUserId,
+      ip_address: extractIp(req) ?? null,
+      file_name: filename,
       content_flags: JSON.stringify(csvContentFlags),
     }).catch((err: unknown) => {
-      logger.warn('Failed to persist export log', { error: err, simulation_id: simId, format: 'CSV', user_id: adminUserId });
+      logger.warn('Failed to persist export log', {
+        error: err,
+        simulation_id: simId,
+        format: 'CSV',
+        user_id: adminUserId,
+      });
     });
 
     void auditLog({
-      action:     'SIMULATION_EXPORTED_CSV',
-      entity:     'SIMULATION',
-      entity_id:  simId,
+      action: 'SIMULATION_EXPORTED_CSV',
+      entity: 'SIMULATION',
+      entity_id: simId,
       actor_type: 'ADMIN',
-      user_id:    adminUserId,
+      user_id: adminUserId,
       ip_address: extractIp(req),
-      details:    {
-        simulation_id:              simId,
-        format:                     'CSV',
-        include_summary:            csvContentFlags.summary,
+      details: {
+        simulation_id: simId,
+        format: 'CSV',
+        include_summary: csvContentFlags.summary,
         include_amortization_table: csvContentFlags.amortizationTable,
-        file_name:                  filename,
+        file_name: filename,
       },
     });
 
-    res.setHeader('Content-Type',        'text/csv; charset=utf-8');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.setHeader('Content-Length',      csvBuffer.length);
+    res.setHeader('Content-Length', csvBuffer.length);
     res.send(csvBuffer);
   } catch (error) {
     next(error);

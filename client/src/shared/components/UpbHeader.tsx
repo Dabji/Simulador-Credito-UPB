@@ -140,7 +140,6 @@ export function UpbHeader({ profileOpen, onToggleProfile }: UpbHeaderProps) {
                           Datos personales
                         </button>
                       )}
-                      <div className="border-t border-gray-100 my-1" />
                       <button
                         type="button"
                         role="menuitem"

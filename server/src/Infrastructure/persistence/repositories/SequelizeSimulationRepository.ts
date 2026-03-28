@@ -2,27 +2,22 @@
 // Sequelize Implementation: SequelizeSimulationRepository
 // Persiste y consulta simulaciones + filas de amortización.
 // ============================================================
-
 import { Op } from 'sequelize';
 import { Database } from '../../config/database';
 import { SimulationModel } from '../models/SimulationModel';
 import { AmortizationRowModel } from '../models/AmortizationRowModel';
 import { UserModel } from '../models/UserModel';
-import type {
-  ISimulationRepository,
-  SaveSimulationData,
-  PersistedSimulation,
-  PersistedSimulationWithUser,
-  SimulationSummaryItem,
+import type {ISimulationRepository, SaveSimulationData,PersistedSimulation,
+  PersistedSimulationWithUser,SimulationSummaryItem,
 } from '../../../Core/repositories/ISimulationRepository';
 import type { AmortizationRowDTO } from '../../../Application/dtos/SimulationSummary';
 import { auditLog } from '../../../Application/services/AuditService';
 
 export class SequelizeSimulationRepository implements ISimulationRepository {
-
   async save(data: SaveSimulationData): Promise<{ id: string; savedAt: Date }> {
     const sequelize = Database.getInstance().getSequelize();
     const savedAt = new Date();
+
 
     await sequelize.transaction(async (t) => {
       // 1. Crear simulación
@@ -31,7 +26,7 @@ export class SequelizeSimulationRepository implements ISimulationRepository {
           id: data.id,
           saved_at: savedAt,
           student_type: data.studentType as 'NUEVO' | 'CONTINUO',
-          level: data.level as 'PREGRADO' | 'POSGRADO' | 'UPB_TEC',
+          level: data.level as 'PREGRADO' | 'POSGRADO' | 'UPB_Tech',
           modality: data.modality as 'SIN_INTERES' | 'CON_INTERES',
           tuition_gross: data.tuitionGross,
           scholar_pct: data.scholarPct,
@@ -53,6 +48,7 @@ export class SequelizeSimulationRepository implements ISimulationRepository {
         { transaction: t },
       );
 
+
       // 2. Crear filas de amortización
       if (data.schedule.length > 0) {
         const rows = data.schedule.map((row) => ({
@@ -70,8 +66,10 @@ export class SequelizeSimulationRepository implements ISimulationRepository {
       }
     });
 
+
     return { id: data.id, savedAt };
   }
+
 
   async findByUserId(userId: string): Promise<PersistedSimulation[]> {
     const simulations = await SimulationModel.findAll({
@@ -82,14 +80,18 @@ export class SequelizeSimulationRepository implements ISimulationRepository {
       order: [['saved_at', 'DESC']],
     });
 
+
     if (simulations.length === 0) return [];
 
+
     const simIds = simulations.map((s) => s.id);
+
 
     const allRows = await AmortizationRowModel.findAll({
       where: { simulation_id: { [Op.in]: simIds } },
       order: [['payment_no', 'ASC']],
     });
+
 
     const rowsBySimId = new Map<string, AmortizationRowModel[]>();
     for (const row of allRows) {
@@ -98,16 +100,20 @@ export class SequelizeSimulationRepository implements ISimulationRepository {
       rowsBySimId.set(row.simulation_id, existing);
     }
 
+
     return simulations.map((sim) =>
       this.toPersistedSimulation(sim, rowsBySimId.get(sim.id) ?? []),
     );
   }
 
+
   async findById(id: string): Promise<PersistedSimulation | null> {
     const sim = await SimulationModel.findOne({
       where: { id, deleted_at: null },
     });
+
     if (!sim) return null;
+
 
     const rows = await AmortizationRowModel.findAll({
       where: { simulation_id: sim.id },
@@ -117,40 +123,48 @@ export class SequelizeSimulationRepository implements ISimulationRepository {
     return this.toPersistedSimulation(sim, rows);
   }
 
+
   async findByIdWithUser(id: string): Promise<PersistedSimulationWithUser | null> {
     const sim = await SimulationModel.findOne({
       where: { id, deleted_at: null },
     });
+
     if (!sim) return null;
+
 
     const [rows, user] = await Promise.all([
       AmortizationRowModel.findAll({
         where: { simulation_id: sim.id },
         order: [['payment_no', 'ASC']],
       }),
+
       UserModel.findByPk(sim.user_id, {
         attributes: ['first_name', 'last_name', 'document_number', 'email', 'document_type', 'phone'],
       }),
     ]);
 
+
     const base = this.toPersistedSimulation(sim, rows);
 
     return {
       ...base,
-      level:              sim.level,
-      studentType:        sim.student_type,
+
+      level: sim.level,
+      studentType: sim.student_type,
       studentObservation: sim.student_observation,
       appliedRateMonthly: Number(sim.applied_rate_monthly),
+      
       student: {
-        firstName:            user?.first_name ?? '',
-        lastName:             user?.last_name ?? '',
+        firstName: user?.first_name ?? '',
+        lastName: user?.last_name ?? '',
         identificationNumber: user?.document_number ?? '',
-        email:                user?.email ?? '',
-        documentType:         user?.document_type ?? '',
-        phone:                user?.phone ?? null,
+        email: user?.email ?? '',
+        documentType: user?.document_type ?? '',
+        phone: user?.phone ?? null,
       },
     };
   }
+
 
   async findSummariesByUserId(userId: string, limit = 20): Promise<SimulationSummaryItem[]> {
     const simulations = await SimulationModel.findAll({
@@ -160,14 +174,16 @@ export class SequelizeSimulationRepository implements ISimulationRepository {
       limit,
     });
 
+
     return simulations.map((sim) => ({
-      id:               sim.id,
-      academicPeriod:   sim.academic_period ?? '',
+      id: sim.id,
+      academicPeriod: sim.academic_period ?? '',
       numberOfPayments: sim.total_payments,
-      totalPaid:        Number(sim.total_paid),
-      createdAt:        sim.created_at,
+      totalPaid: Number(sim.total_paid),
+      createdAt: sim.created_at,
     }));
   }
+
 
   async softDelete(id: string, deletedBy: string | null, reason: string): Promise<boolean> {
     // Solo ADMIN (deletedBy = uuid) o SYSTEM (deletedBy = null) pueden eliminar.
@@ -178,24 +194,28 @@ export class SequelizeSimulationRepository implements ISimulationRepository {
       { where: { id, deleted_at: null } },
     );
 
+
     if (affectedRows > 0 && deletedBy === null) {
       void auditLog({
-        action:     'SIMULATION_DELETED',
-        entity:     'SIMULATION',
-        entity_id:  id,
+        action: 'SIMULATION_DELETED',
+        entity: 'SIMULATION',
+        entity_id: id,
         actor_type: 'SYSTEM',
-        user_id:    null,
-        details:    { simulation_id: id, reason },
+        user_id: null,
+        details: { simulation_id: id, reason },
       });
     }
 
+
     return affectedRows > 0;
   }
+
 
   private toPersistedSimulation(
     sim: SimulationModel,
     rows: AmortizationRowModel[],
   ): PersistedSimulation {
+
     const schedule: AmortizationRowDTO[] = rows.map((r) => ({
       period: r.payment_no,
       date: r.scheduled_date,
@@ -207,6 +227,7 @@ export class SequelizeSimulationRepository implements ISimulationRepository {
       payment: Number(r.payment_value),
       finalBalance: Number(r.balance_after),
     }));
+
 
     return {
       id: sim.id,
