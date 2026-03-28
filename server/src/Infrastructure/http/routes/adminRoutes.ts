@@ -803,13 +803,13 @@ router.get('/users/export/csv', async (req: AuthenticatedRequest, res: Response,
     res.setHeader('Content-Length',      csvBuffer.length);
 
     void auditLog({
-      action:     'STUDENTS_EXPORTED_CSV',
-      entity:     'USER',
-      entity_id:  adminUserId,
+      action: 'STUDENTS_EXPORTED_CSV',
+      entity: 'STUDENTS_LIST',
+      entity_id: 'ALL_STUDENTS_EXPORT',
       actor_type: 'ADMIN',
-      user_id:    adminUserId,
+      user_id: adminUserId,
       ip_address: extractIp(req),
-      details:    { totalExported: result.items.length, filename },
+      details: { totalExported: result.items.length, filename },
     });
 
     res.send(csvBuffer);
