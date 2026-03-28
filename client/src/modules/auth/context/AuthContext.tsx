@@ -1,19 +1,8 @@
-import { createContext, useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { getCurrentUser, logoutUser, NETWORK_ERROR_MESSAGE } from '@/shared/services/api';
 import type { UserData } from '@/shared/services/api';
-
-// ── Tipos del contexto ─────────────────────────────────────────────────────
-
-export interface AuthContextValue {
-  user: UserData | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  login: (token: string, userData: UserData) => void;
-  logout: () => void;
-}
-
-export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+import { AuthContext } from './AuthContext.types';
 
 // ── Provider ───────────────────────────────────────────────────────────────
 
