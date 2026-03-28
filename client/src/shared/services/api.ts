@@ -297,20 +297,9 @@ export async function saveSimulation(
 
 // ── DTOs de Parámetros Administrativos (RF-10, RF-23, RF-24) ────────────
 
-export type EducationLevelScope = 'PREGRADO' | 'POSGRADO' | 'UPB_TEC';
+export type EducationLevelScope = 'PREGRADO' | 'POSGRADO' | 'UPB_Tech';
 export type ModalityType = 'SIN_INTERES' | 'CON_INTERES';
 
-export interface AdminInterestRate {
-  readonly levelScope: EducationLevelScope;
-  readonly rateMonthly: number;
-}
-
-export interface AdminModalityRule {
-  readonly modality: ModalityType;
-  readonly level: EducationLevelScope;
-  readonly maxTotalPayments: number;
-  readonly minInitialPct: number;
-}
 
 export interface AdminInitialPaymentRule {
   readonly level: EducationLevelScope;
@@ -323,6 +312,8 @@ export interface AdminLevelConfig {
   readonly levelScope: EducationLevelScope;
   readonly isActive: boolean;
   readonly validFrom: string;
+  readonly maxPaymentsSinInteres?: number;
+  readonly maxPaymentsConInteres?: number;
   readonly paymentCount: number;
   readonly rateMonthly: number;
 }
@@ -335,8 +326,6 @@ export interface AdminParameterVersion {
   readonly installmentsWindowTo: string;
   readonly paymentPeriodDays: number;
   readonly notes?: string | null;
-  readonly interestRates: AdminInterestRate[];
-  readonly modalityRules: AdminModalityRule[];
   readonly initialPaymentRules: AdminInitialPaymentRule[];
   readonly levelConfigs?: AdminLevelConfig[];
 }
@@ -354,13 +343,6 @@ export interface UpdateParameterVersionPayload {
   validFrom?: string;
   validTo?: string | null;
   notes?: string | null;
-  interestRates?: { levelScope: EducationLevelScope; rateMonthly: number }[];
-  modalityRules?: {
-    modality: ModalityType;
-    level: EducationLevelScope;
-    maxTotalPayments: number;
-    minInitialPct: number;
-  }[];
   initialPaymentRules?: {
     level: EducationLevelScope;
     modality: ModalityType;
@@ -373,6 +355,8 @@ export interface UpdateParameterVersionPayload {
     validFrom: string;
     paymentCount: number;
     rateMonthly: number;
+    maxPaymentsSinInteres?: number;
+    maxPaymentsConInteres?: number;
   }[];
 }
 
@@ -404,8 +388,6 @@ export interface CreateParameterVersionPayload {
   validFrom: string;
   validTo?: string | null;
   notes?: string | null;
-  interestRates: { levelScope: EducationLevelScope; rateMonthly: number }[];
-  modalityRules: { modality: ModalityType; level: EducationLevelScope; maxTotalPayments: number; minInitialPct: number }[];
   initialPaymentRules: { level: EducationLevelScope; modality: ModalityType; extraInstallments: number; initialPctRequired: number }[];
 }
 
@@ -665,7 +647,7 @@ export interface AdminSimulationItemDTO {
   readonly studentName: string;
   readonly studentEmail: string;
   readonly modality: 'SIN_INTERES' | 'CON_INTERES';
-  readonly educationLevel: 'PREGRADO' | 'POSGRADO' | 'UPB_TEC';
+  readonly educationLevel: 'PREGRADO' | 'POSGRADO' | 'UPB_Tech';
   readonly studentType: 'NUEVO' | 'CONTINUO';
   readonly financedValue: number;
   readonly initialPaymentValue: number;
@@ -785,7 +767,7 @@ export interface AdminSimulationDetailDTO {
   readonly id: string;
   readonly userId: string;
   readonly savedAt: string;
-  readonly level: 'PREGRADO' | 'POSGRADO' | 'UPB_TEC';
+  readonly level: 'PREGRADO' | 'POSGRADO' | 'UPB_Tech';
   readonly studentType: 'NUEVO' | 'CONTINUO';
   readonly studentObservation: string | null;
   readonly appliedRateMonthly: number;

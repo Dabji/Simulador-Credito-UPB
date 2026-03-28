@@ -192,7 +192,7 @@ const HELPER_COLOR = { color: '#4A5565' } as const;
 const LEVEL_SCOPE_MAP: Record<string, string> = {
   pregrado: 'PREGRADO',
   posgrado: 'POSGRADO',
-  upbTech:  'UPB_TEC',
+  upbTech:  'UPB_Tech',
 };
 
 /** HU-PV-02: Obtiene la tasa dinámica por nivel y número de pagos desde levelConfigs */
@@ -252,37 +252,40 @@ function deriveEffectiveMode(
   return currentMode;
 }
 
-/** Cuota inicial mínima (%) según nivel y modalidad desde params activos */
+/** Cuota inicial mínima (%) según nivel y modalidad desde params activos.
+ *  Se deriva de initialPaymentRules: el initialPctRequired de la fila con mayor
+ *  extraInstallments para ese (level, modality) es el porcentaje mínimo exigido. */
 function getMinInitialPct(
   params: AdminParameterVersion | null,
   educationLevel: string,
   interestMode: string,
 ): number {
-  if (!params) return educationLevel === 'upbTech' ? 15 : 20; // fallback
+  const fallback = educationLevel === 'upbTech' ? 15 : 20;
+  if (!params) return fallback;
   const scope = LEVEL_SCOPE_MAP[educationLevel];
-  if (!scope) return 20;
-  // Usar modalidad efectiva para la regla
+  if (!scope) return fallback;
   const dbModality = interestMode === 'con_interes' ? 'CON_INTERES' : 'SIN_INTERES';
-  const rule = params.modalityRules.find(
-    r => r.level === scope && r.modality === dbModality,
-  );
-  return rule ? Math.round(rule.minInitialPct * 100) : (educationLevel === 'upbTech' ? 15 : 20);
+  const matches = params.initialPaymentRules.filter(r => r.level === scope && r.modality === dbModality);
+  if (matches.length === 0) return fallback;
+  const last = matches.reduce((a, b) => a.extraInstallments > b.extraInstallments ? a : b);
+  return Math.round(last.initialPctRequired * 100);
 }
 
-/** Máximo de cuotas totales por modalidad desde params activos */
+/** Máximo de cuotas totales por modalidad desde el levelConfig activo del nivel. */
 function getMaxPaymentsByMode(
   params: AdminParameterVersion | null,
   educationLevel: string,
   interestMode: string,
 ): number {
-  if (!params) return interestMode === 'sin_interes' ? 3 : 6; // fallback
+  const fallback = interestMode === 'sin_interes' ? 3 : 6;
+  if (!params) return fallback;
   const scope = LEVEL_SCOPE_MAP[educationLevel];
-  if (!scope) return interestMode === 'sin_interes' ? 3 : 6;
-  const dbModality = interestMode === 'con_interes' ? 'CON_INTERES' : 'SIN_INTERES';
-  const rule = params.modalityRules.find(
-    r => r.level === scope && r.modality === dbModality,
-  );
-  return rule?.maxTotalPayments ?? (interestMode === 'sin_interes' ? 3 : 6);
+  if (!scope) return fallback;
+  const activeCfg = (params.levelConfigs ?? []).find(c => c.levelScope === scope && c.isActive);
+  if (!activeCfg) return fallback;
+  return interestMode === 'sin_interes'
+    ? (activeCfg.maxPaymentsSinInteres ?? fallback)
+    : (activeCfg.maxPaymentsConInteres ?? fallback);
 }
 
 interface SimulationFormProps {

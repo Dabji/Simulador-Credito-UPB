@@ -11,7 +11,7 @@ export interface SaveSimulationData {
   readonly userId: string;
   readonly parameterVersionId: string;
   readonly studentType: string;         // "NUEVO" | "CONTINUO"
-  readonly level: string;               // "PREGRADO" | "POSGRADO" | "UPB_TEC"
+  readonly level: string;               // "PREGRADO" | "POSGRADO" | "UPB_Tech"
   readonly modality: string;            // "SIN_INTERES" | "CON_INTERES"
   readonly tuitionGross: number;
   readonly scholarPct: number;          // 0.0000 – 1.0000

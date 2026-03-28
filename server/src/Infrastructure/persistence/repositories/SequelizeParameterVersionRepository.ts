@@ -5,17 +5,21 @@
 
 import { Op } from 'sequelize';
 import { Database } from '../../config/database';
+import { auditLog } from '../../../Application/services/AuditService';
 import { ParameterVersionModel } from '../models/ParameterVersionModel';
-import { InterestRateModel } from '../models/InterestRateModel';
-import { ModalityRuleModel } from '../models/ModalityRuleModel';
 import { InitialPaymentRuleModel } from '../models/InitialPaymentRuleModel';
 import { LevelConfigModel } from '../models/LevelConfigModel';
+import { LevelRateRuleModel } from '../models/LevelRateRuleModel';
 import type {
   IParameterVersionRepository,
   ActiveParameterVersion,
+  ActiveLevelConfig,
+  ActiveLevelConfigHeader,
   ParameterVersionSummary,
   UpdateParameterVersionData,
   CreateParameterVersionData,
+  CreateLevelConfigData,
+  ReactivateLevelConfigData,
 } from '../../../Core/repositories/IParameterVersionRepository';
 
 export class SequelizeParameterVersionRepository implements IParameterVersionRepository {
@@ -117,43 +121,6 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
         await version.update(versionUpdates, { transaction: t });
       }
 
-      // Reemplazar tasas de interés si se proporcionaron
-      // undefined = no tocar; [] = reemplazar por vacío
-      if (data.interestRates !== undefined) {
-        await InterestRateModel.destroy({ where: { parameter_version_id: id }, transaction: t });
-        for (const rate of data.interestRates) {
-          await InterestRateModel.create(
-            {
-              id: crypto.randomUUID(),
-              rate_monthly: rate.rateMonthly,
-              rate_type: 'MV',
-              level_scope: rate.levelScope,
-              parameter_version_id: id,
-            },
-            { transaction: t },
-          );
-        }
-      }
-
-      // Reemplazar reglas de modalidad si se proporcionaron
-      // undefined = no tocar; [] = reemplazar por vacío
-      if (data.modalityRules !== undefined) {
-        await ModalityRuleModel.destroy({ where: { parameter_version_id: id }, transaction: t });
-        for (const rule of data.modalityRules) {
-          await ModalityRuleModel.create(
-            {
-              id: crypto.randomUUID(),
-              modality: rule.modality,
-              level: rule.level,
-              max_total_payments: rule.maxTotalPayments,
-              min_initial_pct: rule.minInitialPct,
-              parameter_version_id: id,
-            },
-            { transaction: t },
-          );
-        }
-      }
-
       // Reemplazar reglas de cuota inicial si se proporcionaron
       // undefined = no tocar; [] = reemplazar por vacío
       if (data.initialPaymentRules !== undefined) {
@@ -173,22 +140,126 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
         }
       }
 
-      // HU-PV-01: Reemplazar configuración por nivel si se proporcionó
+      // HU-PV-01: Reemplazar configuración por nivel si se proporcionó (estructura plana)
       if (data.levelConfigs !== undefined) {
-        await LevelConfigModel.destroy({ where: { parameter_version_id: id }, transaction: t });
+        const createdBy = data.createdBy ?? 'SYSTEM';
+
+        // ── Validaciones de negocio (reemplazan triggers BEFORE) ─────────
+        // Agrupar filas por (levelScope, validFrom) para validar por cabecera
+        const validationMap = new Map<string, { maxSin: number; maxCon: number; counts: number[] }>();
         for (const lc of data.levelConfigs) {
+          const key = `${lc.levelScope}|${lc.validFrom}`;
+          const maxSin = lc.maxPaymentsSinInteres ?? 3;
+          const maxCon = lc.maxPaymentsConInteres ?? 6;
+          if (!validationMap.has(key)) {
+            validationMap.set(key, { maxSin, maxCon, counts: [] });
+          }
+          const entry = validationMap.get(key)!;
+          // Regla 1: payment_count entre 1 y 6
+          if (lc.paymentCount < 1 || lc.paymentCount > 6) {
+            throw new Error(`payment_count ${lc.paymentCount} debe estar entre 1 y 6`);
+          }
+          // Regla 2: payment_count no supera max_payments_con_interes
+          if (lc.paymentCount > maxCon) {
+            throw new Error(`payment_count ${lc.paymentCount} supera maxPaymentsConInteres (${maxCon}) en nivel ${lc.levelScope}`);
+          }
+          // Regla 3: rate_monthly en rango válido [0, 1]
+          if (!Number.isFinite(lc.rateMonthly) || lc.rateMonthly < 0 || lc.rateMonthly > 1) {
+            throw new Error(`rateMonthly ${lc.rateMonthly} debe estar entre 0 y 1 para nivel ${lc.levelScope}`);
+          }
+          // Regla 4: maxPaymentsSinInteres < maxPaymentsConInteres
+          if (maxSin >= maxCon) {
+            throw new Error(`maxPaymentsSinInteres (${maxSin}) debe ser menor que maxPaymentsConInteres (${maxCon}) en nivel ${lc.levelScope}`);
+          }
+          entry.counts.push(lc.paymentCount);
+        }
+
+        // RESTRICT FK: borrar hijas primero, luego cabeceras
+        const existingConfigs = await LevelConfigModel.findAll({
+          where: { parameter_version_id: id },
+          transaction: t,
+        });
+        const existingIds = existingConfigs.map(ec => ec.id);
+        if (existingIds.length > 0) {
+          await LevelRateRuleModel.destroy({ where: { level_config_id: existingIds }, transaction: t });
+        }
+        await LevelConfigModel.destroy({ where: { parameter_version_id: id }, transaction: t });
+
+        // Guardar maxPayments por level_scope antes de destruir (fallback cuando el cliente no los envía)
+        const existingMaxPayments = new Map<string, { sin: number; con: number }>();
+        for (const ec of existingConfigs) {
+          existingMaxPayments.set(ec.level_scope, {
+            sin: ec.max_payments_sin_interes,
+            con: ec.max_payments_con_interes,
+          });
+        }
+
+        // Agrupar filas planas por (levelScope, validFrom) → reconstruir cabecera + reglas
+        const headerMap = new Map<string, {
+          levelScope: 'PREGRADO' | 'POSGRADO' | 'UPB_Tech'; isActive: boolean; validFrom: string;
+          maxPaymentsSinInteres: number; maxPaymentsConInteres: number;
+          rules: { paymentCount: number; rateMonthly: number }[];
+        }>();
+        for (const lc of data.levelConfigs) {
+          const key = `${lc.levelScope}|${lc.validFrom}`;
+          if (!headerMap.has(key)) {
+            const prevMaxPay = existingMaxPayments.get(lc.levelScope);
+            headerMap.set(key, {
+              levelScope: lc.levelScope as 'PREGRADO' | 'POSGRADO' | 'UPB_Tech',
+              isActive: lc.isActive, validFrom: lc.validFrom,
+              maxPaymentsSinInteres: lc.maxPaymentsSinInteres ?? prevMaxPay?.sin ?? 3,
+              maxPaymentsConInteres: lc.maxPaymentsConInteres ?? prevMaxPay?.con ?? 6,
+              rules: [],
+            });
+          }
+          headerMap.get(key)!.rules.push({ paymentCount: lc.paymentCount, rateMonthly: lc.rateMonthly });
+        }
+
+        const todayCol = SequelizeParameterVersionRepository.todayInColombia();
+        for (const [, header] of headerMap) {
+          const lcId = crypto.randomUUID();
           await LevelConfigModel.create(
             {
-              id: crypto.randomUUID(),
-              level_scope: lc.levelScope,
-              is_active: lc.isActive,
-              valid_from: lc.validFrom,
-              payment_count: lc.paymentCount,
-              rate_monthly: lc.rateMonthly,
+              id: lcId,
+              level_scope: header.levelScope,
+              is_active: header.isActive,
+              valid_from: header.validFrom,
+              valid_to: header.isActive ? null : todayCol,
+              max_payments_sin_interes: header.maxPaymentsSinInteres,
+              max_payments_con_interes: header.maxPaymentsConInteres,
               parameter_version_id: id,
+              created_by: createdBy,
             },
             { transaction: t },
           );
+          // bulkCreate para todas las reglas de tasa de este nivel de una sola vez
+          await LevelRateRuleModel.bulkCreate(
+            header.rules.map(rr => ({
+              id: crypto.randomUUID(),
+              level_config_id: lcId,
+              payment_count: rr.paymentCount,
+              rate_monthly: rr.rateMonthly,
+            })),
+            { transaction: t },
+          );
+          void auditLog({
+            action: header.isActive ? 'LEVEL_CONFIG_SAVED' : 'LEVEL_CONFIG_DEACTIVATED',
+            entity: 'LEVEL_CONFIG',
+            entity_id: lcId,
+            actor_type: 'ADMIN',
+            user_id: data.actorUserId ?? null,
+            ip_address: data.actorIpAddress ?? null,
+            details: {
+              levelScope: header.levelScope,
+              isActive: header.isActive,
+              validFrom: header.validFrom,
+              validTo: header.isActive ? null : todayCol,
+              maxPaymentsSinInteres: header.maxPaymentsSinInteres,
+              maxPaymentsConInteres: header.maxPaymentsConInteres,
+              rateRules: header.rules,
+              parameterVersionId: id,
+            },
+          });
         }
       }
     });
@@ -218,33 +289,6 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
         { transaction: t },
       );
 
-      for (const rate of data.interestRates) {
-        await InterestRateModel.create(
-          {
-            id: crypto.randomUUID(),
-            rate_monthly: rate.rateMonthly,
-            rate_type: 'MV',
-            level_scope: rate.levelScope,
-            parameter_version_id: versionId,
-          },
-          { transaction: t },
-        );
-      }
-
-      for (const rule of data.modalityRules) {
-        await ModalityRuleModel.create(
-          {
-            id: crypto.randomUUID(),
-            modality: rule.modality,
-            level: rule.level,
-            max_total_payments: rule.maxTotalPayments,
-            min_initial_pct: rule.minInitialPct,
-            parameter_version_id: versionId,
-          },
-          { transaction: t },
-        );
-      }
-
       for (const rule of data.initialPaymentRules) {
         await InitialPaymentRuleModel.create(
           {
@@ -259,19 +303,67 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
         );
       }
 
-      // HU-PV-01: Persistir configuración por nivel
+      // HU-PV-01: Persistir configuración por nivel (estructura plana → agrupar por header)
       if (data.levelConfigs) {
+        // ── Validaciones de negocio (reemplazan triggers BEFORE) ─────────
         for (const lc of data.levelConfigs) {
+          const maxSin = lc.maxPaymentsSinInteres ?? 3;
+          const maxCon = lc.maxPaymentsConInteres ?? 6;
+          if (lc.paymentCount < 1 || lc.paymentCount > 6) {
+            throw new Error(`payment_count ${lc.paymentCount} debe estar entre 1 y 6`);
+          }
+          if (lc.paymentCount > maxCon) {
+            throw new Error(`payment_count ${lc.paymentCount} supera maxPaymentsConInteres (${maxCon}) en nivel ${lc.levelScope}`);
+          }
+          if (!Number.isFinite(lc.rateMonthly) || lc.rateMonthly < 0 || lc.rateMonthly > 1) {
+            throw new Error(`rateMonthly ${lc.rateMonthly} debe estar entre 0 y 1 para nivel ${lc.levelScope}`);
+          }
+          if (maxSin >= maxCon) {
+            throw new Error(`maxPaymentsSinInteres (${maxSin}) debe ser menor que maxPaymentsConInteres (${maxCon}) en nivel ${lc.levelScope}`);
+          }
+        }
+
+        const headerMapCreate = new Map<string, {
+          levelScope: 'PREGRADO' | 'POSGRADO' | 'UPB_Tech'; isActive: boolean; validFrom: string;
+          maxPaymentsSinInteres: number; maxPaymentsConInteres: number;
+          rules: { paymentCount: number; rateMonthly: number }[];
+        }>();
+        for (const lc of data.levelConfigs) {
+          const key = `${lc.levelScope}|${lc.validFrom}`;
+          if (!headerMapCreate.has(key)) {
+            headerMapCreate.set(key, {
+              levelScope: lc.levelScope, isActive: lc.isActive, validFrom: lc.validFrom,
+              maxPaymentsSinInteres: lc.maxPaymentsSinInteres ?? 3,
+              maxPaymentsConInteres: lc.maxPaymentsConInteres ?? 6,
+              rules: [],
+            });
+          }
+          headerMapCreate.get(key)!.rules.push({ paymentCount: lc.paymentCount, rateMonthly: lc.rateMonthly });
+        }
+        for (const [, header] of headerMapCreate) {
+          const lcId = crypto.randomUUID();
           await LevelConfigModel.create(
             {
-              id: crypto.randomUUID(),
-              level_scope: lc.levelScope,
-              is_active: lc.isActive,
-              valid_from: lc.validFrom,
-              payment_count: lc.paymentCount,
-              rate_monthly: lc.rateMonthly,
+              id: lcId,
+              level_scope: header.levelScope,
+              is_active: header.isActive,
+              valid_from: header.validFrom,
+              valid_to: header.isActive ? null : SequelizeParameterVersionRepository.todayInColombia(),
+              max_payments_sin_interes: header.maxPaymentsSinInteres,
+              max_payments_con_interes: header.maxPaymentsConInteres,
               parameter_version_id: versionId,
+              created_by: data.createdBy,
             },
+            { transaction: t },
+          );
+          // bulkCreate para todas las reglas de tasa de este nivel de una sola vez
+          await LevelRateRuleModel.bulkCreate(
+            header.rules.map(rr => ({
+              id: crypto.randomUUID(),
+              level_config_id: lcId,
+              payment_count: rr.paymentCount,
+              rate_monthly: rr.rateMonthly,
+            })),
             { transaction: t },
           );
         }
@@ -314,12 +406,37 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
   private async buildWithRules(version: ParameterVersionModel): Promise<ActiveParameterVersion> {
     const versionId = version.id;
 
-    const [rates, modRules, initRules, lvlConfigs] = await Promise.all([
-      InterestRateModel.findAll({ where: { parameter_version_id: versionId } }),
-      ModalityRuleModel.findAll({ where: { parameter_version_id: versionId } }),
+    const [initRules, activeLvlConfigs] = await Promise.all([
       InitialPaymentRuleModel.findAll({ where: { parameter_version_id: versionId } }),
-      LevelConfigModel.findAll({ where: { parameter_version_id: versionId } }),
+      LevelConfigModel.findAll({
+        where: { parameter_version_id: versionId },
+        order: [['valid_from', 'DESC']],
+      }),
     ]);
+
+    // JOIN con level_rate_rules para armar el array plano que consume SimulationEngine
+    const rateRulesPerConfig = await Promise.all(
+      activeLvlConfigs.map(lc =>
+        LevelRateRuleModel.findAll({ where: { level_config_id: lc.id }, order: [['payment_count', 'ASC']] }),
+      ),
+    );
+
+    const levelConfigs: ActiveLevelConfig[] = [];
+    activeLvlConfigs.forEach((lc, idx) => {
+      rateRulesPerConfig[idx].forEach(rr => {
+        levelConfigs.push({
+          id: lc.id,
+          levelScope: lc.level_scope,
+          isActive: lc.is_active,
+          validFrom: lc.valid_from,
+          validTo: lc.valid_to,
+          maxPaymentsSinInteres: lc.max_payments_sin_interes,
+          maxPaymentsConInteres: lc.max_payments_con_interes,
+          paymentCount: rr.payment_count,
+          rateMonthly: Number(rr.rate_monthly),
+        });
+      });
+    });
 
     return {
       id: version.id,
@@ -328,29 +445,198 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
       installmentsWindowFrom: version.installments_window_from,
       installmentsWindowTo: version.installments_window_to,
       paymentPeriodDays: version.payment_period_days,
-      interestRates: rates.map(r => ({
-        levelScope: r.level_scope,
-        rateMonthly: Number(r.rate_monthly),
-      })),
-      modalityRules: modRules.map(m => ({
-        modality: m.modality,
-        level: m.level,
-        maxTotalPayments: m.max_total_payments,
-        minInitialPct: Number(m.min_initial_pct),
-      })),
       initialPaymentRules: initRules.map(i => ({
         level: i.level,
         modality: i.modality,
         extraInstallments: i.extra_installments,
         initialPctRequired: Number(i.initial_pct_required),
       })),
-      levelConfigs: lvlConfigs.map(lc => ({
-        levelScope: lc.level_scope,
-        isActive: lc.is_active,
-        validFrom: lc.valid_from,
-        paymentCount: lc.payment_count,
-        rateMonthly: Number(lc.rate_monthly),
+      levelConfigs,
+    };
+  }
+
+  // ── Helper: convierte un LevelConfigModel a ActiveLevelConfigHeader ──────
+
+  private async buildLevelConfigHeader(lc: LevelConfigModel): Promise<ActiveLevelConfigHeader> {
+    const rateRules = await LevelRateRuleModel.findAll({
+      where: { level_config_id: lc.id },
+      order: [['payment_count', 'ASC']],
+    });
+    return {
+      id: lc.id,
+      levelScope: lc.level_scope,
+      isActive: lc.is_active,
+      validFrom: lc.valid_from,
+      validTo: lc.valid_to,
+      maxPaymentsSinInteres: lc.max_payments_sin_interes,
+      maxPaymentsConInteres: lc.max_payments_con_interes,
+      createdBy: lc.created_by,
+      createdAt: lc.created_at,
+      rateRules: rateRules.map(rr => ({
+        id: rr.id,
+        paymentCount: rr.payment_count,
+        rateMonthly: Number(rr.rate_monthly),
       })),
+    };
+  }
+
+  // ── CRUD temporal de level_configs ───────────────────────────────────────
+
+  async findLevelConfigsByVersion(parameterVersionId: string): Promise<ActiveLevelConfigHeader[]> {
+    const configs = await LevelConfigModel.findAll({
+      where: { parameter_version_id: parameterVersionId },
+      order: [['valid_from', 'DESC'], ['level_scope', 'ASC']],
+    });
+    return Promise.all(configs.map(lc => this.buildLevelConfigHeader(lc)));
+  }
+
+  async createLevelConfig(data: CreateLevelConfigData): Promise<ActiveLevelConfigHeader> {
+    const sequelize = Database.getInstance().getSequelize();
+    const lcId = crypto.randomUUID();
+
+    await sequelize.transaction(async (t) => {
+      // SELECT FOR UPDATE: segunda defensa (trigger BEFORE INSERT es la primera)
+      const existing = await LevelConfigModel.findOne({
+        where: {
+          parameter_version_id: data.parameterVersionId,
+          level_scope: data.levelScope,
+          is_active: true,
+          valid_to: null,
+        },
+        lock: t.LOCK.UPDATE,
+        transaction: t,
+      });
+      if (existing) {
+        throw new Error(
+          `Ya existe una configuración activa para ${data.levelScope} en esta versión. ` +
+          'Desactivarla primero antes de crear una nueva.',
+        );
+      }
+
+      await LevelConfigModel.create(
+        {
+          id: lcId,
+          parameter_version_id: data.parameterVersionId,
+          level_scope: data.levelScope,
+          is_active: true,
+          valid_from: data.validFrom,
+          valid_to: null,
+          max_payments_sin_interes: data.maxPaymentsSinInteres,
+          max_payments_con_interes: data.maxPaymentsConInteres,
+          created_by: data.createdBy,
+        },
+        { transaction: t },
+      );
+
+      for (const rr of data.rateRules) {
+        await LevelRateRuleModel.create(
+          {
+            id: crypto.randomUUID(),
+            level_config_id: lcId,
+            payment_count: rr.paymentCount,
+            rate_monthly: rr.rateMonthly,
+          },
+          { transaction: t },
+        );
+      }
+    });
+
+    const created = await LevelConfigModel.findByPk(lcId);
+    if (!created) throw new Error('No se pudo recuperar la configuración creada');
+    return this.buildLevelConfigHeader(created);
+  }
+
+  async deactivateLevelConfig(id: string): Promise<ActiveLevelConfigHeader | null> {
+    const lc = await LevelConfigModel.findByPk(id);
+    if (!lc || !lc.is_active) return null;
+
+    const today = SequelizeParameterVersionRepository.todayInColombia();
+    await lc.update({ is_active: false, valid_to: today });
+    return this.buildLevelConfigHeader(lc);
+  }
+
+  async reactivateLevelConfig(
+    previousId: string,
+    data: ReactivateLevelConfigData,
+  ): Promise<ActiveLevelConfigHeader> {
+    const previous = await LevelConfigModel.findByPk(previousId);
+    if (!previous) throw new Error(`Configuración con id '${previousId}' no encontrada`);
+    if (previous.is_active) {
+      throw new Error(
+        'La configuración anterior aún está activa. Desactivarla primero antes de reactivar.',
+      );
+    }
+
+    const sequelize = Database.getInstance().getSequelize();
+    const lcId = crypto.randomUUID();
+
+    await sequelize.transaction(async (t) => {
+      // Verificar que no haya otro activo para este (version, levelScope)
+      const existing = await LevelConfigModel.findOne({
+        where: {
+          parameter_version_id: previous.parameter_version_id,
+          level_scope: previous.level_scope,
+          is_active: true,
+          valid_to: null,
+        },
+        lock: t.LOCK.UPDATE,
+        transaction: t,
+      });
+      if (existing) {
+        throw new Error(
+          `Ya existe una configuración activa para ${previous.level_scope}. ` +
+          'No es posible reactivar mientras exista otra activa.',
+        );
+      }
+
+      await LevelConfigModel.create(
+        {
+          id: lcId,
+          parameter_version_id: previous.parameter_version_id,
+          level_scope: previous.level_scope,
+          is_active: true,
+          valid_from: data.validFrom,
+          valid_to: null,
+          max_payments_sin_interes: data.maxPaymentsSinInteres,
+          max_payments_con_interes: data.maxPaymentsConInteres,
+          created_by: data.createdBy,
+        },
+        { transaction: t },
+      );
+
+      for (const rr of data.rateRules) {
+        await LevelRateRuleModel.create(
+          {
+            id: crypto.randomUUID(),
+            level_config_id: lcId,
+            payment_count: rr.paymentCount,
+            rate_monthly: rr.rateMonthly,
+          },
+          { transaction: t },
+        );
+      }
+    });
+
+    const created = await LevelConfigModel.findByPk(lcId);
+    if (!created) throw new Error('No se pudo recuperar la configuración reactivada');
+    return this.buildLevelConfigHeader(created);
+  }
+
+  async updateLevelRateRule(
+    configId: string,
+    paymentCount: number,
+    newRate: number,
+  ): Promise<{ id: string; paymentCount: number; rateMonthly: number } | null> {
+    const rule = await LevelRateRuleModel.findOne({
+      where: { level_config_id: configId, payment_count: paymentCount },
+    });
+    if (!rule) return null;
+
+    await rule.update({ rate_monthly: newRate });
+    return {
+      id: rule.id,
+      paymentCount: rule.payment_count,
+      rateMonthly: Number(rule.rate_monthly),
     };
   }
 }

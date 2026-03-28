@@ -9,7 +9,7 @@ import { Database } from '../../config/database';
 
 interface InitialPaymentRuleAttributes {
   id: string;
-  level: 'PREGRADO' | 'POSGRADO' | 'UPB_TEC';
+  level: 'PREGRADO' | 'POSGRADO' | 'UPB_Tech';
   modality: 'SIN_INTERES' | 'CON_INTERES';
   extra_installments: number;
   initial_pct_required: number;      // decimal(5,4) → e.g. 0.2000 = 20%
@@ -21,7 +21,7 @@ export class InitialPaymentRuleModel
   implements InitialPaymentRuleAttributes
 {
   declare id: string;
-  declare level: 'PREGRADO' | 'POSGRADO' | 'UPB_TEC';
+  declare level: 'PREGRADO' | 'POSGRADO' | 'UPB_Tech';
   declare modality: 'SIN_INTERES' | 'CON_INTERES';
   declare extra_installments: number;
   declare initial_pct_required: number;
@@ -38,7 +38,7 @@ InitialPaymentRuleModel.init(
       defaultValue: DataTypes.UUIDV4,
     },
     level: {
-      type: DataTypes.ENUM('PREGRADO', 'POSGRADO', 'UPB_TEC'),
+      type: DataTypes.ENUM('PREGRADO', 'POSGRADO', 'UPB_Tech'),
       allowNull: false,
     },
     modality: {

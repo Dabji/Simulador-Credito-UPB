@@ -51,7 +51,7 @@ interface LevelConfigFormEntry {
   conInteresMax: string; // máx. cuotas totales con interés para este nivel
 }
 
-type LevelConfigsForm = Record<'PREGRADO' | 'POSGRADO' | 'UPB_TEC', LevelConfigFormEntry>;
+type LevelConfigsForm = Record<'PREGRADO' | 'POSGRADO' | 'UPB_Tech', LevelConfigFormEntry>;
 
 interface ParameterFormState {
   versionId: string;
@@ -69,9 +69,6 @@ interface ParameterFormState {
 // Helpers
 // ═══════════════════════════════════════════════════════════════════════
 
-function rateToPercent(rate: number): string {
-  return (rate * 100).toFixed(4).replace(/\.?0+$/, '');
-}
 
 function percentToRate(pct: string): number {
   return parseFloat(pct) / 100;
@@ -97,7 +94,7 @@ function clampInt(raw: string, min: number, max: number): string {
   return raw;
 }
 
-const LEVEL_SCOPES = ['PREGRADO', 'POSGRADO', 'UPB_TEC'] as const;
+const LEVEL_SCOPES = ['PREGRADO', 'POSGRADO', 'UPB_Tech'] as const;
 
 /** Construye el estado del formulario de levelConfigs desde la versión activa */
 function buildLevelConfigsFromVersion(v: AdminParameterVersion): LevelConfigsForm {
@@ -113,39 +110,47 @@ function buildLevelConfigsFromVersion(v: AdminParameterVersion): LevelConfigsFor
   const result: LevelConfigsForm = {
     PREGRADO: defaultEntry(),
     POSGRADO: defaultEntry(),
-    UPB_TEC: defaultEntry(),
+    UPB_Tech: defaultEntry(),
   };
 
   const cfgs = v.levelConfigs ?? [];
   for (const scope of LEVEL_SCOPES) {
+    // Tomar el config más reciente para este scope (puede ser activo o inactivo)
     const levelCfgs = cfgs.filter(c => c.levelScope === scope);
     if (levelCfgs.length > 0) {
-      result[scope].isActive = levelCfgs[0].isActive;
-      result[scope].validFrom = levelCfgs[0].validFrom;
+      const latest = levelCfgs[0];
+      result[scope].isActive = latest.isActive;
+      result[scope].validFrom = latest.validFrom;
+      if (latest.maxPaymentsSinInteres != null)
+        result[scope].sinInteresMax = String(latest.maxPaymentsSinInteres);
+      if (latest.maxPaymentsConInteres != null)
+        result[scope].conInteresMax = String(latest.maxPaymentsConInteres);
       const rates: [string, string, string, string, string, string] = ['0', '0', '0', '0', '0', '0'];
       for (const c of levelCfgs) {
         if (c.paymentCount >= 1 && c.paymentCount <= 6) {
-          rates[c.paymentCount - 1] = rateToPercent(c.rateMonthly);
+          rates[c.paymentCount - 1] = String(parseFloat((c.rateMonthly * 100).toFixed(10)));
         }
       }
       result[scope].rates = rates;
     }
-    // Leer límites desde modalityRules
-    const sinRule = v.modalityRules.find(r => r.modality === 'SIN_INTERES' && r.level === scope);
-    const conRule = v.modalityRules.find(r => r.modality === 'CON_INTERES' && r.level === scope);
-    if (sinRule) result[scope].sinInteresMax = String(sinRule.maxTotalPayments);
-    if (conRule) result[scope].conInteresMax = String(conRule.maxTotalPayments);
   }
-
   return result;
 }
 
-function buildFormFromVersion(v: AdminParameterVersion): ParameterFormState {
-  const sinInteresPreg = v.modalityRules.find(r => r.modality === 'SIN_INTERES' && r.level === 'PREGRADO');
-  const conInteresPreg = v.modalityRules.find(r => r.modality === 'CON_INTERES' && r.level === 'PREGRADO');
-  const sinInteresTec  = v.modalityRules.find(r => r.modality === 'SIN_INTERES' && r.level === 'UPB_TEC');
-  const conInteresTec  = v.modalityRules.find(r => r.modality === 'CON_INTERES' && r.level === 'UPB_TEC');
+/** Deriva el porcentaje mínimo de cuota inicial para un (level, modality) desde initialPaymentRules.
+ *  El mínimo es el initialPctRequired de la fila con mayor extraInstallments (la más permisiva = el piso). */
+function deriveMinInitialPct(
+  rules: AdminParameterVersion['initialPaymentRules'],
+  level: string,
+  modality: string,
+): string {
+  const matches = rules.filter(r => r.level === level && r.modality === modality);
+  if (matches.length === 0) return '';
+  const last = matches.reduce((a, b) => a.extraInstallments > b.extraInstallments ? a : b);
+  return (last.initialPctRequired * 100).toFixed(2).replace(/\.?0+$/, '');
+}
 
+function buildFormFromVersion(v: AdminParameterVersion): ParameterFormState {
   const getInitPct = (extra: number) =>
     v.initialPaymentRules.find(
       r => r.level === 'PREGRADO' && r.modality === 'CON_INTERES' && r.extraInstallments === extra,
@@ -162,10 +167,10 @@ function buildFormFromVersion(v: AdminParameterVersion): ParameterFormState {
     _validTo: v.validTo ?? '',
     _notes: v.notes ?? '',
     minInitialPct: {
-      pregradoSinInteres: sinInteresPreg ? (sinInteresPreg.minInitialPct * 100).toFixed(2).replace(/\.?0+$/, '') : '',
-      pregradoConInteres: conInteresPreg ? (conInteresPreg.minInitialPct * 100).toFixed(2).replace(/\.?0+$/, '') : '',
-      upbTecSinInteres:   sinInteresTec  ? (sinInteresTec.minInitialPct  * 100).toFixed(2).replace(/\.?0+$/, '') : '',
-      upbTecConInteres:   conInteresTec  ? (conInteresTec.minInitialPct  * 100).toFixed(2).replace(/\.?0+$/, '') : '',
+      pregradoSinInteres: deriveMinInitialPct(v.initialPaymentRules, 'PREGRADO', 'SIN_INTERES'),
+      pregradoConInteres: deriveMinInitialPct(v.initialPaymentRules, 'PREGRADO', 'CON_INTERES'),
+      upbTecSinInteres:   deriveMinInitialPct(v.initialPaymentRules, 'UPB_Tech', 'SIN_INTERES'),
+      upbTecConInteres:   deriveMinInitialPct(v.initialPaymentRules, 'UPB_Tech', 'CON_INTERES'),
     },
     initialPayments: {
       extra0: ip(0), extra1: ip(1), extra2: ip(2),
@@ -289,12 +294,13 @@ export function AdminParametersPage() {
 
   function validate(): string | null {
     if (!form) return 'No hay datos cargados';
-    const LEVEL_LABELS: Record<string, string> = { PREGRADO: 'Pregrado', POSGRADO: 'Posgrado', UPB_TEC: 'UPB Tech' };
+    const LEVEL_LABELS: Record<string, string> = { PREGRADO: 'Pregrado', POSGRADO: 'Posgrado', UPB_Tech: 'UPB Tech' };
     for (const scope of LEVEL_SCOPES) {
       const entry = form.levelConfigs[scope];
       const sin = parseInt(entry.sinInteresMax, 10);
       const con = parseInt(entry.conInteresMax, 10);
       if (isNaN(sin) || sin < 1) return `${LEVEL_LABELS[scope]}: el máximo de cuotas sin interés debe ser al menos 1`;
+      if (sin > 3) return `${LEVEL_LABELS[scope]}: el máximo de cuotas sin interés no puede superar 3`;
       if (isNaN(con) || con < 1) return `${LEVEL_LABELS[scope]}: el máximo de cuotas con interés debe ser al menos 1`;
       if (con > 6) return `${LEVEL_LABELS[scope]}: el máximo de cuotas con interés no puede superar 6`;
       if (sin > con) return `${LEVEL_LABELS[scope]}: el límite sin interés no puede ser mayor que el límite con interés`;
@@ -305,32 +311,15 @@ export function AdminParametersPage() {
     const tecCon  = parseFloat(form.minInitialPct.upbTecConInteres);
     if (isNaN(pregSin) || pregSin < 0 || pregSin > 100) return 'Cuota inicial mínima Pregrado sin intereses inválida (0-100)';
     if (isNaN(pregCon) || pregCon < 0 || pregCon > 100) return 'Cuota inicial mínima Pregrado con intereses inválida (0-100)';
-    if (isNaN(tecSin)  || tecSin  < 0 || tecSin  > 100) return 'Cuota inicial mínima UPB TEC sin intereses inválida (0-100)';
-    if (isNaN(tecCon)  || tecCon  < 0 || tecCon  > 100) return 'Cuota inicial mínima UPB TEC con intereses inválida (0-100)';
+    if (isNaN(tecSin)  || tecSin  < 0 || tecSin  > 100) return 'Cuota inicial mínima UPB Tech sin intereses inválida (0-100)';
+    if (isNaN(tecCon)  || tecCon  < 0 || tecCon  > 100) return 'Cuota inicial mínima UPB Tech con intereses inválida (0-100)';
     return null;
   }
 
   // ── Guardar ─────────────────────────────────────────────────────────
 
-  /** Construye las reglas de modalidad por nivel y cuota inicial desde el form */
+  /** Construye las reglas de cuota inicial actualizadas desde el form */
   function buildSharedRules() {
-    const sinMinPreg = percentToRate(form!.minInitialPct.pregradoSinInteres);
-    const conMinPreg = percentToRate(form!.minInitialPct.pregradoConInteres);
-    const sinMinTec  = percentToRate(form!.minInitialPct.upbTecSinInteres);
-    const conMinTec  = percentToRate(form!.minInitialPct.upbTecConInteres);
-
-    const modalityRules = LEVEL_SCOPES.flatMap(level => {
-      const entry = form!.levelConfigs[level];
-      const sinMax = parseInt(entry.sinInteresMax, 10) || 3;
-      const conMax = parseInt(entry.conInteresMax, 10) || 6;
-      const sinMin = level === 'UPB_TEC' ? sinMinTec : sinMinPreg;
-      const conMin = level === 'UPB_TEC' ? conMinTec : conMinPreg;
-      return [
-        { modality: 'SIN_INTERES' as const, level, maxTotalPayments: sinMax, minInitialPct: sinMin },
-        { modality: 'CON_INTERES' as const, level, maxTotalPayments: conMax, minInitialPct: conMin },
-      ];
-    });
-
     const formInitPcts: Record<number, number> = {};
     ([
       [0, form!.initialPayments.extra0],
@@ -357,7 +346,7 @@ export function AdminParametersPage() {
       };
     });
 
-    return { modalityRules, initialPaymentRules };
+    return { initialPaymentRules };
   }
 
   async function handleSave() {
@@ -372,24 +361,32 @@ export function AdminParametersPage() {
     setError(null);
     setSuccessMsg(null);
 
-    const { modalityRules, initialPaymentRules } = buildSharedRules();
+    const { initialPaymentRules } = buildSharedRules();
 
     const levelConfigsPayload = LEVEL_SCOPES.flatMap(scope => {
       const entry = form.levelConfigs[scope];
-      return entry.rates.map((ratePct, idx) => ({
-        levelScope: scope,
-        isActive: entry.isActive,
-        validFrom: entry.validFrom,
-        paymentCount: idx + 1,
-        rateMonthly: percentToRate(ratePct || '0'),
-      }));
+      const sinMax = parseInt(entry.sinInteresMax, 10) || 3;
+      const conMax = parseInt(entry.conInteresMax, 10) || 6;
+      return entry.rates
+        .map((ratePct, idx) => {
+          const paymentCount = idx + 1;
+          return {
+            levelScope: scope,
+            isActive: entry.isActive,
+            validFrom: entry.validFrom,
+            paymentCount,
+            rateMonthly: percentToRate(ratePct || '0'),
+            maxPaymentsSinInteres: sinMax,
+            maxPaymentsConInteres: conMax,
+          };
+        })
+        .filter(row => row.paymentCount <= conMax);
     });
 
     const res = await updateParameterVersion(form.versionId, {
       validFrom: form._validFrom,
       validTo: form._validTo || null,
       notes: form._notes || null,
-      modalityRules,
       initialPaymentRules,
       levelConfigs: levelConfigsPayload,
     });
@@ -416,7 +413,7 @@ export function AdminParametersPage() {
   }
 
   /** HU-PV-01: Actualiza un campo del levelConfig para un nivel */
-  function setLevelConfig(scope: 'PREGRADO' | 'POSGRADO' | 'UPB_TEC', patch: Partial<LevelConfigFormEntry>) {
+  function setLevelConfig(scope: 'PREGRADO' | 'POSGRADO' | 'UPB_Tech', patch: Partial<LevelConfigFormEntry>) {
     setForm(prev => {
       if (!prev) return prev;
       return {
@@ -429,7 +426,7 @@ export function AdminParametersPage() {
     });
   }
 
-  function setLevelRate(scope: 'PREGRADO' | 'POSGRADO' | 'UPB_TEC', idx: number, value: string) {
+  function setLevelRate(scope: 'PREGRADO' | 'POSGRADO' | 'UPB_Tech', idx: number, value: string) {
     setForm(prev => {
       if (!prev) return prev;
       const entry = prev.levelConfigs[scope];
@@ -454,7 +451,7 @@ export function AdminParametersPage() {
     const LEVEL_LABELS: Record<string, string> = {
       PREGRADO: 'Pregrado',
       POSGRADO: 'Posgrado',
-      UPB_TEC: 'UPB Tech',
+      UPB_Tech: 'UPB Tech',
     };
 
     const PAYMENT_LABELS = [
@@ -602,8 +599,8 @@ export function AdminParametersPage() {
                                 });
                               }}
                               onBlur={v => {
-                                // Al perder foco: clampear y limpiar tasas del rango sin interés
-                                const clamped = clampInt(v, 1, 6);
+                                // Al perder foco: clampear a 1-3 (DB constraint chk_lc_max_sin)
+                                const clamped = clampInt(v, 1, 3);
                                 const newSin = parseInt(clamped, 10);
                                 setForm(prev => {
                                   if (!prev) return prev;
@@ -679,17 +676,16 @@ export function AdminParametersPage() {
                     const paymentCount = idx + 1;
                     const isSinInteres = paymentCount <= sinMax;
                     const isOutOfRange = paymentCount > conMax;
-                    const isDisabled   = isSinInteres || isOutOfRange;
 
                     return (
                       <div key={idx} className="relative">
                         <Field
                           label={plabel}
-                          value={isSinInteres ? '0' : isOutOfRange ? '' : entry.rates[idx]}
+                          value={isOutOfRange ? '' : entry.rates[idx]}
                           suffix={isOutOfRange ? undefined : '% M.V.'}
                           placeholder={isOutOfRange ? '—' : '0'}
                           type="number"
-                          readOnly={!editMode || isDisabled}
+                          readOnly={!editMode || isOutOfRange}
                           onChange={v => setLevelRate(scope, idx, clampPct(v))}
                         />
                         {/* Badge indicador de modalidad */}
@@ -733,8 +729,8 @@ export function AdminParametersPage() {
     const fields = [
       { label: 'Sin intereses (Pregrado y Posgrado)', key: 'pregradoSinInteres' as const, hint: 'Mínimo recomendado: 20%' },
       { label: 'Con intereses (Pregrado y Posgrado)', key: 'pregradoConInteres' as const, hint: 'Mínimo recomendado: 20%' },
-      { label: 'Sin intereses (UPB TEC)',              key: 'upbTecSinInteres'   as const, hint: 'Mínimo recomendado: 15%' },
-      { label: 'Con intereses (UPB TEC)',              key: 'upbTecConInteres'   as const, hint: 'Mínimo recomendado: 15%' },
+      { label: 'Sin intereses (UPB Tech)',             key: 'upbTecSinInteres'   as const, hint: 'Mínimo recomendado: 15%' },
+      { label: 'Con intereses (UPB Tech)',             key: 'upbTecConInteres'   as const, hint: 'Mínimo recomendado: 15%' },
     ];
 
     return (

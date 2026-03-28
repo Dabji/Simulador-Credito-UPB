@@ -2,6 +2,12 @@
 // Sequelize Model: InterestRateModel
 // Mapeo ORM para la tabla 'interest_rates'.
 // Tasa mensual por nivel educativo dentro de una versión.
+//
+// @deprecated — Reemplazado por LevelRateRuleModel (level_rate_rules).
+// Una tasa global por nivel ya no es suficiente: el nuevo modelo
+// permite tasas distintas por número de cuotas.
+// Mantener hasta migrar ParameterVersionRepository.
+// Ver: docs/database/migration_level_configs_redesign.sql
 // ============================================================
 
 import { DataTypes, Model } from 'sequelize';
@@ -12,7 +18,7 @@ interface InterestRateAttributes {
   id: string;
   rate_monthly: number;                // decimal(8,6)
   rate_type: 'MV';
-  level_scope: 'PREGRADO' | 'POSGRADO' | 'UPB_TEC';
+  level_scope: 'PREGRADO' | 'POSGRADO' | 'UPB_Tech';
   created_at: Date;
   parameter_version_id: string;
 }
@@ -26,7 +32,7 @@ export class InterestRateModel
   declare id: string;
   declare rate_monthly: number;
   declare rate_type: 'MV';
-  declare level_scope: 'PREGRADO' | 'POSGRADO' | 'UPB_TEC';
+  declare level_scope: 'PREGRADO' | 'POSGRADO' | 'UPB_Tech';
   declare created_at: Date;
   declare parameter_version_id: string;
 }
@@ -50,7 +56,7 @@ InterestRateModel.init(
       defaultValue: 'MV',
     },
     level_scope: {
-      type: DataTypes.ENUM('PREGRADO', 'POSGRADO', 'UPB_TEC'),
+      type: DataTypes.ENUM('PREGRADO', 'POSGRADO', 'UPB_Tech'),
       allowNull: false,
     },
     created_at: {

@@ -78,7 +78,7 @@ async function seed(): Promise<void> {
 
     // ── 2. Tasas de interés por nivel ────────────────────────
     // Según HU-13: 0.9% MV para con_interes (igual para todos los niveles)
-    const levels = ['PREGRADO', 'POSGRADO', 'UPB_TEC'] as const;
+    const levels = ['PREGRADO', 'POSGRADO', 'UPB_Tech'] as const;
 
     for (const level of levels) {
       await InterestRateModel.create(
@@ -92,7 +92,7 @@ async function seed(): Promise<void> {
         { transaction: t },
       );
     }
-    console.log('✅ interest_rates: 3 filas (PREGRADO, POSGRADO, UPB_TEC) @ 0.9% MV');
+    console.log('✅ interest_rates: 3 filas (PREGRADO, POSGRADO, UPB_Tech) @ 0.9% MV');
 
     // ── 3. Reglas de modalidad ───────────────────────────────
     // Según HU-13 y formato AF-FO-318-B:
@@ -105,9 +105,9 @@ async function seed(): Promise<void> {
       // POSGRADO
       { modality: 'SIN_INTERES', level: 'POSGRADO',  maxPay: 3, minPct: 0.2000 },
       { modality: 'CON_INTERES', level: 'POSGRADO',  maxPay: 6, minPct: 0.2000 },
-      // UPB_TEC
-      { modality: 'SIN_INTERES', level: 'UPB_TEC',   maxPay: 3, minPct: 0.1500 },
-      { modality: 'CON_INTERES', level: 'UPB_TEC',   maxPay: 6, minPct: 0.1500 },
+      // UPB_Tech
+      { modality: 'SIN_INTERES', level: 'UPB_Tech',   maxPay: 3, minPct: 0.1500 },
+      { modality: 'CON_INTERES', level: 'UPB_Tech',   maxPay: 6, minPct: 0.1500 },
     ] as const;
 
     for (const rule of modalityData) {
@@ -161,18 +161,18 @@ async function seed(): Promise<void> {
       { level: 'POSGRADO', modality: 'CON_INTERES', extra: 4, pct: 0.2000 },
       { level: 'POSGRADO', modality: 'CON_INTERES', extra: 5, pct: 0.2000 },
       { level: 'POSGRADO', modality: 'CON_INTERES', extra: 6, pct: 0.2000 },
-      // ─── UPB_TEC ───
-      { level: 'UPB_TEC', modality: 'SIN_INTERES', extra: 0, pct: 1.0000 },
-      { level: 'UPB_TEC', modality: 'SIN_INTERES', extra: 1, pct: 0.5000 },
-      { level: 'UPB_TEC', modality: 'SIN_INTERES', extra: 2, pct: 0.3400 },
-      { level: 'UPB_TEC', modality: 'SIN_INTERES', extra: 3, pct: 0.1500 },
-      { level: 'UPB_TEC', modality: 'CON_INTERES', extra: 0, pct: 1.0000 },
-      { level: 'UPB_TEC', modality: 'CON_INTERES', extra: 1, pct: 0.5000 },
-      { level: 'UPB_TEC', modality: 'CON_INTERES', extra: 2, pct: 0.3400 },
-      { level: 'UPB_TEC', modality: 'CON_INTERES', extra: 3, pct: 0.2500 },
-      { level: 'UPB_TEC', modality: 'CON_INTERES', extra: 4, pct: 0.2000 },
-      { level: 'UPB_TEC', modality: 'CON_INTERES', extra: 5, pct: 0.1500 },
-      { level: 'UPB_TEC', modality: 'CON_INTERES', extra: 6, pct: 0.1500 },
+      // ─── UPB_Tech ───
+      { level: 'UPB_Tech', modality: 'SIN_INTERES', extra: 0, pct: 1.0000 },
+      { level: 'UPB_Tech', modality: 'SIN_INTERES', extra: 1, pct: 0.5000 },
+      { level: 'UPB_Tech', modality: 'SIN_INTERES', extra: 2, pct: 0.3400 },
+      { level: 'UPB_Tech', modality: 'SIN_INTERES', extra: 3, pct: 0.1500 },
+      { level: 'UPB_Tech', modality: 'CON_INTERES', extra: 0, pct: 1.0000 },
+      { level: 'UPB_Tech', modality: 'CON_INTERES', extra: 1, pct: 0.5000 },
+      { level: 'UPB_Tech', modality: 'CON_INTERES', extra: 2, pct: 0.3400 },
+      { level: 'UPB_Tech', modality: 'CON_INTERES', extra: 3, pct: 0.2500 },
+      { level: 'UPB_Tech', modality: 'CON_INTERES', extra: 4, pct: 0.2000 },
+      { level: 'UPB_Tech', modality: 'CON_INTERES', extra: 5, pct: 0.1500 },
+      { level: 'UPB_Tech', modality: 'CON_INTERES', extra: 6, pct: 0.1500 },
     ] as const;
 
     for (const rule of initialPaymentData) {
