@@ -35,7 +35,7 @@ jobs:
           cache-dependency-path: package-lock.json # ✅ Corregido: Mira a la raíz
 
       - name: 📦 Instalar dependencias (Monorepo)
-        run: npm ci # ✅ Instala todo desde la raíz
+        run: npm ci --legacy-peer-deps # ✅ Instala todo desde la raíz
 
       - name: 🔍 Verificar tipos (TypeScript)
         run: npx tsc -p client/tsconfig.json --noEmit
@@ -64,7 +64,7 @@ jobs:
           cache-dependency-path: package-lock.json # ✅ Corregido: Mira a la raíz
 
       - name: 📦 Instalar dependencias (Monorepo)
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: 🔍 Verificar tipos (TypeScript)
         run: npx tsc -p server/tsconfig.json --noEmit
