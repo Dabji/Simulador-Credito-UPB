@@ -21,14 +21,6 @@ import {
 import type { MyProfileDTO, MySimulationItemDTO, UpdateMyProfilePayload } from '@/shared/services/api';
 
 // ── Helpers ───────────────────────────────────────────────────
-function formatCOP(value: number): string {
-  return new Intl.NumberFormat('es-CO', {
-    style: 'currency',
-    currency: 'COP',
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
 function formatDate(isoString: string): string {
   return new Date(isoString).toLocaleDateString('es-CO', {
     year: 'numeric',
@@ -493,31 +485,57 @@ export function UserProfilePage() {
                 No tienes simulaciones guardadas aún.
               </p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-100">
-                      <th className="text-left py-2 pr-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Periodo</th>
-                      <th className="text-left py-2 pr-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Cuotas</th>
-                      <th className="text-right py-2 pr-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Total pagado</th>
-                      <th className="text-right py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Fecha</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {simulations.map((sim) => (
-                      <tr key={sim.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                        <td className="py-3 pr-4 font-medium text-gray-800">{sim.academicPeriod}</td>
-                        <td className="py-3 pr-4 text-gray-600">{sim.numberOfPayments}</td>
-                        <td className="py-3 pr-4 text-right font-semibold" style={{ color: '#6E11B0' }}>
-                          {formatCOP(sim.totalPaid)}
-                        </td>
-                        <td className="py-3 text-right text-gray-500">{formatDate(sim.createdAt)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <ul className="space-y-3">
+                {simulations.map((sim, idx) => (
+                  <li
+                    key={sim.id}
+                    className="flex items-center gap-4 rounded-xl px-4 py-3.5 border border-gray-100 hover:border-purple-200 hover:shadow-md transition-all duration-300 ease-out group"
+                    style={{
+                      backgroundColor: '#FAFAFA',
+                      animation: `simFadeSlide 0.4s ease-out ${idx * 0.08}s both`,
+                    }}
+                  >
+                    {/* Ícono cuadernillo con acento violeta */}
+                    <span
+                      className="flex items-center justify-center w-10 h-10 rounded-xl shrink-0 transition-transform duration-300 group-hover:scale-110"
+                      style={{ backgroundColor: '#F3E8FF' }}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="w-5 h-5"
+                        style={{ color: '#A85BFF' }}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={1.8}
+                        aria-hidden="true"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </span>
+
+                    {/* Fecha */}
+                    <span className="text-sm font-semibold text-gray-700 group-hover:text-gray-900 transition-colors duration-200">
+                      {formatDate(sim.createdAt)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             )}
+
+            {/* Animación CSS en línea — fade + slide desde abajo */}
+            <style>{`
+              @keyframes simFadeSlide {
+                from {
+                  opacity: 0;
+                  transform: translateY(12px);
+                }
+                to {
+                  opacity: 1;
+                  transform: translateY(0);
+                }
+              }
+            `}</style>
           </div>
         </section>
 
@@ -525,7 +543,7 @@ export function UserProfilePage() {
         <div className="mt-8 flex justify-center">
           <button
             type="button"
-            onClick={() => navigate('/student/main')}
+            onClick={() => { window.scrollTo({ top: 0 }); navigate('/student/main'); }}
             className="inline-flex items-center gap-2 px-8 py-2.5 rounded-full font-semibold text-sm text-gray-700 border border-gray-300 hover:bg-gray-100 transition-all focus:outline-none focus:ring-2 focus:ring-gray-400"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">

@@ -8,8 +8,8 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
-import { simulateCredit } from '../services/api';
-import type { SimulationSummaryDTO, SimulationInputDTO } from '../services/api';
+import { simulateCredit, getSimulatorConfig } from '../services/api';
+import type { SimulationSummaryDTO, SimulationInputDTO, AdminParameterVersion } from '../services/api';
 
 /* ── Helpers de formateo (sin over-ingeniería) ──────────────────
    parseDigits   : extrae solo dígitos de un string
@@ -121,21 +121,16 @@ function isMonthPast(month: number, year: number): boolean {
     (year === now.getFullYear() && month < now.getMonth() + 1);
 }
 
-/** Cuotas máximas desde el mes elegido hasta el fin del periodo:
- *  - con_interes  → máximo absoluto 6
- *  - sin_interes  → máximo absoluto 3
- *  Siempre limitado por cuántos meses quedan en el periodo. */
-function maxInstallmentsFor(
+/** Meses restantes en el periodo desde el mes elegido.
+ *  El tope por modalidad se aplica externamente desde parámetros activos (capByMode). */
+function remainingMonthsInPeriod(
   period: string,
   firstPaymentMonth: number,
-  interestMode: string,
 ): number {
   const months  = getMonthsForPeriod(period);
   const idx     = months.indexOf(firstPaymentMonth);
   if (idx === -1) return 0;
-  const remaining = months.length - idx;           // cuotas disponibles en el periodo
-  const cap       = interestMode === 'sin_interes' ? 3 : 6;  // tope por modalidad
-  return Math.min(remaining, cap);
+  return months.length - idx;
 }
 
 /* Ventana móvil de 2 años: año actual + siguiente.
@@ -182,10 +177,6 @@ const INITIAL_FIELDS: FormFields = {
   observations: '',
 };
 
-/* #59 — Aviso de modalidad forzada a sin_interes (dinámico según número de cuotas) */
-const forcedSinInteresText = (n: number): string =>
-  `Por regla institucional, con ${n} cuota${n === 1 ? '' : 's'} totales se aplica modalidad sin intereses.`;
-
 /* Clases CSS compartidas para inputs, labels y helpers */
 const INPUT_BASE =
   'w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none transition-all duration-200 bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-purple-400 focus:border-purple-400';
@@ -193,8 +184,128 @@ const LABEL_CLASS  = 'block text-sm font-semibold text-gray-700 mb-1.5';
 const HELPER_CLASS = 'mt-1.5 text-xs leading-relaxed';
 const HELPER_COLOR = { color: '#4A5565' } as const;
 
+/* ── Helpers para extraer valores dinámicos de los parámetros activos ──
+   Reemplazan los valores hardcode (tasa 0.9%, min 20%, max 3/6) por lo
+   que el admin haya configurado en /admin/parameters. */
+
+/** Mapa de educationLevel del formulario → levelScope de la BD */
+const LEVEL_SCOPE_MAP: Record<string, string> = {
+  pregrado: 'PREGRADO',
+  posgrado: 'POSGRADO',
+  upbTech:  'UPB_Tech',
+};
+
+/** HU-PV-02: Obtiene la tasa dinámica por nivel y número de pagos desde levelConfigs */
+function getDynamicRate(
+  params: AdminParameterVersion | null,
+  educationLevel: string,
+  numberOfPayments: number,
+): number | null {
+  if (!params) return null;
+  const scope = LEVEL_SCOPE_MAP[educationLevel];
+  if (!scope) return null;
+  const cfgs = (params.levelConfigs ?? []).filter(c => c.levelScope === scope);
+  if (cfgs.length === 0) return null;
+  const cfg = cfgs.find(c => c.paymentCount === numberOfPayments);
+  return cfg ? cfg.rateMonthly : 0;
+}
+
+/** HU-PV-02: Texto dinámico para la etiqueta de "Con intereses" */
+function getDynamicRateLabel(
+  params: AdminParameterVersion | null,
+  educationLevel: string,
+  numberOfPayments: number,
+): string {
+  const rate = getDynamicRate(params, educationLevel, numberOfPayments);
+  if (rate !== null && numberOfPayments > 0) {
+    const pct = (rate * 100).toFixed(2).replace(/\.?0+$/, '');
+    return `Con intereses (${pct}% mensual M.V.)`;
+  }
+  return 'Con intereses (mensual vencida)';
+}
+
+/** HU-PV-01: Verifica si un nivel académico está inactivo según levelConfigs */
+function isLevelInactive(params: AdminParameterVersion | null, educationLevel: string): boolean {
+  if (!params) return false;
+  const scope = LEVEL_SCOPE_MAP[educationLevel];
+  if (!scope) return false;
+  const cfgs = (params.levelConfigs ?? []).filter(c => c.levelScope === scope);
+  if (cfgs.length === 0) return false;
+  return cfgs.every(c => !c.isActive);
+}
+
+/** HU-PV-02: Obtiene el máximo de pagos sin interés para un nivel desde levelConfigs */
+function getSinInteresMax(
+  params: AdminParameterVersion | null,
+  educationLevel: string,
+): number | null {
+  if (!params) return null;
+  const scope = LEVEL_SCOPE_MAP[educationLevel];
+  if (!scope) return null;
+  const cfgs = (params.levelConfigs ?? []).filter(c => c.levelScope === scope && c.isActive);
+  if (cfgs.length === 0) return null;
+  const maxSin = cfgs[0].maxPaymentsSinInteres;
+  return maxSin != null ? maxSin : null;
+}
+
+/** HU-PV-02: Deriva la modalidad efectiva según la parametrización real */
+function deriveEffectiveMode(
+  params: AdminParameterVersion | null,
+  educationLevel: string,
+  numberOfPayments: number,
+  currentMode: string,
+): string {
+  const sinMax = getSinInteresMax(params, educationLevel);
+  if (sinMax !== null) {
+    // La modalidad se determina por el límite sin interés, no por la tasa
+    return numberOfPayments <= sinMax ? 'sin_interes' : 'con_interes';
+  }
+  // Fallback #59: regla legacy si no hay levelConfigs
+  if (currentMode === 'con_interes' && numberOfPayments >= 1 && numberOfPayments <= 3) {
+    return 'sin_interes';
+  }
+  return currentMode;
+}
+
+/** Cuota inicial mínima (%) según nivel y modalidad desde params activos.
+ *  Se deriva de initialPaymentRules: el initialPctRequired de la fila con mayor
+ *  extraInstallments para ese (level, modality) es el porcentaje mínimo exigido. */
+function getMinInitialPct(
+  params: AdminParameterVersion | null,
+  educationLevel: string,
+  interestMode: string,
+): number {
+  const fallback = educationLevel === 'upbTech' ? 15 : 20;
+  if (!params) return fallback;
+  const scope = LEVEL_SCOPE_MAP[educationLevel];
+  if (!scope) return fallback;
+  const dbModality = interestMode === 'con_interes' ? 'CON_INTERES' : 'SIN_INTERES';
+  const matches = params.initialPaymentRules.filter(r => r.level === scope && r.modality === dbModality);
+  if (matches.length === 0) return fallback;
+  const last = matches.reduce((a, b) => a.extraInstallments > b.extraInstallments ? a : b);
+  return Math.round(last.initialPctRequired * 100);
+}
+
+/** Máximo de cuotas totales por modalidad desde el levelConfig activo del nivel. */
+function getMaxPaymentsByMode(
+  params: AdminParameterVersion | null,
+  educationLevel: string,
+  interestMode: string,
+): number {
+  const fallback = interestMode === 'sin_interes' ? 3 : 6;
+  if (!params) return fallback;
+  const scope = LEVEL_SCOPE_MAP[educationLevel];
+  if (!scope) return fallback;
+  const activeCfg = (params.levelConfigs ?? []).find(c => c.levelScope === scope && c.isActive);
+  if (!activeCfg) return fallback;
+  return interestMode === 'sin_interes'
+    ? (activeCfg.maxPaymentsSinInteres ?? fallback)
+    : (activeCfg.maxPaymentsConInteres ?? fallback);
+}
+
 interface SimulationFormProps {
   onResult: (summary: SimulationSummaryDTO, input: SimulationInputDTO) => void;
+  mode?: 'student' | 'guest';
 }
 
 /* ── Tipo para el diálogo de confirmación ──────────────────────────────────
@@ -229,14 +340,46 @@ function readDraft(): FormFields {
   }
 }
 
-export function SimulationForm({ onResult }: SimulationFormProps) {
+export function SimulationForm({ onResult, mode = 'student' }: SimulationFormProps) {
+  void mode; // mode consumed by parent orchestrator for guest restrictions
   const [fields, setFields]     = useState<FormFields>(readDraft);
   const [loading, setLoading]         = useState(false);
   const [apiError, setApiError]       = useState<string | null>(null);
+
+  /* ── Parámetros activos desde BD (tasa, cuota mínima, límites) ── */
+  const PARAMS_CACHE_KEY = 'sim_active_params';
+
+  function readCachedParams(): AdminParameterVersion | null {
+    try {
+      const raw = sessionStorage.getItem(PARAMS_CACHE_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw) as AdminParameterVersion;
+    } catch { return null; }
+  }
+
+  const [activeParams, setActiveParams] = useState<AdminParameterVersion | null>(readCachedParams);
+  const [paramsLoading, setParamsLoading] = useState(!readCachedParams());
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadConfig() {
+      const res = await getSimulatorConfig();
+      if (cancelled) return;
+      if (res.data?.data) {
+        setActiveParams(res.data.data);
+        try { sessionStorage.setItem(PARAMS_CACHE_KEY, JSON.stringify(res.data.data)); } catch { /* ignorar */ }
+      }
+      setParamsLoading(false);
+    }
+    void loadConfig();
+    return () => { cancelled = true; };
+  }, []);
   /* Mensaje post-submit: informa que la modalidad fue forzada a sin_interes (#59) */
   const [submitForcedMsg, setSubmitForcedMsg] = useState<string | null>(null);
   /* Diálogo de confirmación emergente — usado para Limpiar formulario */
   const [dialog, setDialog]           = useState<ConfirmDialogState>(DIALOG_CLOSED);
+  /* Modal de nivel deshabilitado */
+  const [blockedLevelModal, setBlockedLevelModal] = useState<string | null>(null);
 
   /* Persiste el borrador en sessionStorage cada vez que cambian los campos */
   useEffect(() => {
@@ -296,20 +439,19 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
         const pct    = parseFloat(parsePctInput(next.downPaymentPercent)) || 0;
         next.downPaymentValue = newNet > 0 && pct > 0 ? String(Math.round(newNet * pct / 100)) : '';
       }
-      /* #58 — Al seleccionar upbTech, forzar cuota inicial a 15%
-         #57 — Beca no aplica en upbTech: base de cálculo es la matrícula bruta */
-      if (key === 'educationLevel' && value === 'upbTech') {
-        next.downPaymentPercent = '15';
-        const tuition = parseFloat(parseCOPInput(next.tuitionValue)) || 0;
-        next.downPaymentValue = tuition > 0 ? String(Math.round(tuition * 0.15)) : '';
-      }
-      /* #58 — Al cambiar de upbTech a otro nivel, restaurar mínimo 20% si estaba en 15 */
-      if (key === 'educationLevel' && value !== 'upbTech' && prev.educationLevel === 'upbTech') {
-        next.downPaymentPercent = '20';
-        const tuition    = parseFloat(parseCOPInput(next.tuitionValue)) || 0;
-        const scholarship = parseFloat(parsePctInput(next.scholarshipPercent)) || 0;
-        const netT       = tuition * (1 - scholarship / 100);
-        next.downPaymentValue = netT > 0 ? String(Math.round(netT * 0.2)) : '';
+      /* Al cambiar nivel educativo → bloquear si inactivo, auto-rellenar cuota inicial */
+      if (key === 'educationLevel' && value) {
+        if (isLevelInactive(activeParams, value)) {
+          const lbl = value === 'upbTech' ? 'UPB Tech' : value === 'posgrado' ? 'Posgrado' : 'Pregrado';
+          setBlockedLevelModal(lbl);
+          return prev; // no cambiar el campo
+        }
+        const minPctLevel = getMinInitialPct(activeParams, value, next.interestMode || 'sin_interes');
+        next.downPaymentPercent = String(minPctLevel);
+        const tuitionVal  = parseFloat(parseCOPInput(next.tuitionValue)) || 0;
+        const scholVal    = parseFloat(parsePctInput(next.scholarshipPercent)) || 0;
+        const netTVal     = value === 'upbTech' ? tuitionVal : tuitionVal * (1 - scholVal / 100);
+        next.downPaymentValue = netTVal > 0 ? String(Math.round(netTVal * minPctLevel / 100)) : '';
       }
       /* Al cambiar periodo, limpiar mes y cuotas dependientes */
       if (key === 'academicPeriod') { next.firstPaymentMonth = ''; next.numberOfPayments = ''; }
@@ -323,40 +465,87 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
   /* Limpiar submitForcedMsg al cambiar cuotas o modalidad para no mostrar info vieja */
   const clearSubmitForced = () => setSubmitForcedMsg(null);
 
-  /* #59 — Forzar sin_interes si con_interes + numberOfPayments <= 3 */
+  /* HU-PV-02: Derivar modalidad dinámica al cambiar número de cuotas */
   const handleNumberOfPayments = (raw: string) => {
     clearSubmitForced();
     const v = raw.replace(/[^0-9]/g, '');
     const n = parseInt(v, 10);
     const capped = !v || n <= maxCuotas ? v : String(maxCuotas);
     const nFinal = parseInt(capped, 10);
-    if (fields.interestMode === 'con_interes' && nFinal >= 1 && nFinal <= 3) {
-      setForcedSinInteresMsg(forcedSinInteresText(nFinal));
-      setFields((prev) => ({ ...prev, interestMode: 'sin_interes', numberOfPayments: capped }));
-      setApiError(null);
-    } else {
+
+    /* Bug fix: cuotas=1 → pago único, cuota inicial auto 100% */
+    if (nFinal === 1) {
+      const tuition     = parseFloat(parseCOPInput(fields.tuitionValue)) || 0;
+      const scholarship = parseFloat(parsePctInput(fields.scholarshipPercent)) || 0;
+      const netTuition  = tuition * (1 - scholarship / 100);
       setForcedSinInteresMsg(null);
-      set('numberOfPayments', capped);
+      setFields((prev) => ({
+        ...prev,
+        numberOfPayments: capped,
+        downPaymentPercent: '100',
+        downPaymentValue: netTuition > 0 ? String(Math.round(netTuition)) : '',
+        interestMode: 'sin_interes',
+      }));
+      setApiError(null);
+      return;
     }
+
+    setForcedSinInteresMsg(null);
+    // Solo derivar modalidad cuando hay un número válido — nunca cuando el campo está vacío o borrando
+    if (!isNaN(nFinal) && nFinal > 1) {
+      const derived = deriveEffectiveMode(activeParams, fields.educationLevel || 'pregrado', nFinal, fields.interestMode || 'sin_interes');
+      if (derived !== fields.interestMode) {
+        const level   = fields.educationLevel || 'pregrado';
+        const minPct  = getMinInitialPct(activeParams, level, derived);
+        const tuition = parseFloat(parseCOPInput(fields.tuitionValue)) || 0;
+        const scholar = parseFloat(parsePctInput(fields.scholarshipPercent)) || 0;
+        const netT    = level === 'upbTech' ? tuition : tuition * (1 - scholar / 100);
+        const curPct  = parseFloat(parsePctInput(fields.downPaymentPercent)) || 0;
+        setFields((prev) => ({
+          ...prev,
+          numberOfPayments: capped,
+          interestMode: derived,
+          downPaymentPercent: curPct < minPct ? String(minPct) : prev.downPaymentPercent,
+          downPaymentValue: curPct < minPct && netT > 0
+            ? String(Math.round(netT * minPct / 100))
+            : prev.downPaymentValue,
+        }));
+        setApiError(null);
+        return;
+      }
+    }
+    set('numberOfPayments', capped);
   };
 
-  /* Cambio de interestMode: aplica regla #59 si se intenta con_interes con cuotas <= 3 */
+  /* Cambio libre de interestMode — el usuario elige sin forzado automático.
+     Solo actualiza el porcentaje mínimo de cuota inicial si queda por debajo del mínimo. */
   const handleInterestMode = (value: string) => {
     clearSubmitForced();
-    const n = parseInt(fields.numberOfPayments || '0', 10);
-    if (value === 'con_interes' && n >= 1 && n <= 3) {
-      setForcedSinInteresMsg(forcedSinInteresText(n));
-      setFields((prev) => ({ ...prev, interestMode: 'sin_interes' }));
-      setApiError(null);
-    } else {
-      setForcedSinInteresMsg(null);
-      set('interestMode', value);
-    }
+    setForcedSinInteresMsg(null);
+    const level = fields.educationLevel || 'pregrado';
+    const minPct = getMinInitialPct(activeParams, level, value);
+    const tuition     = parseFloat(parseCOPInput(fields.tuitionValue)) || 0;
+    const scholarship = parseFloat(parsePctInput(fields.scholarshipPercent)) || 0;
+    const netT        = level === 'upbTech' ? tuition : tuition * (1 - scholarship / 100);
+    const currentPct  = parseFloat(parsePctInput(fields.downPaymentPercent)) || 0;
+    setFields((prev) => ({
+      ...prev,
+      interestMode: value,
+      numberOfPayments: '', // limpiar cuotas al cambiar modalidad para que el usuario reescoja
+      downPaymentPercent: currentPct < minPct ? String(minPct) : prev.downPaymentPercent,
+      downPaymentValue: currentPct < minPct && netT > 0
+        ? String(Math.round(netT * minPct / 100))
+        : prev.downPaymentValue,
+    }));
+    setApiError(null);
   };
 
-  /* Porcentaje mínimo de cuota inicial según nivel de formación:
-     UPB Tech → 15%   |   Pregrado / Posgrado → 20% */
-  const minDownPct = fields.educationLevel === 'upbTech' ? 15 : 20;
+  /* Porcentaje mínimo de cuota inicial — dinámico desde parámetros activos */
+  const minDownPct = getMinInitialPct(
+    activeParams,
+    fields.educationLevel || 'pregrado',
+    fields.interestMode || 'sin_interes',
+  );
 
   /* Error inline para cuota inicial — se muestra en tiempo real */
   const downPctNum    = parseFloat(parsePctInput(fields.downPaymentPercent)) || 0;
@@ -372,13 +561,19 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
     [fields.academicPeriod],
   );
 
-  /* Máximo de cuotas según periodo, mes elegido Y modalidad:
-     con_interes → tope 6  |  sin_interes → tope 3 */
-  const maxCuotas = useMemo(() => {
-    const m = parseInt(fields.firstPaymentMonth, 10);
-    if (!fields.academicPeriod || !m) return fields.interestMode === 'sin_interes' ? 3 : 6;
-    return maxInstallmentsFor(fields.academicPeriod, m, fields.interestMode);
-  }, [fields.academicPeriod, fields.firstPaymentMonth, fields.interestMode]);
+  /* Máximo de cuotas — dinámico desde parámetros activos y periodo/mes */
+  const capByMode = getMaxPaymentsByMode(
+    activeParams,
+    fields.educationLevel || 'pregrado',
+    fields.interestMode || 'sin_interes',
+  );
+  const firstPayMonth = parseInt(fields.firstPaymentMonth, 10);
+  const maxCuotas = (!fields.academicPeriod || !firstPayMonth)
+    ? capByMode
+    : Math.min(
+        remainingMonthsInPeriod(fields.academicPeriod, firstPayMonth),
+        capByMode,
+      );
 
   /* Limpiar formulario — pide confirmación antes de borrar */
   const handleReset = () => {
@@ -408,6 +603,10 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
   function buildInput(): SimulationInputDTO | string {
     if (!fields.studentType)       return 'Selecciona el tipo de estudiante.';
     if (!fields.educationLevel)    return 'Selecciona el nivel de formación.';
+    // HU-PV-01: Bloquear si el nivel está inactivo
+    if (isLevelInactive(activeParams, fields.educationLevel)) {
+      return `El nivel de formación "${fields.educationLevel === 'upbTech' ? 'UPB Tech' : fields.educationLevel === 'posgrado' ? 'Posgrado' : 'Pregrado'}" se encuentra temporalmente deshabilitado por lineamientos institucionales.`;
+    }
     /* Extraer valores numéricos limpios de los campos formateados */
     const rawTuition      = parseCOPInput(fields.tuitionValue);
     const rawDownPct      = parsePctInput(fields.downPaymentPercent);
@@ -415,8 +614,8 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
     const rawScholarship  = parsePctInput(fields.scholarshipPercent);
 
     if (!rawTuition)             return 'Ingresa el valor de matrícula.';
-    /* Mínimo dinámico: 15% UPB Tech, 20% Pregrado/Posgrado */
-    const minPct = fields.educationLevel === 'upbTech' ? 15 : 20;
+    /* Mínimo dinámico desde parámetros activos */
+    const minPct = minDownPct;
     if (parseFloat(rawDownPct) < minPct)
       return `La cuota inicial debe ser mínimo del ${minPct}% para este nivel de formación.`;
     if (!rawDownVal)             return 'Ingresa el valor de cuota inicial.';
@@ -430,10 +629,9 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
       return 'El mes de la primera cuota ya pasó. Selecciona un mes válido.';
     const nPayments = parseInt(fields.numberOfPayments, 10);
     if (!nPayments || nPayments < 1) return 'Ingresa el número de cuotas (mínimo 1).';
-    /* Bloquear si supera el tope de la modalidad */
-    const maxPay = maxInstallmentsFor(fields.academicPeriod, fpm, fields.interestMode);
-    if (nPayments > maxPay)
-      return `El número de cuotas supera el máximo permitido (${maxPay}) para esta modalidad y mes.`;
+    /* Bloquear si supera el tope (periodo + modalidad dinámica) */
+    if (nPayments > maxCuotas)
+      return `El número de cuotas supera el máximo permitido (${maxCuotas}) para esta modalidad y mes.`;
 
     /* Los 3 niveles del select coinciden 1:1 con los valores del backend */
     return {
@@ -457,15 +655,17 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
     e.preventDefault();
     setApiError(null);
 
-    /* #59 — Si el usuario tiene con_interes + cuotas <=3, corregir el radio ANTES
-       de construir el input. Así el radio queda en sin_interes visualmente y el
-       input enviado al backend es consistente con lo que ve el usuario. */
+    /* HU-PV-02: Derivar modalidad efectiva antes de enviar al backend */
     const nPayRaw = parseInt(fields.numberOfPayments, 10);
-    const modeWillForce = fields.interestMode === 'con_interes'
-      && nPayRaw >= 1 && nPayRaw <= 3;
+    const derived = deriveEffectiveMode(
+      activeParams, fields.educationLevel || 'pregrado', nPayRaw, fields.interestMode,
+    );
+    const modeWillForce = derived !== fields.interestMode;
     if (modeWillForce) {
-      setFields((prev) => ({ ...prev, interestMode: 'sin_interes' }));
-      setForcedSinInteresMsg(forcedSinInteresText(nPayRaw));
+      setFields((prev) => ({ ...prev, interestMode: derived }));
+      setForcedSinInteresMsg(
+        `La modalidad se ajustó automáticamente a ${derived === 'sin_interes' ? 'Sin intereses' : 'Con intereses'} según la parametrización vigente.`,
+      );
     }
 
     const inputOrError = buildInput();
@@ -473,16 +673,15 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
 
     /* Usar la modalidad efectiva en el objeto enviado al backend */
     const effectiveInput: typeof inputOrError = modeWillForce
-      ? { ...inputOrError, interestMode: 'sin_interes' }
+      ? { ...inputOrError, interestMode: derived as 'sin_interes' | 'con_interes' }
       : inputOrError;
 
-    /* Mostrar aviso post-cálculo SOLO si la modalidad fue forzada en este submit */
-    const nPay = effectiveInput.numberOfPayments;
-    if (modeWillForce && nPay >= 1 && nPay <= 3) {
+    /* Mostrar aviso post-cálculo si la modalidad fue forzada */
+    if (modeWillForce) {
+      const nPay = effectiveInput.numberOfPayments;
       setSubmitForcedMsg(
-        `La simulación se calculó en modalidad Sin intereses (0%) porque seleccionaste ` +
-        `${nPay} cuota${nPay === 1 ? '' : 's'} total${nPay === 1 ? '' : 'es'}. ` +
-        `Por regla institucional, financiaciones de hasta 3 cuotas no generan intereses.`,
+        `La simulación se calculó en modalidad ${derived === 'sin_interes' ? 'Sin intereses' : 'Con intereses'} ` +
+        `para ${nPay} cuota${nPay === 1 ? '' : 's'} total${nPay === 1 ? '' : 'es'} según la parametrización vigente.`,
       );
     } else {
       setSubmitForcedMsg(null);
@@ -548,9 +747,14 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
             className={INPUT_BASE}
           >
             <option value="">Seleccionar...</option>
-            {EDUCATION_LEVELS.map((lvl) => (
-              <option key={lvl.value} value={lvl.value}>{lvl.label}</option>
-            ))}
+            {EDUCATION_LEVELS.map((lvl) => {
+              const inactive = isLevelInactive(activeParams, lvl.value);
+              return (
+                <option key={lvl.value} value={lvl.value} disabled={inactive}>
+                  {inactive ? `${lvl.label} (No disponible)` : lvl.label}
+                </option>
+              );
+            })}
           </select>
         </div>
       </section>
@@ -604,6 +808,16 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
               onChange={(e: ChangeEvent<HTMLInputElement>) =>
                 set('scholarshipPercent', clampPct(parsePctInput(e.target.value)))
               }
+              onFocus={(e) => e.target.select()}
+              onKeyDown={(e) => {
+                const el = e.currentTarget;
+                if (e.key === 'Backspace' && el.selectionStart === el.value.length && el.value.endsWith('%')) {
+                  e.preventDefault();
+                  const pos = el.value.length - 1;
+                  el.setSelectionRange(pos, pos);
+                  set('scholarshipPercent', clampPct(parsePctInput(el.value.slice(0, -2))));
+                }
+              }}
               disabled={fields.educationLevel === 'upbTech'}
               className={INPUT_BASE}
               style={fields.educationLevel === 'upbTech'
@@ -638,8 +852,21 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
                   set('downPaymentPercent', clampPct(parsePctInput(e.target.value)))
                 }
+                onFocus={(e) => e.target.select()}
+                onKeyDown={(e) => {
+                  const el = e.currentTarget;
+                  if (e.key === 'Backspace' && el.selectionStart === el.value.length && el.value.endsWith('%')) {
+                    e.preventDefault();
+                    const pos = el.value.length - 1;
+                    el.setSelectionRange(pos, pos);
+                    set('downPaymentPercent', clampPct(parsePctInput(el.value.slice(0, -2))));
+                  }
+                }}
+                disabled={fields.numberOfPayments === '1'}
                 className={INPUT_BASE}
-                style={downPctError ? { borderColor: '#EF4444' } : undefined}
+                style={fields.numberOfPayments === '1'
+                  ? { backgroundColor: '#F3F4F6', color: '#9CA3AF', cursor: 'not-allowed', borderColor: '#E5E7EB' }
+                  : downPctError ? { borderColor: '#EF4444' } : undefined}
                 aria-invalid={!!downPctError}
                 aria-describedby="downPctErrorMsg"
               />
@@ -668,12 +895,26 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
                   set('downPaymentValue', parseCOPInput(e.target.value))
                 }
+                disabled={fields.numberOfPayments === '1'}
                 className={INPUT_BASE}
+                style={fields.numberOfPayments === '1'
+                  ? { backgroundColor: '#F3F4F6', color: '#9CA3AF', cursor: 'not-allowed', borderColor: '#E5E7EB' }
+                  : undefined}
               />
             </div>
           </div>
+          {/* Banner informativo: cuotas=1 → pago único */}
+          {fields.numberOfPayments === '1' && (
+            <div
+              className="mt-3 rounded-lg px-3 py-2 text-xs font-medium"
+              style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1E40AF' }}
+              role="alert"
+            >
+              Con 1 cuota total, el pago se realiza en una sola cuota. La cuota inicial se ajustó al 100%.
+            </div>
+          )}
           {/* Helper text dinámico: indica el mínimo según el nivel de formación */}
-          {!downPctError && (
+          {fields.numberOfPayments !== '1' && !downPctError && (
             <p className={HELPER_CLASS} style={HELPER_COLOR}>
               {fields.educationLevel === 'upbTech'
                 ? 'Cuota inicial predeterminada al 15% para UPB Tech. Puedes modificarla si lo requieres.'
@@ -718,7 +959,7 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
                 onChange={(e: ChangeEvent<HTMLInputElement>) => handleInterestMode(e.target.value)}
                 className="w-4 h-4 text-purple-600 focus:ring-purple-500"
               />
-              Con intereses (0.9% mensual M.V.)
+              {getDynamicRateLabel(activeParams, fields.educationLevel || 'pregrado', parseInt(fields.numberOfPayments, 10) || 0)}
             </label>
           </div>
         </fieldset>
@@ -895,11 +1136,11 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
       <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || paramsLoading}
           className="w-full sm:w-auto px-10 py-3 rounded-full text-white font-bold text-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 hover:brightness-110 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
           style={{ backgroundColor: '#A85BFF', boxShadow: '0 4px 14px rgba(168,91,255,0.35)' }}
         >
-          {loading ? 'Calculando...' : 'Calcular Simulación'}
+          {paramsLoading ? 'Cargando parámetros...' : loading ? 'Calculando...' : 'Calcular Simulación'}
         </button>
         <button
           type="button"
@@ -924,6 +1165,58 @@ export function SimulationForm({ onResult }: SimulationFormProps) {
             <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <span>{submitForcedMsg}</span>
+        </div>
+      )}
+      {/* ── Modal: nivel de formación deshabilitado ── */}
+      {blockedLevelModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="blocked-level-title"
+          style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
+          onClick={() => setBlockedLevelModal(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl p-8 mx-4 w-full max-w-md flex flex-col items-center gap-5"
+            style={{ animation: 'fadeScaleIn 0.2s ease-out' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Icono de advertencia */}
+            <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center">
+              <svg className="w-7 h-7 text-amber-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+            </div>
+
+            <div className="text-center">
+              <h3 id="blocked-level-title" className="text-lg font-black text-gray-900 mb-2">
+                Nivel no disponible
+              </h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                El nivel de formación <span className="font-bold text-gray-800">{blockedLevelModal}</span> se encuentra
+                temporalmente deshabilitado por problemas de parametrización técnica.
+                <br /><br />
+                Pronto será habilitado nuevamente. Por favor selecciona otro nivel o intenta más tarde.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setBlockedLevelModal(null)}
+              className="px-8 py-2.5 rounded-full text-sm font-bold text-white transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 hover:brightness-110 active:scale-95"
+              style={{ backgroundColor: '#A85BFF' }}
+            >
+              Entendido
+            </button>
+          </div>
+
+          <style>{`
+            @keyframes fadeScaleIn {
+              from { opacity: 0; transform: scale(0.92); }
+              to   { opacity: 1; transform: scale(1); }
+            }
+          `}</style>
         </div>
       )}
     </form>

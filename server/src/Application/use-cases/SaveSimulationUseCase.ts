@@ -31,7 +31,7 @@ export class SaveSimulationUseCase {
   async execute(
     input: SimulationInput,
     userId: string,
-  ): Promise<{ id: string; savedAt: Date; summary: SimulationSummary }> {
+  ): Promise<{ id: string; savedAt: Date; summary: SimulationSummary; parameterVersionId: string; appliedRateMonthly: number }> {
     // 1. Obtener versión activa de parámetros
     const activeVersion = await this.paramRepo.findActive();
     if (!activeVersion) {
@@ -44,14 +44,26 @@ export class SaveSimulationUseCase {
     const dbLevel = LEVEL_MAP[input.educationLevel];
     if (!dbLevel) throw new BadRequestError(`Nivel educativo inválido: ${input.educationLevel}`);
 
-    const rateEntry = activeVersion.interestRates.find(r => r.levelScope === dbLevel);
-    if (input.interestMode === 'con_interes' && (!rateEntry || rateEntry.rateMonthly == null)) {
-      throw new NotFoundError(
-        'La versión de parámetros activa no define una tasa de interés para este nivel',
+    // HU-PV-01: Validar que el nivel académico no esté desactivado
+    const lvlCfgs = activeVersion.levelConfigs.filter(c => c.levelScope === dbLevel);
+    if (lvlCfgs.length > 0 && lvlCfgs.every(c => !c.isActive)) {
+      throw new BadRequestError(
+        `El nivel de formación "${input.educationLevel}" se encuentra temporalmente ` +
+        'deshabilitado por lineamientos institucionales.',
+      );
+    }
+
+    const levelCfgForRate = activeVersion.levelConfigs.find(
+      c => c.levelScope === dbLevel && c.isActive && c.paymentCount === input.numberOfPayments,
+    );
+    if (input.interestMode === 'con_interes' && (!levelCfgForRate || levelCfgForRate.rateMonthly <= 0)) {
+      throw new BadRequestError(
+        `No existe una tasa de interés configurada para el nivel "${input.educationLevel}" ` +
+        `con ${input.numberOfPayments} cuota(s). Contacte al administrador.`,
       );
     }
     const appliedRate = input.interestMode === 'con_interes'
-      ? rateEntry!.rateMonthly
+      ? (levelCfgForRate?.rateMonthly ?? 0)
       : 0;
 
     // 3. Calcular la simulación (valida reglas de negocio)
@@ -91,6 +103,6 @@ export class SaveSimulationUseCase {
     // 6. Persistir en BD (transacción)
     const result = await this.simulationRepo.save(data);
 
-    return { id: result.id, savedAt: result.savedAt, summary };
+    return { id: result.id, savedAt: result.savedAt, summary, parameterVersionId: activeVersion.id, appliedRateMonthly: appliedRate };
   }
 }

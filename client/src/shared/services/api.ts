@@ -217,12 +217,44 @@ export async function logoutUser(): Promise<ApiResponse<{ message: string }>> {
 
 // ── Funciones de recuperación de contraseña ──────────────────────────────
 
+export interface RecoveryHintResponse {
+  readonly success: boolean;
+  readonly maskedEmail: string;
+}
+
+/**
+ * POST /api/auth/recover-hint (HU-PV-04)
+ * Retorna el correo enmascarado asociado a un número de identificación.
+ */
+export async function getRecoveryHint(
+  identificationNumber: string,
+): Promise<ApiResponse<RecoveryHintResponse>> {
+  return request<RecoveryHintResponse>('/auth/recover-hint', {
+    method: 'POST',
+    body: JSON.stringify({ identificationNumber }),
+  });
+}
+
 export async function forgotPassword(
   email: string,
 ): Promise<ApiResponse<{ message: string }>> {
   return request<{ message: string }>('/auth/forgot-password', {
     method: 'POST',
     body: JSON.stringify({ email }),
+  });
+}
+
+/**
+ * POST /api/auth/forgot-password-by-id (HU-PV-04)
+ * Inicia recuperación de contraseña usando el número de identificación.
+ * El backend localiza el correo real y envía el enlace sin exponerlo al cliente.
+ */
+export async function forgotPasswordById(
+  identificationNumber: string,
+): Promise<ApiResponse<{ message: string }>> {
+  return request<{ message: string }>('/auth/forgot-password-by-id', {
+    method: 'POST',
+    body: JSON.stringify({ identificationNumber }),
   });
 }
 
@@ -261,6 +293,133 @@ export async function saveSimulation(
     method: 'POST',
     body: JSON.stringify(input),
   });
+}
+
+// ── DTOs de Parámetros Administrativos (RF-10, RF-23, RF-24) ────────────
+
+export type EducationLevelScope = 'PREGRADO' | 'POSGRADO' | 'UPB_Tech';
+export type ModalityType = 'SIN_INTERES' | 'CON_INTERES';
+
+
+export interface AdminInitialPaymentRule {
+  readonly level: EducationLevelScope;
+  readonly modality: ModalityType;
+  readonly extraInstallments: number;
+  readonly initialPctRequired: number;
+}
+
+export interface AdminLevelConfig {
+  readonly levelScope: EducationLevelScope;
+  readonly isActive: boolean;
+  readonly validFrom: string;
+  readonly maxPaymentsSinInteres?: number;
+  readonly maxPaymentsConInteres?: number;
+  readonly paymentCount: number;
+  readonly rateMonthly: number;
+}
+
+export interface AdminParameterVersion {
+  readonly id: string;
+  readonly validFrom: string;
+  readonly validTo: string | null;
+  readonly installmentsWindowFrom: string;
+  readonly installmentsWindowTo: string;
+  readonly paymentPeriodDays: number;
+  readonly notes?: string | null;
+  readonly initialPaymentRules: AdminInitialPaymentRule[];
+  readonly levelConfigs?: AdminLevelConfig[];
+}
+
+export interface AdminParameterVersionSummary {
+  readonly id: string;
+  readonly validFrom: string;
+  readonly validTo: string | null;
+  readonly notes: string | null;
+  readonly createdAt: string;
+  readonly isActive: boolean;
+}
+
+export interface UpdateParameterVersionPayload {
+  validFrom?: string;
+  validTo?: string | null;
+  notes?: string | null;
+  initialPaymentRules?: {
+    level: EducationLevelScope;
+    modality: ModalityType;
+    extraInstallments: number;
+    initialPctRequired: number;
+  }[];
+  levelConfigs?: {
+    levelScope: EducationLevelScope;
+    isActive: boolean;
+    validFrom: string;
+    paymentCount: number;
+    rateMonthly: number;
+    maxPaymentsSinInteres?: number;
+    maxPaymentsConInteres?: number;
+  }[];
+}
+
+/** GET /api/admin/parameters/active — versión vigente con todas sus reglas (requiere ADMIN) */
+export async function getActiveParameters(): Promise<ApiResponse<{ data: AdminParameterVersion }>> {
+  return request<{ data: AdminParameterVersion }>('/admin/parameters/active');
+}
+
+/** GET /api/parameters/active — parámetros activos PÚBLICO (student + guest).
+ *  Usado por SimulationForm para reflejar tasa, cuota mínima, límites dinámicamente. */
+export async function getSimulatorConfig(): Promise<ApiResponse<{ data: AdminParameterVersion }>> {
+  return request<{ data: AdminParameterVersion }>('/parameters/active');
+}
+
+/** GET /api/admin/parameters — listado de todas las versiones (resumen) */
+export async function listParameterVersions(): Promise<ApiResponse<{ data: AdminParameterVersionSummary[] }>> {
+  return request<{ data: AdminParameterVersionSummary[] }>('/admin/parameters');
+}
+
+/** GET /api/admin/parameters/:id — versión específica con todas sus reglas */
+export async function getParameterVersion(
+  id: string,
+): Promise<ApiResponse<{ data: AdminParameterVersion }>> {
+  return request<{ data: AdminParameterVersion }>(`/admin/parameters/${id}`);
+}
+
+/** Payload para crear una nueva versión de parámetros */
+export interface CreateParameterVersionPayload {
+  validFrom: string;
+  validTo?: string | null;
+  notes?: string | null;
+  initialPaymentRules: { level: EducationLevelScope; modality: ModalityType; extraInstallments: number; initialPctRequired: number }[];
+}
+
+/** POST /api/admin/parameters — crea una nueva versión de parámetros (requiere ADMIN) */
+export async function createParameterVersion(
+  payload: CreateParameterVersionPayload,
+): Promise<ApiResponse<{ data: AdminParameterVersion; message: string }>> {
+  return request<{ data: AdminParameterVersion; message: string }>(
+    '/admin/parameters',
+    { method: 'POST', body: JSON.stringify(payload) },
+  );
+}
+
+/** PATCH /api/admin/parameters/:id/activate — activa una versión y desactiva las demás */
+export async function activateParameterVersion(
+  id: string,
+): Promise<ApiResponse<{ data: AdminParameterVersion; message: string }>> {
+  return request<{ data: AdminParameterVersion; message: string }>(
+    `/admin/parameters/${id}/activate`,
+    { method: 'PATCH' },
+  );
+}
+
+/** PUT /api/admin/parameters/:id — actualiza una versión de parámetros */
+export async function updateParameterVersion(
+  id: string,
+  payload: UpdateParameterVersionPayload,
+): Promise<ApiResponse<{ data: AdminParameterVersion; message: string }>> {
+  return request<{ data: AdminParameterVersion; message: string }>(
+    `/admin/parameters/${id}`,
+    { method: 'PUT', body: JSON.stringify(payload) },
+  );
 }
 
 // ── HU-81: Perfil del usuario ─────────────────────────────────────────────
@@ -314,4 +473,415 @@ export async function updateMyProfile(
 /** GET /api/users/me/simulations — Lista simulaciones del estudiante (máx. 20) */
 export async function getMySimulations(): Promise<ApiResponse<{ simulations: MySimulationItemDTO[] }>> {
   return request<{ simulations: MySimulationItemDTO[] }>('/users/me/simulations');
+}
+
+// ── HU-82: Gestión de usuarios (Admin) ───────────────────────────────────
+
+export type AdminUserFilterField =
+  | 'identificationNumber'
+  | 'documentType'
+  | 'fullName'
+  | 'email'
+  | 'phone'
+  | 'createdAt';
+
+export interface AdminUserListItemDTO {
+  readonly id: string;
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly fullName: string;
+  readonly documentType?: 'CC' | 'TI';
+  readonly identificationNumber: string;
+  readonly email: string;
+  readonly phone?: string;
+  readonly role: 'STUDENT' | 'ADMIN';
+  readonly createdAt: string;
+}
+
+export interface AdminUsersResponseDTO {
+  readonly items: AdminUserListItemDTO[];
+  readonly page: number;
+  readonly pageSize: number;
+  readonly total: number;
+  readonly totalPages: number;
+}
+
+export interface AdminUserProfileDTO {
+  readonly id: string;
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly fullName: string;
+  readonly documentType?: 'CC' | 'TI';
+  readonly identificationNumber: string;
+  readonly email: string;
+  readonly phone?: string;
+  readonly role: 'STUDENT' | 'ADMIN';
+  readonly isActive: boolean;
+  readonly createdAt: string;
+}
+
+export interface AdminUpdateUserPayload {
+  email?: string;
+  documentType?: 'CC' | 'TI';
+  identificationNumber?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+}
+
+export interface AdminUserSimulationItemDTO {
+  readonly id: string;
+  readonly academicPeriod: string;
+  readonly numberOfPayments: number;
+  readonly totalPaid: number;
+  readonly createdAt: string;
+}
+
+/** Criterio individual de filtro multi-campo (HU-PV-03) */
+export interface AdminUserFilterCriterion {
+  field: AdminUserFilterField;
+  value: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export interface AdminListUsersParams {
+  q?: string;
+  filter?: AdminUserFilterField;
+  /** HU-PV-03: criterios multi-campo acumulables */
+  criteria?: AdminUserFilterCriterion[];
+  page?: number;
+  pageSize?: number;
+}
+
+
+/** GET /api/admin/users — Listar estudiantes con búsqueda y paginación */
+export async function adminListUsers(
+  params: AdminListUsersParams = {},
+): Promise<ApiResponse<{ data: AdminUsersResponseDTO }>> {
+  const qs = new URLSearchParams();
+  if (params.q)                          qs.set('q',        params.q);
+  if (params.filter)                     qs.set('filter',   params.filter);
+  if (params.criteria && params.criteria.length > 0) qs.set('criteria', JSON.stringify(params.criteria));
+  if (params.page)                       qs.set('page',     String(params.page));
+  if (params.pageSize)                   qs.set('pageSize', String(params.pageSize));
+  const query = qs.toString() ? `?${qs.toString()}` : '';
+  return request<{ data: AdminUsersResponseDTO }>(`/admin/users${query}`);
+}
+
+/**
+ * GET /api/admin/users/export/csv
+ * HU-PV-03: Descarga el CSV de estudiantes respetando los filtros activos.
+ * Lanza un Error con mensaje legible si la respuesta no es OK.
+ */
+export async function adminExportStudentsCsv(
+  params: Omit<AdminListUsersParams, 'page' | 'pageSize'> = {},
+): Promise<{ blob: Blob; filename: string }> {
+  const token = localStorage.getItem('token');
+  const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
+  const qs = new URLSearchParams();
+  if (params.q)                          qs.set('q',        params.q);
+  if (params.filter)                     qs.set('filter',   params.filter);
+  if (params.criteria && params.criteria.length > 0) qs.set('criteria', JSON.stringify(params.criteria));
+  const query = qs.toString() ? `?${qs.toString()}` : '';
+
+  const response = await fetch(`${API_BASE}/admin/users/export/csv${query}`, { headers });
+
+  if (!response.ok) {
+    let msg = 'Error al generar el CSV.';
+    try {
+      const body = (await response.json()) as { error?: { message?: string } | string };
+      if (typeof body.error === 'string') msg = body.error;
+      else if (body.error?.message) msg = body.error.message;
+    } catch { /* ignorar */ }
+    throw new Error(msg);
+  }
+
+  const blob = await response.blob();
+  const cd   = response.headers.get('Content-Disposition') ?? '';
+  const match = /filename="?([^"]+)"?/.exec(cd);
+  const filename = match?.[1] ?? `estudiantes-upb-${new Date().toISOString().slice(0, 10)}.csv`;
+  return { blob, filename };
+}
+
+/** GET /api/admin/users/:id — Perfil completo de un usuario */
+export async function adminGetUser(
+  id: string,
+): Promise<ApiResponse<{ data: AdminUserProfileDTO }>> {
+  return request<{ data: AdminUserProfileDTO }>(`/admin/users/${id}`);
+}
+
+/** PATCH /api/admin/users/:id — Actualizar datos personales de un usuario */
+export async function adminUpdateUser(
+  id: string,
+  payload: AdminUpdateUserPayload,
+): Promise<ApiResponse<{ data: AdminUserProfileDTO; message: string }>> {
+  return request<{ data: AdminUserProfileDTO; message: string }>(
+    `/admin/users/${id}`,
+    { method: 'PATCH', body: JSON.stringify(payload) },
+  );
+}
+
+/** GET /api/admin/users/:id/simulations — Simulaciones de un usuario */
+export async function adminGetUserSimulations(
+  id: string,
+): Promise<ApiResponse<{ data: AdminUserSimulationItemDTO[] }>> {
+  return request<{ data: AdminUserSimulationItemDTO[] }>(`/admin/users/${id}/simulations`);
+}
+
+// ── HU-42: Gestión de simulaciones (ADMIN) ────────────────────────────────
+
+export type AdminSimFilterField =
+  | 'createdAt'
+  | 'academicPeriod'
+  | 'interestMode'
+  | 'educationLevel'
+  | 'studentType'
+  | 'studentName'
+  | 'studentEmail';
+
+export interface AdminSimulationItemDTO {
+  readonly id: string;
+  readonly createdAt: string;
+  readonly studentName: string;
+  readonly studentEmail: string;
+  readonly modality: 'SIN_INTERES' | 'CON_INTERES';
+  readonly educationLevel: 'PREGRADO' | 'POSGRADO' | 'UPB_Tech';
+  readonly studentType: 'NUEVO' | 'CONTINUO';
+  readonly financedValue: number;
+  readonly initialPaymentValue: number;
+  readonly firstPaymentDate: string;
+  readonly numberOfPayments: number;
+  readonly academicPeriod: string;
+}
+
+export interface AdminSimulationsResponseDTO {
+  readonly items: AdminSimulationItemDTO[];
+  readonly page: number;
+  readonly pageSize: number;
+  readonly total: number;
+  readonly totalPages: number;
+}
+
+/** Criterio individual de filtro multi-campo para simulaciones (HU-PV-03) */
+export interface AdminSimFilterCriterion {
+  field: AdminSimFilterField;
+  value: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export interface AdminListSimulationsParams {
+  q?: string;
+  filter?: AdminSimFilterField;
+  /** HU-PV-03: criterios multi-campo acumulables */
+  criteria?: AdminSimFilterCriterion[];
+  page?: number;
+  pageSize?: number;
+}
+
+/** GET /api/admin/simulations — Lista paginada de todas las simulaciones */
+export async function adminListSimulations(
+  params: AdminListSimulationsParams = {},
+): Promise<ApiResponse<{ data: AdminSimulationsResponseDTO }>> {
+  const qs = new URLSearchParams();
+  if (params.q)                          qs.set('q',        params.q);
+  if (params.filter)                     qs.set('filter',   params.filter);
+  if (params.criteria && params.criteria.length > 0) qs.set('criteria', JSON.stringify(params.criteria));
+  if (params.page)                       qs.set('page',     String(params.page));
+  if (params.pageSize)                   qs.set('pageSize', String(params.pageSize));
+  const query = qs.toString() ? `?${qs.toString()}` : '';
+  return request<{ data: AdminSimulationsResponseDTO }>(`/admin/simulations${query}`);
+}
+
+/** DELETE /api/admin/simulations/:id — Eliminar simulación (admin) */
+export async function adminDeleteSimulation(
+  id: string,
+  reason?: string,
+): Promise<ApiResponse<{ success: boolean; message: string }>> {
+  return request<{ success: boolean; message: string }>(
+    `/admin/simulations/${id}`,
+    { method: 'DELETE', body: JSON.stringify({ reason: reason ?? 'Eliminado por administrador' }) },
+  );
+}
+
+// ── HU-40 / HU-41: Exportar simulación (ADMIN) ───────────────────────────
+
+/**
+ * Descarga el PDF de una simulación como Blob.
+ * Lanza un Error con mensaje legible si la respuesta no es OK.
+ */
+export async function adminExportSimulationPdf(id: string): Promise<{ blob: Blob; filename: string }> {
+  const token = localStorage.getItem('token');
+  const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
+  const response = await fetch(`${API_BASE}/admin/simulations/${id}/export/pdf`, { headers });
+
+  if (!response.ok) {
+    let msg = 'Error al generar el PDF.';
+    try {
+      const body = (await response.json()) as { error?: { message?: string } | string };
+      if (typeof body.error === 'string') msg = body.error;
+      else if (body.error?.message) msg = body.error.message;
+    } catch { /* ignorar */ }
+    throw new Error(msg);
+  }
+
+  const blob = await response.blob();
+  const cd   = response.headers.get('Content-Disposition') ?? '';
+  const match = /filename="?([^"]+)"?/.exec(cd);
+  const filename = match?.[1] ?? `simulacion-upb-${id.slice(0, 8)}.pdf`;
+  return { blob, filename };
+}
+
+/**
+ * Descarga el CSV de una simulación como Blob.
+ * Lanza un Error con mensaje legible si la respuesta no es OK.
+ */
+export async function adminExportSimulationCsv(id: string): Promise<{ blob: Blob; filename: string }> {
+  const token = localStorage.getItem('token');
+  const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
+  const response = await fetch(`${API_BASE}/admin/simulations/${id}/export/csv`, { headers });
+
+  if (!response.ok) {
+    let msg = 'Error al generar el CSV.';
+    try {
+      const body = (await response.json()) as { error?: { message?: string } | string };
+      if (typeof body.error === 'string') msg = body.error;
+      else if (body.error?.message) msg = body.error.message;
+    } catch { /* ignorar */ }
+    throw new Error(msg);
+  }
+
+  const blob = await response.blob();
+  const cd   = response.headers.get('Content-Disposition') ?? '';
+  const match = /filename="?([^"]+)"?/.exec(cd);
+  const filename = match?.[1] ?? `simulacion-upb-${id.slice(0, 8)}.csv`;
+  return { blob, filename };
+}
+
+/** DTO del detalle completo de una simulación para admin (HU-43) */
+export interface AdminSimulationDetailDTO {
+  readonly id: string;
+  readonly userId: string;
+  readonly savedAt: string;
+  readonly level: 'PREGRADO' | 'POSGRADO' | 'UPB_Tech';
+  readonly studentType: 'NUEVO' | 'CONTINUO';
+  readonly studentObservation: string | null;
+  readonly appliedRateMonthly: number;
+  readonly student: {
+    readonly firstName: string;
+    readonly lastName: string;
+    readonly identificationNumber: string;
+    readonly email: string;
+    readonly documentType: string;
+    readonly phone: string | null;
+  };
+  readonly summary: SimulationSummaryDTO;
+}
+
+/** GET /api/admin/simulations/:id — Detalle completo de una simulación (admin) */
+export async function adminGetSimulationById(
+  id: string,
+): Promise<ApiResponse<{ data: AdminSimulationDetailDTO }>> {
+  return request<{ data: AdminSimulationDetailDTO }>(`/admin/simulations/${id}`);
+}
+
+// ── HU-35: Historial de simulaciones del estudiante ───────────────────────
+
+export type StudentHistoryFilter =
+  | 'modality'
+  | 'academicPeriod'
+  | 'createdAt';
+
+export interface StudentHistoryItemDTO {
+  readonly id: string;
+  readonly createdAt: string;
+  readonly studentName: string;
+  readonly studentEmail: string;
+  readonly modality: 'SIN_INTERES' | 'CON_INTERES';
+  readonly financedValue: number;
+  readonly initialPaymentValue: number;
+  readonly firstPaymentDate: string;
+  readonly numberOfPayments: number;
+  readonly academicPeriod: string;
+}
+
+export interface StudentHistoryResponseDTO {
+  readonly items: StudentHistoryItemDTO[];
+  readonly page: number;
+  readonly pageSize: number;
+  readonly total: number;
+  readonly totalPages: number;
+}
+
+/** Criterio individual de filtro multi-campo para historial (HU-PV-03) */
+export interface StudentHistoryFilterCriterion {
+  field: StudentHistoryFilter;
+  value: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export interface GetMyHistoryParams {
+  q?: string;
+  filter?: StudentHistoryFilter;
+  /** HU-PV-03: criterios multi-campo acumulables */
+  criteria?: StudentHistoryFilterCriterion[];
+  page?: number;
+  pageSize?: number;
+}
+
+/** GET /api/simulator/history — Historial paginado del estudiante autenticado */
+export async function getMySimulationHistory(
+  params: GetMyHistoryParams = {},
+): Promise<ApiResponse<StudentHistoryResponseDTO>> {
+  const qs = new URLSearchParams();
+  if (params.q)                          qs.set('q',        params.q);
+  if (params.filter)                     qs.set('filter',   params.filter);
+  if (params.criteria && params.criteria.length > 0) qs.set('criteria', JSON.stringify(params.criteria));
+  if (params.page)                       qs.set('page',     String(params.page));
+  if (params.pageSize)                   qs.set('pageSize', String(params.pageSize));
+  const query = qs.toString() ? `?${qs.toString()}` : '';
+  return request<StudentHistoryResponseDTO>(`/simulator/history${query}`);
+}
+
+// ── HU-36: Detalle de simulación del estudiante ───────────────────────────
+
+export type StudentSimulationDetailDTO = AdminSimulationDetailDTO;
+
+/** GET /api/simulator/history/:id — Detalle completo de una simulación (estudiante) */
+export async function getMySimulationById(
+  id: string,
+): Promise<ApiResponse<StudentSimulationDetailDTO>> {
+  return request<StudentSimulationDetailDTO>(`/simulator/history/${id}`);
+}
+
+/**
+ * Descarga el PDF de una simulación del estudiante autenticado.
+ * Lanza un Error con mensaje legible si la respuesta no es OK.
+ */
+export async function exportMySimulationPdf(id: string): Promise<{ blob: Blob; filename: string }> {
+  const token = localStorage.getItem('token');
+  const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
+  const response = await fetch(`${API_BASE}/simulator/history/${id}/export/pdf`, { headers });
+
+  if (!response.ok) {
+    let msg = 'Error al generar el PDF.';
+    try {
+      const body = (await response.json()) as { error?: { message?: string } | string };
+      if (typeof body.error === 'string') msg = body.error;
+      else if (body.error?.message) msg = body.error.message;
+    } catch { /* ignorar */ }
+    throw new Error(msg);
+  }
+
+  const blob = await response.blob();
+  const cd   = response.headers.get('Content-Disposition') ?? '';
+  const match = /filename="?([^"]+)"?/.exec(cd);
+  const filename = match?.[1] ?? `simulacion-upb-${id.slice(0, 8)}.pdf`;
+  return { blob, filename };
 }

@@ -7,7 +7,7 @@ import { z } from 'zod';
 
 export const ResetPasswordSchema = z
   .object({
-    token: z.string().min(1, 'El token es requerido'),
+    token: z.string().trim().min(1, 'El token es requerido'),
     password: z
       .string()
       .min(7, 'La contraseña debe tener al menos 7 caracteres')
@@ -22,5 +22,10 @@ export const ResetPasswordSchema = z
     message: 'Las contraseñas no coinciden',
     path: ['confirmPassword'],
   });
+
+/** Esquema a nivel de request para el middleware validateRequest (HU-53) */
+export const ResetPasswordInputSchema = z.object({
+  body: ResetPasswordSchema,
+});
 
 export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;

@@ -3,12 +3,16 @@ import { SimulatorPage } from './modules/simulator/pages/user/SimulatorPage';
 import { CreateSimulationPage } from './modules/simulator/pages/user/CreateSimulationPage';
 import { MainStudentPage } from './modules/simulator/pages/user/MainStudentPage';
 import { StudentHistoryPage } from './modules/simulator/pages/user/StudentHistoryPage';
+import { StudentHistoryDetailPage } from './modules/simulator/pages/user/StudentHistoryDetailPage';
+import { StudentHistoryExportPage } from './modules/simulator/pages/user/StudentHistoryExportPage';
 import { UserProfilePage } from './modules/simulator/pages/user/UserProfilePage';
 import { AdminDashboard } from './modules/admin/pages/AdminDashboard';
 import { AdminMainPage } from './modules/admin/pages/AdminMainPage';
 import { AdminStudentsPage } from './modules/admin/pages/AdminStudentsPage';
+import { AdminStudentProfilePage } from './modules/admin/pages/AdminStudentProfilePage';
 import { AdminParametersPage } from './modules/admin/pages/AdminParametersPage';
 import { AdminSimulationsPage } from './modules/admin/pages/AdminSimulationsPage';
+import { AdminSimulationDetailPage } from './modules/admin/pages/AdminSimulationDetailPage';
 import { LoginPage } from './modules/auth/pages/LoginPage';
 import { RegisterPage } from './modules/auth/pages/RegisterPage';
 import { ForgotPasswordPage } from './modules/auth/pages/ForgotPasswordPage';
@@ -19,7 +23,8 @@ import { AuthProvider } from './modules/auth/context/AuthContext';
 import { ProtectedRoute } from './shared/components/ProtectedRoute';
 import { PublicRoute } from './shared/components/PublicRoute';
 import { LandingPage } from './modules/landing/pages/LandingPage';
-import { GuestPage } from './modules/simulator/pages/guest/GuestPage';
+import { GuestMainPage } from './modules/simulator/pages/guest/GuestMainPage';
+import { GuestCreateSimulationPage } from './modules/simulator/pages/guest/GuestCreateSimulationPage';
 
 export function App() {
   return (
@@ -35,11 +40,15 @@ export function App() {
 
           {/* Página principal: Landing pública */}
           <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
-          <Route path="/guest" element={<PublicRoute><GuestPage /></PublicRoute>} />
+          <Route path="/guest" element={<Navigate to="/guest/main" replace />} />
+          <Route path="/guest/main" element={<PublicRoute><GuestMainPage /></PublicRoute>} />
+          <Route path="/guest/simulator/create" element={<PublicRoute><GuestCreateSimulationPage /></PublicRoute>} />
 
           {/* ── Rutas del estudiante (HU-08) ── */}
           <Route path="/student/main" element={<ProtectedRoute requiredRole="STUDENT"><MainStudentPage /></ProtectedRoute>} />
           <Route path="/student/history" element={<ProtectedRoute requiredRole="STUDENT"><StudentHistoryPage /></ProtectedRoute>} />
+          <Route path="/student/history/:id" element={<ProtectedRoute requiredRole="STUDENT"><StudentHistoryDetailPage /></ProtectedRoute>} />
+          <Route path="/student/history/:id/export" element={<ProtectedRoute requiredRole="STUDENT"><StudentHistoryExportPage /></ProtectedRoute>} />
           <Route path="/student/profile" element={<ProtectedRoute requiredRole="STUDENT"><UserProfilePage /></ProtectedRoute>} />
 
           {/* Rutas protegidas — requieren sesión activa */}
@@ -49,8 +58,10 @@ export function App() {
           <Route path="/admin" element={<Navigate to="/admin/main" replace />} />
           <Route path="/admin/main" element={<ProtectedRoute requiredRole="ADMIN"><AdminMainPage /></ProtectedRoute>} />
           <Route path="/admin/students" element={<ProtectedRoute requiredRole="ADMIN"><AdminStudentsPage /></ProtectedRoute>} />
+          <Route path="/admin/students/:id" element={<ProtectedRoute requiredRole="ADMIN"><AdminStudentProfilePage /></ProtectedRoute>} />
           <Route path="/admin/parameters" element={<ProtectedRoute requiredRole="ADMIN"><AdminParametersPage /></ProtectedRoute>} />
           <Route path="/admin/simulations" element={<ProtectedRoute requiredRole="ADMIN"><AdminSimulationsPage /></ProtectedRoute>} />
+          <Route path="/admin/simulations/:id" element={<ProtectedRoute requiredRole="ADMIN"><AdminSimulationDetailPage /></ProtectedRoute>} />
 
           {/* Rutas con Layout (protegidas) */}
           <Route element={<Layout />}>

@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <meta name="author" content="WB DataDic" />
+    <meta name="description" content="mydb Data Dictionary." />
+    <title>mydb Data Dictionary</title>
+    <style type="text/css">
+    table{
+        width: 100%;
+        margin-bottom: 30px;
+    }
+    abbr{
+        cursor: help;
+    }
+    table, td, th{
+        border-style: solid;
+        border-width: 1px;
+    }
+    table caption{
+        font-size: 120%;
+        font-weight: bold;
+    }
+    caption{
+        color: black;
+    }
+    td, th{
+        border-color: silver;
+    }
+    tr:hover{
+        color: #333;
+        background-color: #F2F2F2;
+    }
+    th{
+        background-color: silver;
+    }
+    td{
+        color: gray;
+    }
+    ul{
+        font-style: italic;
+    }
+    #title-sect{
+        color: gray;
+        text-align: right;
+    }
+    .proj-desc{
+        text-align: right;
+    }
+    </style>
+</head>
+<body>
+<div id="title-sect">
+<h1>mydb<br> Data Dictionay</h1>
+<p>
+<em>2026-03-04</em>
+</p>
+<p class="proj-desc">
+<em></em>
+</p>
+</div>
+<h2>Alphabetic Index</h2>
+<ul>
+<li><a href='#AMORTIZATION_ROW'>AMORTIZATION_ROW</a></li>
+<li><a href='#AUDIT_LOG'>AUDIT_LOG</a></li>
+<li><a href='#EXPORT_LOG'>EXPORT_LOG</a></li>
+<li><a href='#INITIAL_PAYMENT_RULE'>INITIAL_PAYMENT_RULE</a></li>
+<li><a href='#INTEREST_RATE'>INTEREST_RATE</a></li>
+<li><a href='#MODALITY_RULE'>MODALITY_RULE</a></li>
+<li><a href='#PARAMETER_VERSION'>PARAMETER_VERSION</a></li>
+<li><a href='#PASSWORD_RESET_TOKEN'>PASSWORD_RESET_TOKEN</a></li>
+<li><a href='#SIMULATION'>SIMULATION</a></li>
+<li><a href='#USER'>USER</a></li>
+</ul>
+<table id='AMORTIZATION_ROW'>
+<caption>AMORTIZATION_ROW</caption>
+<tr><td colspan='11'>Almacena el detalle fila por fila de la tabla de amortización de cada simulación guardada. Cada registro representa una cuota del plan de pagos con su desglose de capital, interés y saldo restante.</td></tr>
+<tr>
+    <th>Column name</th>
+    <th>DataType</th>
+    <th><abbr title='Primary Key'>PK</abbr></th>
+    <th><abbr title='Not Null'>NN</abbr></th>
+    <th><abbr title='Unique'>UQ</abbr></th>
+    <th><abbr title='Binary'>BIN</abbr></th>
+    <th><abbr title='Unsigned'>UN</abbr></th>
+    <th><abbr title='Zero Fill'>ZF</abbr></th>
+    <th><abbr title='Auto Increment'>AI</abbr></th>
+    <th>Default</th>
+    <th>Comment</th>
+</tr>
+<tr>
+    <td>id_AMORTIZATION_ROW</td>
+    <td>CHAR(36)</td>
+    <td>&#10004;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Identificador de cada tabla de amortización</td>
+</tr>
+<tr>
+    <td>payment_no</td>
+    <td>TINYINT(3)</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Número de cuota</td>
+</tr>
+<tr>
+    <td>scheduled_date</td>
+    <td>DATE</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Fecha programada de pago.</td>
+</tr>
+<tr>
+    <td>payment_value</td>
+    <td>BIGINT(20)</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Valor total cuota (COP).</td>
+</tr>
+<tr>
+    <td>interest_value</td>
+    <td>BIGINT(20)</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td>0</td>
+    <td>Interés de esa cuota (COP).</td>
+</tr>
+<tr>
+    <td>principal_value</td>
+    <td>BIGINT(20)</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Abono a capital (COP).</td>
+</tr>
+<tr>
+    <td>balance_after</td>
+    <td>BIGINT(20)</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Saldo después del pago.</td>
+</tr>
+<tr>
+    <td>SIMULATION_id_SIMULATION</td>
+    <td>CHAR(36)</td>
+    <td>&#10004;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Referencia a la simulación a la que pertenece esta fila de amortización.</td>
+</tr>
+<table id='AUDIT_LOG'>
+<caption>AUDIT_LOG</caption>
+<tr><td colspan='11'>Registro inmutable de todas las acciones relevantes realizadas en el sistema por usuarios o por procesos automáticos. Sirve para auditoría, trazabilidad y no repudio según los requisitos no funcionales del sistema. Ningún registro de esta tabla debe modificarse ni eliminarse.</td></tr>
+<tr>
+    <th>Column name</th>
+    <th>DataType</th>
+    <th><abbr title='Primary Key'>PK</abbr></th>
+    <th><abbr title='Not Null'>NN</abbr></th>
+    <th><abbr title='Unique'>UQ</abbr></th>
+    <th><abbr title='Binary'>BIN</abbr></th>
+    <th><abbr title='Unsigned'>UN</abbr></th>
+    <th><abbr title='Zero Fill'>ZF</abbr></th>
+    <th><abbr title='Auto Increment'>AI</abbr></th>
+    <th>Default</th>
+    <th>Comment</th>
+</tr>
+<tr>
+    <td>id_AUDIT_LOG</td>
+    <td>CHAR(36)</td>
+    <td>&#10004;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Identificador del evento.</td>
+</tr>
+<tr>
+    <td>action</td>
+    <td>VARCHAR(45)</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Acción (SAVE_SIMULATION, EXPORT_PDF, UPDATE_PARAMS, etc.).</td>
+</tr>
+<tr>
+    <td>entity</td>
+    <td>VARCHAR(100)</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Entidad afectada (simulation, parameter_version, etc.).</td>
+</tr>
+<tr>
+    <td>entity_id</td>
+    <td>BIGINT(20)</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Id del registro afectado (si aplica).</td>
+</tr>
+<tr>
+    <td>ip_address</td>
+    <td>VARCHAR(45)</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>IP</td>
+</tr>
+<tr>
+    <td>created_at</td>
+    <td>DATETIME</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td>CURRENT_TIMESTAMP</td>
+    <td>Momento exacto del evento.</td>
+</tr>
+<tr>
+    <td>details</td>
+    <td>JSON</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>JSON con información contextual de la acción. Para eliminaciones incluye el motivo, para cambios de parámetros incluye los valores anteriores y nuevos.</td>
+</tr>
+<tr>
+    <td>actor_type</td>
+    <td>ENUM('ADMIN', 'STUDENT', 'SYSTEM')</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td>'USER'</td>
+    <td>Tipo de actor que realizó la acción. ADMIN para administradores, STUDENT para estudiantes, SYSTEM para procesos automáticos como la purga de 90 días.</td>
+</tr>
+<tr>
+    <td>USER_id_USER</td>
+    <td>CHAR(36)</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Referencia al usuario que realizó la acción. NULL cuando actor_type es SYSTEM porque no hay usuario humano involucrado.</td>
+</tr>
+<table id='EXPORT_LOG'>
+<caption>EXPORT_LOG</caption>
+<tr><td colspan='11'>Registra cada exportación de simulación realizada en el sistema. Los estudiantes solo pueden exportar en PDF y los administradores solo en CSV. Permite trazabilidad de quién exportó qué y cuándo.</td></tr>
+<tr>
+    <th>Column name</th>
+    <th>DataType</th>
+    <th><abbr title='Primary Key'>PK</abbr></th>
+    <th><abbr title='Not Null'>NN</abbr></th>
+    <th><abbr title='Unique'>UQ</abbr></th>
+    <th><abbr title='Binary'>BIN</abbr></th>
+    <th><abbr title='Unsigned'>UN</abbr></th>
+    <th><abbr title='Zero Fill'>ZF</abbr></th>
+    <th><abbr title='Auto Increment'>AI</abbr></th>
+    <th>Default</th>
+    <th>Comment</th>
+</tr>
+<tr>
+    <td>idEXPORT_LOG</td>
+    <td>CHAR(36)</td>
+    <td>&#10004;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Identificador único del registro de exportación</td>
+</tr>
+<tr>
+    <td>format</td>
+    <td>ENUM('PDF', 'CSV')</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Formato del archivo exportado. PDF para estudiantes, CSV para administradores.</td>
+</tr>
+<tr>
+    <td>content_flags</td>
+    <td>JSON</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td>1</td>
+    <td>JSON que registra qué secciones fueron incluidas en la exportación. Por ejemplo include_summary, include_amortization, include_charts.</td>
+</tr>
+<tr>
+    <td>exported_at</td>
+    <td>DATETIME</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td>CURRENT_TIMESTAMP</td>
+    <td>Fecha y hora en que se realizó la exportación. Se llena automáticamente por el sistema.</td>
+</tr>
+<tr>
+    <td>ip_address</td>
+    <td>VARCHAR(45)</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Dirección IP desde donde se realizó la exportación. </td>
+</tr>
+<tr>
+    <td>file_name</td>
+    <td>VARCHAR(120)</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Nombre del archivo exportado</td>
+</tr>
+<tr>
+    <td>SIMULATION_id_SIMULATION</td>
+    <td>CHAR(36)</td>
+    <td>&#10004;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Referencia a la simulación que fue exportada.</td>
+</tr>
+<tr>
+    <td>USER_id_USER</td>
+    <td>CHAR(36)</td>
+    <td>&#10004;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Referencia al usuario que realizó la exportación. Puede ser el estudiante dueño de la simulación o un administrador.</td>
+</tr>
+<table id='INITIAL_PAYMENT_RULE'>
+<caption>INITIAL_PAYMENT_RULE</caption>
+<tr><td colspan='11'>Define los esquemas específicos de distribución de pagos disponibles para cada combinación de nivel y modalidad. Modela las opciones concretas del formato de solicitud de crédito institucional.</td></tr>
+<tr>
+    <th>Column name</th>
+    <th>DataType</th>
+    <th><abbr title='Primary Key'>PK</abbr></th>
+    <th><abbr title='Not Null'>NN</abbr></th>
+    <th><abbr title='Unique'>UQ</abbr></th>
+    <th><abbr title='Binary'>BIN</abbr></th>
+    <th><abbr title='Unsigned'>UN</abbr></th>
+    <th><abbr title='Zero Fill'>ZF</abbr></th>
+    <th><abbr title='Auto Increment'>AI</abbr></th>
+    <th>Default</th>
+    <th>Comment</th>
+</tr>
+<tr>
+    <td>idINITIAL_PAYMENT_RULE</td>
+    <td>CHAR(36)</td>
+    <td>&#10004;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Identificador único del esquema generado</td>
+</tr>
+<tr>
+    <td>level</td>
+    <td>ENUM('PREGRADO', 'POSGRADO', 'UPB_TEC')</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Nivel académico al que aplica este esquema. PREGRADO, POSGRADO o UPB_TEC.</td>
+</tr>
+<tr>
+    <td>modality</td>
+    <td>ENUM('CON_INTERES', 'SIN_INTERES')</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Modalidad del crédito a la que aplica este esquema. SIN_INTERES o CON_INTERES.</td>
+</tr>
+<tr>
+    <td>extra_installments</td>
+    <td>TINYINT(6)</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td>0</td>
+    <td>Número de cuotas adicionales después de la cuota inicial que permite este esquema.</td>
+</tr>
+<tr>
+    <td>initial_pct_required</td>
+    <td>DECIMAL(5,4)</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Porcentaje de cuota inicial requerido para este esquema específico expresado como decimal.</td>
+</tr>
+<tr>
+    <td>PARAMETER_VERSION_id_PARAMETER_VERSION</td>
+    <td>CHAR(36)</td>
+    <td>&#10004;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Llave foránea de la versión de parámetros a la que pertenece este esquema.</td>
+</tr>
+<table id='INTEREST_RATE'>
+<caption>INTEREST_RATE</caption>
+<tr><td colspan='11'>Almacena las tasas de interés institucionales por nivel académico dentro de una versión de parámetros. Permite tener tasas distintas por nivel si la institución así lo decide.</td></tr>
+<tr>
+    <th>Column name</th>
+    <th>DataType</th>
+    <th><abbr title='Primary Key'>PK</abbr></th>
+    <th><abbr title='Not Null'>NN</abbr></th>
+    <th><abbr title='Unique'>UQ</abbr></th>
+    <th><abbr title='Binary'>BIN</abbr></th>
+    <th><abbr title='Unsigned'>UN</abbr></th>
+    <th><abbr title='Zero Fill'>ZF</abbr></th>
+    <th><abbr title='Auto Increment'>AI</abbr></th>
+    <th>Default</th>
+    <th>Comment</th>
+</tr>
+<tr>
+    <td>id_INTEREST_RATE</td>
+    <td>CHAR(36)</td>
+    <td>&#10004;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Identificador unico de la tasa de interes</td>
+</tr>
+<tr>
+    <td>rate_monthly</td>
+    <td>DECIMAL(8,6)</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Tasa mensual</td>
+</tr>
+<tr>
+    <td>rate_type</td>
+    <td>ENUM('MV')</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td>'MV'</td>
+    <td>Tipo de tasa</td>
+</tr>
+<tr>
+    <td>level_scope</td>
+    <td>ENUM('PREGRADO', 'POSGRADO', 'UPB_TEC')</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Nivel académico al que aplica esta tasa. Valores: PREGRADO, POSGRADO, UPB_TEC.</td>
+</tr>
+<tr>
+    <td>created_at</td>
+    <td>DATETIME</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td>CURRENT_TIMESTAMP</td>
+    <td>Fecha y hora en que se registró esta tasa.</td>
+</tr>
+<tr>
+    <td>PARAMETER_VERSION_id_PARAMETER_VERSION</td>
+    <td>CHAR(36)</td>
+    <td>&#10004;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Referencia a la versión de parámetros a la que pertenece esta tasa. Una tasa siempre pertenece a un semestre específico.</td>
+</tr>
+<table id='MODALITY_RULE'>
+<caption>MODALITY_RULE</caption>
+<tr><td colspan='11'>Define las reglas de cada modalidad de crédito por nivel académico. Establece cuántas cuotas máximo puede tener el estudiante y cuál es el porcentaje mínimo obligatorio de cuota inicial según los lineamientos institucionales.</td></tr>
+<tr>
+    <th>Column name</th>
+    <th>DataType</th>
+    <th><abbr title='Primary Key'>PK</abbr></th>
+    <th><abbr title='Not Null'>NN</abbr></th>
+    <th><abbr title='Unique'>UQ</abbr></th>
+    <th><abbr title='Binary'>BIN</abbr></th>
+    <th><abbr title='Unsigned'>UN</abbr></th>
+    <th><abbr title='Zero Fill'>ZF</abbr></th>
+    <th><abbr title='Auto Increment'>AI</abbr></th>
+    <th>Default</th>
+    <th>Comment</th>
+</tr>
+<tr>
+    <td>id_MODALITY_RULE</td>
+    <td>CHAR(36)</td>
+    <td>&#10004;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Identificador unico de la regla</td>
+</tr>
+<tr>
+    <td>modality</td>
+    <td>ENUM('SIN_INTERES', 'CON_INTERES')</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Modalidad del credito</td>
+</tr>
+<tr>
+    <td>level</td>
+    <td>ENUM('PREGRADO', 'POSGRADO', 'UPB_TEC')</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Nivel académico</td>
+</tr>
+<tr>
+    <td>max_total_payment</td>
+    <td>TINYINT(3)</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Máximo de pagos totale</td>
+</tr>
+<tr>
+    <td>min_initial_pct</td>
+    <td>DECIMAL(5,4)</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>mínimo cuota inicial</td>
+</tr>
+<tr>
+    <td>PARAMETER_VERSION_id_PARAMETER_VERSION</td>
+    <td>CHAR(36)</td>
+    <td>&#10004;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Referencia a la versión de parámetros a la que pertenece esta regla.</td>
+</tr>
+<table id='PARAMETER_VERSION'>
+<caption>PARAMETER_VERSION</caption>
+<tr><td colspan='11'>Almacena las versiones de parámetros institucionales del simulador. Cada versión corresponde a un semestre académico y agrupa todas las reglas vigentes en ese período. Cuando cambian las condiciones del crédito, el administrador crea una nueva versión sin borrar la anterior, preservando el historial.</td></tr>
+<tr>
+    <th>Column name</th>
+    <th>DataType</th>
+    <th><abbr title='Primary Key'>PK</abbr></th>
+    <th><abbr title='Not Null'>NN</abbr></th>
+    <th><abbr title='Unique'>UQ</abbr></th>
+    <th><abbr title='Binary'>BIN</abbr></th>
+    <th><abbr title='Unsigned'>UN</abbr></th>
+    <th><abbr title='Zero Fill'>ZF</abbr></th>
+    <th><abbr title='Auto Increment'>AI</abbr></th>
+    <th>Default</th>
+    <th>Comment</th>
+</tr>
+<tr>
+    <td>id_PARAMETER_VERSION</td>
+    <td>CHAR(36)</td>
+    <td>&#10004;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Identificador unico de cada parametor y de la tabla</td>
+</tr>
+<tr>
+    <td>valid_from</td>
+    <td>DATE</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Fecha desde la cual aplica la versión.</td>
+</tr>
+<tr>
+    <td>valid_to</td>
+    <td>DATE</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Fecha fin de vigencia</td>
+</tr>
+<tr>
+    <td>created_at</td>
+    <td>DATETIME</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td>CURRENT_TIMESTAP</td>
+    <td>Fecha en la que se creo la versión</td>
+</tr>
+<tr>
+    <td>notes</td>
+    <td>VARCHAR(255)</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Observaciones</td>
+</tr>
+<tr>
+    <td>installments_window_from</td>
+    <td>DATE</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Fecha de inicio de la ventana de cuotas del semestre. Define desde cuándo el estudiante puede programar su primera cuota.</td>
+</tr>
+<tr>
+    <td>installments_window_to</td>
+    <td>DATE</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Fecha de cierre de la ventana de cuotas del semestre. Para primer semestre sería mayo, para segundo semestre noviembre.</td>
+</tr>
+<tr>
+    <td>payment_period_days</td>
+    <td>SMALLINT(6)</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td>30</td>
+    <td>Número de días calendario entre cuotas consecutivas. Por lineamiento institucional el valor por defecto es 30 días.</td>
+</tr>
+<tr>
+    <td>created_by</td>
+    <td>CHAR(36)</td>
+    <td>&#10004;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Referencia al administrador que creó esta versión de parámetros. Permite trazabilidad de quién configuró qué.</td>
+</tr>
+<table id='PASSWORD_RESET_TOKEN'>
+<caption>PASSWORD_RESET_TOKEN</caption>
+<tr><td colspan='11'>Almacena los tokens de recuperación de contraseña. Por seguridad nunca se guarda el token original sino su hash. Cada token tiene una vigencia limitada y solo puede usarse una vez.</td></tr>
+<tr>
+    <th>Column name</th>
+    <th>DataType</th>
+    <th><abbr title='Primary Key'>PK</abbr></th>
+    <th><abbr title='Not Null'>NN</abbr></th>
+    <th><abbr title='Unique'>UQ</abbr></th>
+    <th><abbr title='Binary'>BIN</abbr></th>
+    <th><abbr title='Unsigned'>UN</abbr></th>
+    <th><abbr title='Zero Fill'>ZF</abbr></th>
+    <th><abbr title='Auto Increment'>AI</abbr></th>
+    <th>Default</th>
+    <th>Comment</th>
+</tr>
+<tr>
+    <td>idPASSWORD_RESET_TOKEN</td>
+    <td>CHAR(36)</td>
+    <td>&#10004;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Identificador único del token</td>
+</tr>
+<tr>
+    <td>token_hash</td>
+    <td>VARCHAR(255)</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Hash del token enviado al correo del usuario. Se hashea para que si alguien accede a la base de datos no pueda usar los tokens directamente.</td>
+</tr>
+<tr>
+    <td>expires_at</td>
+    <td>DATETIME</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Fecha y hora en que el token deja de ser válido. Todo token debe tener fecha de expiración obligatoria.</td>
+</tr>
+<tr>
+    <td>used_at</td>
+    <td>DATETIME</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Fecha y hora en que el token fue usado para restablecer la contraseña.</td>
+</tr>
+<tr>
+    <td>created_at</td>
+    <td>DATETIME</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Fecha y hora en que se generó el token. Se llena automáticamente por el sistema.</td>
+</tr>
+<tr>
+    <td>requested_ip</td>
+    <td>VARCHAR(45)</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Dirección IP desde donde se solicitó el restablecimiento.</td>
+</tr>
+<tr>
+    <td>user_agent</td>
+    <td>VARCHAR(255)</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Información del navegador y dispositivo desde donde se solicitó el reset.</td>
+</tr>
+<tr>
+    <td>USER_id_USER</td>
+    <td>CHAR(36)</td>
+    <td>&#10004;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Referencia al usuario que solicitó el restablecimiento de contraseña.</td>
+</tr>
+<table id='SIMULATION'>
+<caption>SIMULATION</caption>
+<tr><td colspan='11'>Almacena las simulaciones guardadas por los estudiantes autenticados. Cada fila es una fotografía completa del momento en que el estudiante decidió guardar su simulación, incluyendo todos los parámetros de entrada y resultados calculados. Los gráficos no se guardan porque se regeneran dinámicamente desde los datos almacenados.</td></tr>
+<tr>
+    <th>Column name</th>
+    <th>DataType</th>
+    <th><abbr title='Primary Key'>PK</abbr></th>
+    <th><abbr title='Not Null'>NN</abbr></th>
+    <th><abbr title='Unique'>UQ</abbr></th>
+    <th><abbr title='Binary'>BIN</abbr></th>
+    <th><abbr title='Unsigned'>UN</abbr></th>
+    <th><abbr title='Zero Fill'>ZF</abbr></th>
+    <th><abbr title='Auto Increment'>AI</abbr></th>
+    <th>Default</th>
+    <th>Comment</th>
+</tr>
+<tr>
+    <td>id_SIMULATION</td>
+    <td>CHAR(36)</td>
+    <td>&#10004;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Identificador de simulación guardada.</td>
+</tr>
+<tr>
+    <td>created_at</td>
+    <td>DATETIME</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td>CURRENT_TIMESTAP</td>
+    <td>Fecha y hora de creación</td>
+</tr>
+<tr>
+    <td>saved_at</td>
+    <td>DATETIME</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Fecha y hora de cuando se guardo</td>
+</tr>
+<tr>
+    <td>deleted_at</td>
+    <td>DATETIME</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Fecha de borrado</td>
+</tr>
+<tr>
+    <td>student_type</td>
+    <td>ENUM('NUEVO', 'CONTINUO')</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Tipo de estudiante al momento de la simulación. NUEVO para estudiantes nuevos, CONTINUO para estudiantes que ya cursaron semestres anteriores.</td>
+</tr>
+<tr>
+    <td>level</td>
+    <td>ENUM('PREGRADO', 'POSGRADO', 'UPB_TEC')</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Nivel académico del programa simulado. PREGRADO, POSGRADO o UPB_TEC. Se guarda directamente para preservar el dato histórico.</td>
+</tr>
+<tr>
+    <td>tuition_gross</td>
+    <td>BIGINT(20)</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Valor bruto de la matrícula en pesos colombianos antes de aplicar cualquier descuento o beca.</td>
+</tr>
+<tr>
+    <td>scholar_pct</td>
+    <td>DECIMAL(5,4)</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td>0.0000</td>
+    <td>Porcentaje de beca o descuento aplicado expresado como decimal. 0.0000 si no aplica ningún descuento.</td>
+</tr>
+<tr>
+    <td>delete_reason</td>
+    <td>VARCHAR(255)</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td></td>
+</tr>
+<tr>
+    <td>tuition_net</td>
+    <td>BIGINT(20)</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Valor neto de la matrícula en pesos colombianos después de aplicar el descuento. Es la base para calcular la cuota inicial y el valor financiado.</td>
+</tr>
+<tr>
+    <td>initial_payment_value</td>
+    <td>BIGINT(20)</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Valor en pesos colombianos de la cuota inicial calculado como tuition_net multiplicado por initial_payment_pct.</td>
+</tr>
+<tr>
+    <td>initial_payment_pct</td>
+    <td>DECIMAL(5,4)</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Porcentaje de cuota inicial elegido por el estudiante expresado como decimal. Debe ser mayor o igual al mínimo institucional.</td>
+</tr>
+<tr>
+    <td>total_payments</td>
+    <td>TINYINT(3)</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Número total de cuotas del crédito incluyendo la cuota inicial.</td>
+</tr>
+<tr>
+    <td>first_payment_date</td>
+    <td>DATE</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Fecha estimada de la primera cuota ingresada por el estudiante. Es referencial para la simulación, la fecha real está sujeta a trámites institucionales.</td>
+</tr>
+<tr>
+    <td>modality</td>
+    <td>ENUM('SIN_INTERES', 'CON_INTERES')</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Modalidad de crédito elegida. SIN_INTERES o CON_INTERES. Se guarda directamente para preservar el dato histórico.</td>
+</tr>
+<tr>
+    <td>financed_value</td>
+    <td>BIGINT(20)</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Valor en pesos colombianos que queda pendiente de pago después de la cuota inicial. Es la base del cálculo de amortización.</td>
+</tr>
+<tr>
+    <td>periodic_payment_value</td>
+    <td>BIGINT(20)</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Valor en pesos colombianos de cada cuota periódica después de la inicial.</td>
+</tr>
+<tr>
+    <td>total_interest</td>
+    <td>BIGINT(20)</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td>0</td>
+    <td>Total de intereses generados durante todo el crédito en pesos colombianos. 0 para modalidad sin interés.</td>
+</tr>
+<tr>
+    <td>total_paid</td>
+    <td>BIGINT(20)</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Suma total que pagará el estudiante al finalizar el crédito incluyendo capital e intereses en pesos colombianos.</td>
+</tr>
+<tr>
+    <td>applied_rate_monthly</td>
+    <td>DECIMAL(8,6)</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td>0.000000</td>
+    <td>Tasa mensual aplicada en el cálculo expresada como decimal. Se congela al momento de guardar para que cambios futuros de tasa no alteren simulaciones históricas. 0.000000 para modalidad sin interés.</td>
+</tr>
+<tr>
+    <td>student_observation</td>
+    <td>VARCHAR(255)</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Nota opcional que el estudiante puede escribir al guardar para recordar el contexto de la simulación.</td>
+</tr>
+<tr>
+    <td>PARAMETER_VERSION_id_PARAMETER_VERSION</td>
+    <td>CHAR(36)</td>
+    <td>&#10004;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>llave foánea de la versión de parámetros institucionales vigente al momento de realizar la simulación. Permite reconstruir exactamente con qué reglas se calculó.</td>
+</tr>
+<tr>
+    <td>USER_id_USER</td>
+    <td>CHAR(36)</td>
+    <td>&#10004;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Referencia al estudiante dueño de esta simulación.</td>
+</tr>
+<table id='USER'>
+<caption>USER</caption>
+<tr><td colspan='11'>Almacena los usuarios del sistema con sus datos personales y credenciales de acceso. Maneja dos roles: estudiantes que realizan simulaciones y administradores que gestionan los parámetros institucionales.</td></tr>
+<tr>
+    <th>Column name</th>
+    <th>DataType</th>
+    <th><abbr title='Primary Key'>PK</abbr></th>
+    <th><abbr title='Not Null'>NN</abbr></th>
+    <th><abbr title='Unique'>UQ</abbr></th>
+    <th><abbr title='Binary'>BIN</abbr></th>
+    <th><abbr title='Unsigned'>UN</abbr></th>
+    <th><abbr title='Zero Fill'>ZF</abbr></th>
+    <th><abbr title='Auto Increment'>AI</abbr></th>
+    <th>Default</th>
+    <th>Comment</th>
+</tr>
+<tr>
+    <td>id_USER</td>
+    <td>CHAR(36)</td>
+    <td>&#10004;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Identificador único de la cada usuario y de la tabla</td>
+</tr>
+<tr>
+    <td>document_type</td>
+    <td>ENUM('CC', 'TI')</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Tipo de documento de identidad. Valores posibles: CC (Cédula de Ciudadanía), TI (Tarjeta de Identidad)</td>
+</tr>
+<tr>
+    <td>document_number</td>
+    <td>VARCHAR(20)</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Número del documento de identidad. Junto con document_type forma un identificador único de persona.</td>
+</tr>
+<tr>
+    <td>first_name</td>
+    <td>VARCHAR(100)</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Nombre completo</td>
+</tr>
+<tr>
+    <td>last_name</td>
+    <td>VARCHAR(100)</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Apellido completo</td>
+</tr>
+<tr>
+    <td>email</td>
+    <td>VARCHAR(255)</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Correo electrónico del usuario. Sirve como credencial de inicio de sesión. Debe ser único en el sistema.</td>
+</tr>
+<tr>
+    <td>password</td>
+    <td>VARCHAR(255)</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Constraseña</td>
+</tr>
+<tr>
+    <td>is_active</td>
+    <td>TINYINT(1)</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td>0</td>
+    <td>Estado del usuario</td>
+</tr>
+<tr>
+    <td>created_at</td>
+    <td>DATETIME</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td>CURRENT_TIMESTAMP</td>
+    <td>Fecha y hora de de creación del registro</td>
+</tr>
+<tr>
+    <td>phone</td>
+    <td>VARCHAR(20)</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Número de teléfono o celular de contacto del usuario.</td>
+</tr>
+<tr>
+    <td>update_at</td>
+    <td>DATETIME</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td>CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP</td>
+    <td>Fecha y hora de la última modificación del registro. Se actualiza automáticamente cada vez que se modifica cualquier campo.</td>
+</tr>
+<tr>
+    <td>terms_accepted_at</td>
+    <td>DATETIME</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Términos y condiciones</td>
+</tr>
+<tr>
+    <td>role</td>
+    <td>ENUM('STUDENT', 'ADMIN')</td>
+    <td>&nbsp;</td>
+    <td>&#10004;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td class='attr'>&nbsp;</td>
+    <td></td>
+    <td>Rol del usuario en el sistema. STUDENT para estudiantes, ADMIN para administradores. Por defecto todo usuario nuevo es STUDENT.</td>
+</tr>
+</table>
+</body>
+</html>

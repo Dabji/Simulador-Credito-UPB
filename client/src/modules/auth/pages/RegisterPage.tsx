@@ -5,8 +5,8 @@ import { z } from 'zod';
 import { useNavigate, Link } from 'react-router-dom';
 import { registerUser } from '@/shared/services/api';
 import { UpbFooter } from '@/shared/components/UpbFooter';
-import LogoUpb from '@/assets/Images/LogoUpb.png';
-import fondoRegister from '@/assets/Images/fondoRegister.png';
+import LogoUpb from '@/assets/images/logo-upb.png';
+import fondoRegister from '@/assets/images/register-bg.png';
 
 // ── Constantes de validación ────────────────────────────────────────────────
 

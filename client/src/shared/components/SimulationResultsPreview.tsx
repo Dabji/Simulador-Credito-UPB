@@ -5,12 +5,13 @@
    Mantiene diseño visual idéntico al prototipo original.
 ───────────────────────────────────────────────────────────────── */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { ChangeEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { SummaryCard } from './SummaryCard';
-import { DonutChartPlaceholder } from './DonutChartPlaceholder';
-import { saveSimulation } from '../services/api';
-import type { SimulationSummaryDTO, SimulationInputDTO } from '../services/api';
+import { SimulationCharts } from './SimulationCharts';
+import { saveSimulation, getSimulatorConfig } from '../services/api';
+import type { SimulationSummaryDTO, SimulationInputDTO, AdminParameterVersion } from '../services/api';
 
 /* ── Tipo compartido para el diálogo de confirmación modal ──────────────
    Mismo patrón que en SimulationForm para consistencia visual.
@@ -31,31 +32,79 @@ const DIALOG_CLOSED: ConfirmDialogState = {
   onConfirm: () => undefined,
 };
 
-/* Formatea un número como COP sin decimales */
+/* Formatea un número como COP sin signo $ ambiguo.
+   Ejemplo: 1400000 → "1.400.000 COP" */
 function cop(value: number): string {
-  return new Intl.NumberFormat('es-CO', {
-    style: 'currency', currency: 'COP', minimumFractionDigits: 0,
+  const formatted = new Intl.NumberFormat('es-CO', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(value);
+  return `${formatted} COP`;
 }
 
-/* Formatea fecha ISO "YYYY-MM-DD" a "DD/MM/YYYY" */
+/** Mapa de educationLevel del formulario → levelScope de la BD */
+const LEVEL_SCOPE_MAP: Record<string, string> = {
+  pregrado: 'PREGRADO',
+  posgrado: 'POSGRADO',
+  upbTech:  'UPB_Tech',
+};
+
+/** HU-PV-02: Tasa dinámica por nivel y número de pagos desde levelConfigs */
+function dynamicRateDisplay(
+  params: AdminParameterVersion | null,
+  educationLevel: string,
+  numberOfPayments: number,
+): string {
+  if (params) {
+    const scope = LEVEL_SCOPE_MAP[educationLevel];
+    if (scope) {
+      const cfgs = (params.levelConfigs ?? []).filter(c => c.levelScope === scope);
+      if (cfgs.length > 0) {
+        const cfg = cfgs.find(c => c.paymentCount === numberOfPayments);
+        const rate = cfg ? cfg.rateMonthly : 0;
+        return (rate * 100).toFixed(2).replace(/\.?0+$/, '');
+      }
+    }
+  }
+  // Fallback cuando no hay levelConfigs configurados
+  return '0.9';
+}
+
+/* Formatea fecha ISO "YYYY-MM-DD" a "Agosto 2026" (mes + año, sin día) */
 function fmtDate(iso: string): string {
-  const [y, m, d] = iso.split('-');
-  return `${d}/${m}/${y}`;
+  const d = new Date(iso + 'T00:00:00');
+  const raw = new Intl.DateTimeFormat('es-CO', { month: 'long', year: 'numeric' }).format(d);
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
 }
 
 interface SimulationResultsPreviewProps {
   summary: SimulationSummaryDTO;
   input: SimulationInputDTO;
   onNewSimulation: () => void;
+  mode?: 'student' | 'guest';
 }
 
-export function SimulationResultsPreview({ summary, input, onNewSimulation }: SimulationResultsPreviewProps) {
+export function SimulationResultsPreview({ summary, input, onNewSimulation, mode = 'student' }: SimulationResultsPreviewProps) {
   const [observations, setObservations] = useState(input.observations ?? '');
   const [toastMsg, setToastMsg]         = useState<string | null>(null);
   const [saving, setSaving]             = useState(false);
   /* Diálogo de confirmación — reutilizable para Guardar y Nueva simulación */
   const [dialog, setDialog]             = useState<ConfirmDialogState>(DIALOG_CLOSED);
+
+  /* Parámetros activos para mostrar tasa dinámica en resumen */
+  const [activeParams, setActiveParams] = useState<AdminParameterVersion | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      const res = await getSimulatorConfig();
+      if (!cancelled && res.data?.data) setActiveParams(res.data.data);
+    }
+    void load();
+    return () => { cancelled = true; };
+  }, []);
+
+  /* Capital total = totalPaid - initialPayment - totalInterest */
+  const totalCapital = summary.totalPaid - summary.initialPayment - summary.totalInterest;
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -73,17 +122,21 @@ export function SimulationResultsPreview({ summary, input, onNewSimulation }: Si
 
   const closeDialog = () => setDialog(DIALOG_CLOSED);
 
-  /* #61 — Guardar simulación directamente, sin requerir estrella, mensaje sin IDs */
+  /* #61 — Guardar simulación con modal elegante (loading spinner + confirmación) */
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
   const handleSave = () => {
     confirm(
       'Guardar simulación',
       '¿Deseas guardar esta simulación? Se registrará con las observaciones y el estado actual.',
       async () => {
         setSaving(true);
+        setSaveSuccess(false);
         const res = await saveSimulation({ ...input, starred: false, observations });
         setSaving(false);
         if (res.error) { showToast('Error al guardar la simulación. Inténtalo de nuevo.'); return; }
-        showToast('Simulación guardada exitosamente en tu historial. ✅');
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 4000);
       },
       'Guardar',
       '#A85BFF',
@@ -126,7 +179,7 @@ export function SimulationResultsPreview({ summary, input, onNewSimulation }: Si
           <SummaryCard label="Valor matrícula"  value={cop(summary.tuitionGross)} />
           <SummaryCard label="Cuota inicial"    value={`${cop(summary.initialPayment)} (${summary.initialPaymentPct}%)`} />
           <SummaryCard label="Total financiado" value={cop(summary.financedValue)} color="purple" />
-          <SummaryCard label="Modalidad"        value={summary.interestMode === 'con_interes' ? 'Con intereses (0.9% M.V.)' : 'Sin intereses (0%)'} />
+          <SummaryCard label="Modalidad"        value={summary.interestMode === 'con_interes' ? `Con intereses (${dynamicRateDisplay(activeParams, input.educationLevel, summary.numberOfPayments)}% M.V.)` : 'Sin intereses (0%)'} />
         </div>
 
         {/* Fila 2 de cards de resumen — datos reales */}
@@ -137,19 +190,12 @@ export function SimulationResultsPreview({ summary, input, onNewSimulation }: Si
           <SummaryCard label="Total intereses"      value={cop(summary.totalInterest)} color="red" />
         </div>
 
-        {/* Gráfico de distribución Capital vs Intereses */}
-        <div className="mb-8 bg-gray-50 rounded-2xl p-5">
-          <h3 className="text-sm font-bold text-gray-800 mb-4 text-center">
-            Distribución Capital vs Intereses
-          </h3>
-          <div className="flex items-center justify-center">
-            <DonutChartPlaceholder
-              capitalPct={summary.totalPaid > 0
-                ? 100 - Math.round((summary.totalInterest / summary.totalPaid) * 100)
-                : 100}
-            />
-          </div>
-        </div>
+        {/* HU-33 — Gráficas interactivas con selector (3 opciones) */}
+        <SimulationCharts
+          schedule={summary.schedule}
+          totalCapital={totalCapital > 0 ? totalCapital : summary.financedValue}
+          totalInterest={summary.totalInterest}
+        />
 
         {/* #58 — Cuota inicial como pago separado, fuera de la tabla */}
         <div
@@ -188,7 +234,13 @@ export function SimulationResultsPreview({ summary, input, onNewSimulation }: Si
                 </tr>
               </thead>
               <tbody>
-                {summary.schedule.map((row, idx) => (
+                {summary.schedule.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-6 text-center text-sm text-gray-500">
+                      No hay cuotas posteriores. Pago único.
+                    </td>
+                  </tr>
+                ) : summary.schedule.map((row, idx) => (
                   <tr
                     key={row.period}
                     className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
@@ -237,35 +289,67 @@ export function SimulationResultsPreview({ summary, input, onNewSimulation }: Si
           </div>
         )}
 
-        {/* #61 — Botones de acción: solo Guardar + Nueva simulación (sin Destacar) */}
+        {/* Modo invitado: banner informativo en lugar del botón guardar */}
+        {mode === 'guest' && (
+          <div
+            className="rounded-xl px-4 py-3 mb-5 text-sm flex items-center gap-3"
+            style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1E40AF' }}
+            role="note"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span><strong>Modo invitado:</strong> para guardar o exportar tus simulaciones debes <Link to="/login" className="underline font-semibold hover:text-blue-700">iniciar sesión</Link>.</span>
+          </div>
+        )}
+
+        {/* #61 — Botones de acción */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
 
-          {/* Guardar simulación — pide confirmación vía diálogo modal */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={saving}
-              className="px-7 py-2.5 rounded-full text-white font-bold text-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 hover:brightness-110 active:scale-95 disabled:opacity-60"
-              style={{ backgroundColor: '#A85BFF', boxShadow: '0 4px 14px rgba(168,91,255,0.25)' }}
-            >
-              {saving ? 'Guardando...' : 'Guardar simulación'}
-            </button>
-
-            {/* Toast de feedback flotante */}
-            {toastMsg && (
-              <div
-                className="absolute left-1/2 mt-2 whitespace-nowrap rounded-lg bg-gray-900 px-3 py-1.5 text-xs text-white"
-                style={{ transform: 'translateX(-50%)', top: '100%', zIndex: 10 }}
-                role="status"
-                aria-live="polite"
+          {/* Guardar simulación — solo en modo student */}
+          {mode === 'student' && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving}
+                className="px-7 py-2.5 rounded-full text-white font-bold text-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 hover:brightness-110 active:scale-95 disabled:opacity-60"
+                style={{ backgroundColor: '#A85BFF', boxShadow: '0 4px 14px rgba(168,91,255,0.25)' }}
               >
-                {toastMsg}
-              </div>
-            )}
-          </div>
+                {saving ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Guardando...
+                  </>
+                ) : saveSuccess ? (
+                  <>
+                    <svg className="-ml-1 mr-1.5 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Guardada exitosamente
+                  </>
+                ) : 'Guardar simulación'
+              }
+              </button>
 
-          {/* Nueva simulación — pide confirmación antes de descartar resultados */}
+              {/* Toast de feedback flotante */}
+              {toastMsg && (
+                <div
+                  className="absolute left-1/2 mt-2 whitespace-nowrap rounded-lg bg-gray-900 px-3 py-1.5 text-xs text-white"
+                  style={{ transform: 'translateX(-50%)', top: '100%', zIndex: 10 }}
+                  role="status"
+                  aria-live="polite"
+                >
+                  {toastMsg}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Nueva simulación — siempre visible */}
           <button
             type="button"
             onClick={handleNewSimulation}

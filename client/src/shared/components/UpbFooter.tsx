@@ -4,11 +4,11 @@
    oferta académica, logo alternativo, redes sociales y copyright.
 ───────────────────────────────────────────────────────────────── */
 
-import LogoUpb2 from '@/assets/Images/LogoUpb (2).png';
-import LogoFacebook from '@/assets/Images/LogoFacebook.png';
-import LogoInstagram from '@/assets/Images/LogoIngtagram.png';
-import LogoX from '@/assets/Images/logoTwitterMejor.png';
-import LogoYoutube from '@/assets/Images/youtube_style_play_icon_512.png';
+import LogoUpb2 from '@/assets/images/logo-upb-alt.png';
+import LogoFacebook from '@/assets/images/logo-facebook.png';
+import LogoInstagram from '@/assets/images/logo-instagram.png';
+import LogoX from '@/assets/images/logo-x.png';
+import LogoYoutube from '@/assets/images/logo-youtube.png';
 
 /* Links de redes sociales */
 const SOCIAL_LINKS = [
@@ -45,7 +45,7 @@ export function UpbFooter({ className }: UpbFooterProps) {
             <div>
               <p className="text-xs uppercase tracking-widest text-gray-500 mb-1">Bucaramanga</p>
               <p className="text-sm text-gray-300 font-medium">Línea telefónica</p>
-              <p className="text-sm">+57 607 6790202</p>
+              <p className="text-sm">+57 607 6796202</p>
             </div>
             <div>
               <p className="text-sm text-gray-300 font-medium">Correo electrónico</p>
@@ -58,7 +58,7 @@ export function UpbFooter({ className }: UpbFooterProps) {
             <div>
               <p className="text-sm text-gray-300 font-medium">Horarios de atención:</p>
               <p className="text-sm">Lunes a jueves 7:30 a.m. a 12:30 p.m. - 1:30 p.m. a 5:00 p.m.</p>
-              <p className="text-sm">Viernes 7:30 a.m. a 10:30 p.m. - 1:30 p.m. a 4:30 p.m.</p>
+              <p className="text-sm">Viernes 7:30 a.m. a 12:30 p.m. - 1:30 p.m. a 4:30 p.m.</p>
             </div>
             <div>
               <p className="text-xs text-gray-600">Solo para temas judiciales</p>

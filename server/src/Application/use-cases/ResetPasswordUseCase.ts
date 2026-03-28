@@ -6,7 +6,6 @@
 
 import crypto from 'crypto';
 import bcrypt from 'bcrypt';
-import { Op } from 'sequelize';
 import type { IUserRepository } from '../../Core/repositories/IUserRepository';
 import { BadRequestError } from '../../Core/errors';
 import { PasswordResetTokenModel } from '../../Infrastructure/persistence/models/PasswordResetTokenModel';
@@ -22,16 +21,24 @@ export class ResetPasswordUseCase {
     // 1. Hashear el token recibido para buscar en BD
     const tokenHash = crypto.createHash('sha256').update(input.token).digest('hex');
 
+    // Buscar token sin filtrar por expiración para distinguir inválido vs expirado
     const tokenRecord = await PasswordResetTokenModel.findOne({
       where: {
         token_hash: tokenHash,
         used_at: null,
-        expires_at: { [Op.gt]: new Date() },
       },
     });
 
     if (!tokenRecord) {
-      throw new BadRequestError('El enlace de recuperación es inválido o ha expirado');
+      const err = new BadRequestError('El enlace de recuperación es inválido');
+      (err as BadRequestError & { resetTokenReason?: string }).resetTokenReason = 'INVALID';
+      throw err;
+    }
+
+    if (tokenRecord.expires_at < new Date()) {
+      const err = new BadRequestError('El enlace de recuperación ha expirado');
+      (err as BadRequestError & { resetTokenReason?: string }).resetTokenReason = 'EXPIRED';
+      throw err;
     }
 
     // 2. Buscar el usuario asociado

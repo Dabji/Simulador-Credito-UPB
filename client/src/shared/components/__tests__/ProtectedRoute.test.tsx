@@ -3,12 +3,12 @@ import { describe, it, expect, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { ProtectedRoute } from '../ProtectedRoute';
 
-// Mock AuthContext
-vi.mock('@/modules/auth/context/AuthContext', () => ({
+// Mock useAuth
+vi.mock('@/modules/auth/context/useAuth', () => ({
   useAuth: vi.fn(),
 }));
 
-import { useAuth } from '@/modules/auth/context/AuthContext';
+import { useAuth } from '@/modules/auth/context/useAuth';
 const mockUseAuth = vi.mocked(useAuth);
 
 describe('ProtectedRoute', () => {

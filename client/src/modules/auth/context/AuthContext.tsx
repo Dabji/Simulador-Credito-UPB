@@ -1,25 +1,16 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { getCurrentUser, logoutUser, NETWORK_ERROR_MESSAGE } from '@/shared/services/api';
 import type { UserData } from '@/shared/services/api';
-
-// ── Tipos del contexto ─────────────────────────────────────────────────────
-
-interface AuthContextValue {
-  user: UserData | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  login: (token: string, userData: UserData) => void;
-  logout: () => void;
-}
-
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+import { AuthContext } from './AuthContext.types';
 
 // ── Provider ───────────────────────────────────────────────────────────────
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(
+    () => !!localStorage.getItem('token'),
+  );
 
   const isAuthenticated = !!user;
 
@@ -47,7 +38,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const token = localStorage.getItem('token');
 
     if (!token) {
-      setIsLoading(false);
       return;
     }
 
@@ -89,14 +79,3 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// ── Hook personalizado ─────────────────────────────────────────────────────
-
-export function useAuth(): AuthContextValue {
-  const context = useContext(AuthContext);
-
-  if (!context) {
-    throw new Error('useAuth debe usarse dentro de un <AuthProvider>');
-  }
-
-  return context;
-}

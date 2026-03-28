@@ -33,9 +33,13 @@ export class SequelizeUserRepository implements IUserRepository {
     return row ? this.toDomain(row) : null;
   }
 
-  async findAll(): Promise<User[]> {
-    const rows = await UserModel.findAll();
-    return rows.map((row) => this.toDomain(row));
+  async findAll(options?: { limit?: number; offset?: number }): Promise<{ rows: User[]; count: number }> {
+    const { rows, count } = await UserModel.findAndCountAll({
+      ...(options?.limit  != null ? { limit: options.limit }   : {}),
+      ...(options?.offset != null ? { offset: options.offset } : {}),
+      order: [['created_at', 'DESC']],
+    });
+    return { rows: rows.map((row) => this.toDomain(row)), count };
   }
 
   async save(user: User): Promise<User> {

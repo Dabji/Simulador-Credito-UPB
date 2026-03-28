@@ -6,9 +6,12 @@
 
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import { xssMiddleware } from './middlewares/xssMiddleware';
 import swaggerUi from 'swagger-ui-express';
 import { authRoutes, simulatorRoutes, adminRoutes, userRoutes } from './routes';
 import simulatorPublicRoutes from './routes/simulatorPublicRoutes';
+import parameterPublicRoutes from './routes/parameterPublicRoutes';
 import { errorHandler } from './middlewares/errorHandler';
 import { authGuard } from './middlewares/authGuard';
 import { roleGuard } from './middlewares/roleGuard';
@@ -26,9 +29,11 @@ export function createApp(): express.Application {
 
   // ── Middlewares Globales ───────────────────────────────────
   app.set('trust proxy', 1);
+  app.use(helmet({ contentSecurityPolicy: process.env.NODE_ENV === 'production' ? undefined : false }));
   app.use(cors());
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
+  app.use(xssMiddleware());
 
   // Evitar que el navegador cachee respuestas autenticadas (HU-05).
   // Esto impide que al presionar "atrás" después de cerrar sesión
@@ -56,11 +61,13 @@ export function createApp(): express.Application {
   app.use('/api/simulator/preview', simulatorLimiter);
   app.use('/api/simulator', simulatorPublicRoutes);
 
+  // Parámetros activos — público (student + guest necesitan config dinámica)
+  app.use('/api/parameters', simulatorLimiter, parameterPublicRoutes);
+
   // ── Rutas Protegidas ──────────────────────────────────────
   // Rutas protegidas por rol (HU-07)
   app.use('/api/simulator', authGuard, simulatorRoutes);
   app.use('/api/admin', authGuard, roleGuard(UserRole.ADMIN), adminRoutes);
-
   // ── HU-81: Perfil del estudiante autenticado ──────────────
   app.use('/api/users', userRoutes);
 
