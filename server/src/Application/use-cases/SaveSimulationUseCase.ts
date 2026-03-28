@@ -56,6 +56,12 @@ export class SaveSimulationUseCase {
     const levelCfgForRate = activeVersion.levelConfigs.find(
       c => c.levelScope === dbLevel && c.isActive && c.paymentCount === input.numberOfPayments,
     );
+    if (input.interestMode === 'con_interes' && (!levelCfgForRate || levelCfgForRate.rateMonthly <= 0)) {
+      throw new BadRequestError(
+        `No existe una tasa de interés configurada para el nivel "${input.educationLevel}" ` +
+        `con ${input.numberOfPayments} cuota(s). Contacte al administrador.`,
+      );
+    }
     const appliedRate = input.interestMode === 'con_interes'
       ? (levelCfgForRate?.rateMonthly ?? 0)
       : 0;

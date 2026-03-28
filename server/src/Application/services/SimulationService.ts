@@ -8,21 +8,43 @@ import { ParameterService } from './ParameterService';
 import { SimulationEngine } from './SimulationEngine';
 import type { SimulationInput } from '../dtos/SimulationInput';
 import type { SimulationSummary } from '../dtos/SimulationSummary';
-import type { ActiveParameterVersion, ActiveModalityRule } from '../../Core/repositories/IParameterVersionRepository';
+import type { ActiveParameterVersion } from '../../Core/repositories/IParameterVersionRepository';
 import { LEVEL_MAP } from '../dtos/constants';
 
-function findModalityRule(
+/** Obtiene el sinMax activo para un nivel desde levelConfigs */
+function getSinMax(
+  activeVersion: ActiveParameterVersion | null | undefined,
+  dbLevel: string | null | undefined,
+): number | null {
+  if (!activeVersion || !dbLevel) return null;
+  const cfgs = activeVersion.levelConfigs.filter(c => c.levelScope === dbLevel && c.isActive);
+  if (cfgs.length === 0) return null;
+  return cfgs[0].maxPaymentsSinInteres ?? null;
+}
+
+/** Obtiene el conMax activo para un nivel desde levelConfigs */
+function getConMax(
+  activeVersion: ActiveParameterVersion | null | undefined,
+  dbLevel: string | null | undefined,
+): number | null {
+  if (!activeVersion || !dbLevel) return null;
+  const cfgs = activeVersion.levelConfigs.filter(c => c.levelScope === dbLevel && c.isActive);
+  if (cfgs.length === 0) return null;
+  return cfgs[0].maxPaymentsConInteres ?? null;
+}
+
+/** Obtiene el porcentaje mínimo de cuota inicial desde initialPaymentRules */
+function getMinInitialPct(
   activeVersion: ActiveParameterVersion | null | undefined,
   dbLevel: string | null | undefined,
   effectiveMode: string,
-): ActiveModalityRule | undefined {
-  if (!activeVersion || !dbLevel) return undefined;
+): number | null {
+  if (!activeVersion || !dbLevel) return null;
   const dbModality = effectiveMode === 'sin_interes' ? 'SIN_INTERES' : 'CON_INTERES';
-  const rules = (activeVersion as unknown as { modalityRules?: ActiveModalityRule[] }).modalityRules;
-  if (!rules) return undefined;
-  return rules.find(
+  const rule = activeVersion.initialPaymentRules.find(
     r => r.level === dbLevel && r.modality === dbModality,
   );
+  return rule ? rule.initialPctRequired * 100 : null;
 }
 
 export class SimulationService {
@@ -46,9 +68,8 @@ export class SimulationService {
     const dbLevel = LEVEL_MAP[input.educationLevel];
     // HU-PV-02: Derivar modalidad efectiva desde levelConfigs si existen, sino fallback #59
     const modeForRule = this.deriveEffectiveMode(input, activeVersion, dbLevel);
-    const initialModalityRule = findModalityRule(activeVersion, dbLevel, modeForRule);
-    if (initialModalityRule) {
-      const minPct = initialModalityRule.minInitialPct * 100; // decimal → porcentaje
+    const minPct = getMinInitialPct(activeVersion, dbLevel, modeForRule);
+    if (minPct !== null) {
       if (input.initialPaymentPct < minPct) {
         throw new Error(
           `La cuota inicial debe ser al menos ${minPct}% del valor neto de matrícula para ${input.educationLevel}.`,
@@ -88,11 +109,10 @@ export class SimulationService {
       input.firstPaymentMonth,
     );
 
-    // Tope por modalidad: leer desde BD si está disponible, sino usar fallback hardcodeado
-    const capModalityRule = findModalityRule(activeVersion, dbLevel, effectiveMode);
-    const capByMode = capModalityRule
-      ? capModalityRule.maxTotalPayments
-      : (effectiveMode === 'sin_interes' ? 3 : 6);
+    // Tope por modalidad: leer desde levelConfigs si está disponible, sino usar fallback hardcodeado
+    const capByMode = effectiveMode === 'sin_interes'
+      ? (getSinMax(activeVersion, dbLevel) ?? 3)
+      : (getConMax(activeVersion, dbLevel) ?? 6);
 
     const maxInstallments = Math.min(maxByPeriod, capByMode);
     if (input.numberOfPayments < 1 || input.numberOfPayments > maxInstallments) {
@@ -123,15 +143,10 @@ export class SimulationService {
     activeVersion: ActiveParameterVersion | undefined,
     dbLevel: string | null | undefined,
   ): string {
-    if (activeVersion && dbLevel) {
-      const cfgs = activeVersion.levelConfigs.filter(c => c.levelScope === dbLevel);
-      if (cfgs.length > 0) {
-        const cfg = cfgs.find(c => c.paymentCount === input.numberOfPayments);
-        if (cfg) {
-          return cfg.rateMonthly > 0 ? 'con_interes' : 'sin_interes';
-        }
-        return 'sin_interes';
-      }
+    const sinMax = getSinMax(activeVersion, dbLevel);
+    if (sinMax !== null) {
+      // La modalidad se determina por el límite sin interés, no por la tasa
+      return input.numberOfPayments <= sinMax ? 'sin_interes' : 'con_interes';
     }
     // Fallback #59: regla legacy si no hay levelConfigs
     if (input.interestMode === 'con_interes' && input.numberOfPayments <= 3) {

@@ -170,6 +170,20 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
           if (maxSin > maxCon) {
             throw new Error(`maxPaymentsSinInteres (${maxSin}) no puede superar maxPaymentsConInteres (${maxCon}) en nivel ${lc.levelScope}`);
           }
+          // Regla 5: coherencia tasa/límites — paymentCount <= sinMax debe tener rate=0;
+          //           sinMax < paymentCount <= conMax debe tener rate > 0
+          if (lc.paymentCount <= maxSin && lc.rateMonthly !== 0) {
+            throw new Error(
+              `paymentCount ${lc.paymentCount} en nivel ${lc.levelScope} está en rango SIN INTERÉS ` +
+              `(máx sin interés: ${maxSin}) pero tiene rateMonthly ${lc.rateMonthly} ≠ 0.`,
+            );
+          }
+          if (lc.paymentCount > maxSin && lc.paymentCount <= maxCon && lc.rateMonthly <= 0) {
+            throw new Error(
+              `paymentCount ${lc.paymentCount} en nivel ${lc.levelScope} está en rango CON INTERÉS ` +
+              `pero tiene rateMonthly ${lc.rateMonthly} ≤ 0. Debe ser mayor a 0.`,
+            );
+          }
           entry.counts.push(lc.paymentCount);
         }
 
@@ -191,6 +205,32 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
             sin: ec.max_payments_sin_interes,
             con: ec.max_payments_con_interes,
           });
+        }
+
+        // Sugerencia 3: validar que no haya más de una cabecera activa por levelScope
+        const activeByScope = new Map<string, number>();
+        for (const lc of data.levelConfigs) {
+          if (!lc.isActive) continue;
+          const count = (activeByScope.get(lc.levelScope) ?? 0) + 1;
+          activeByScope.set(lc.levelScope, count);
+        }
+        // Cada levelScope activo puede tener múltiples filas (una por paymentCount) pero todas
+        // deben compartir el mismo validFrom (una sola cabecera activa por nivel)
+        const activeScopeValidFroms = new Map<string, Set<string>>();
+        for (const lc of data.levelConfigs) {
+          if (!lc.isActive) continue;
+          if (!activeScopeValidFroms.has(lc.levelScope)) {
+            activeScopeValidFroms.set(lc.levelScope, new Set());
+          }
+          activeScopeValidFroms.get(lc.levelScope)!.add(lc.validFrom);
+        }
+        for (const [scope, validFroms] of activeScopeValidFroms) {
+          if (validFroms.size > 1) {
+            throw new Error(
+              `El nivel ${scope} tiene múltiples validFrom activos: ${[...validFroms].join(', ')}. ` +
+              'Solo puede existir una cabecera activa por nivel.',
+            );
+          }
         }
 
         // Agrupar filas planas por (levelScope, validFrom) → reconstruir cabecera + reglas
@@ -416,16 +456,25 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
       }),
     ]);
 
-    // JOIN con level_rate_rules para armar el array plano que consume SimulationEngine
-    const rateRulesPerConfig = await Promise.all(
-      activeLvlConfigs.map(lc =>
-        LevelRateRuleModel.findAll({ where: { level_config_id: lc.id }, order: [['payment_count', 'ASC']] }),
-      ),
-    );
+    // JOIN con level_rate_rules — una sola query IN(...) para evitar N+1
+    const configIds = activeLvlConfigs.map(lc => lc.id);
+    const allRateRules = configIds.length > 0
+      ? await LevelRateRuleModel.findAll({
+          where: { level_config_id: configIds },
+          order: [['payment_count', 'ASC']],
+        })
+      : [];
+    const ratesByConfigId = new Map<string, typeof allRateRules>();
+    for (const rr of allRateRules) {
+      const list = ratesByConfigId.get(rr.level_config_id) ?? [];
+      list.push(rr);
+      ratesByConfigId.set(rr.level_config_id, list);
+    }
 
     const levelConfigs: ActiveLevelConfig[] = [];
-    activeLvlConfigs.forEach((lc, idx) => {
-      rateRulesPerConfig[idx].forEach(rr => {
+    for (const lc of activeLvlConfigs) {
+      const rules = ratesByConfigId.get(lc.id) ?? [];
+      for (const rr of rules) {
         levelConfigs.push({
           id: lc.id,
           levelScope: lc.level_scope,
@@ -437,8 +486,8 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
           paymentCount: rr.payment_count,
           rateMonthly: Number(rr.rate_monthly),
         });
-      });
-    });
+      }
+    }
 
     return {
       id: version.id,
