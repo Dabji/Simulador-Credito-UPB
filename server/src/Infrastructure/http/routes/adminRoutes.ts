@@ -805,7 +805,7 @@ router.get('/users/export/csv', async (req: AuthenticatedRequest, res: Response,
     void auditLog({
       action: 'STUDENTS_EXPORTED_CSV',
       entity: 'STUDENTS_LIST',
-      entity_id: 'ALL_STUDENTS_EXPORT',
+      entity_id: 'N/A',
       actor_type: 'ADMIN',
       user_id: adminUserId,
       ip_address: extractIp(req),
