@@ -29,15 +29,7 @@ export class FrenchAmortizationStrategy implements InterestStrategy {
       return 0;
     }
 
-    // Fallback: usar interestRates (comportamiento original)
-    const rateEntry = activeVersion.interestRates.find(r => r.levelScope === dbLevel);
-    if (rateEntry?.rateMonthly == null) {
-      throw new Error(
-        'No se puede calcular: la versión de parámetros activa no define una tasa de interés para este nivel.',
-      );
-    }
-
-    return rateEntry.rateMonthly;
+    return 0;
   }
 
   computePeriodicPayment(principal: number, rate: number, installments: number): number {

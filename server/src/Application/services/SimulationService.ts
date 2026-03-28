@@ -18,7 +18,9 @@ function findModalityRule(
 ): ActiveModalityRule | undefined {
   if (!activeVersion || !dbLevel) return undefined;
   const dbModality = effectiveMode === 'sin_interes' ? 'SIN_INTERES' : 'CON_INTERES';
-  return activeVersion.modalityRules.find(
+  const rules = (activeVersion as unknown as { modalityRules?: ActiveModalityRule[] }).modalityRules;
+  if (!rules) return undefined;
+  return rules.find(
     r => r.level === dbLevel && r.modality === dbModality,
   );
 }

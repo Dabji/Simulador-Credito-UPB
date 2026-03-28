@@ -390,20 +390,20 @@ router.put('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
         if (typeof cfg.isActive !== 'boolean') {
           return next(new BadRequestError('isActive debe ser booleano en levelConfigs'));
         }
-        if (!isValidDate(cfg.validFrom)) {
+        if (cfg.isActive && !isValidDate(cfg.validFrom)) {
           return next(new BadRequestError('validFrom de levelConfig debe tener formato YYYY-MM-DD'));
         }
         if (cfg.maxPaymentsSinInteres !== undefined &&
-            (!Number.isInteger(cfg.maxPaymentsSinInteres) || cfg.maxPaymentsSinInteres < 1 || cfg.maxPaymentsSinInteres > 3)) {
-          return next(new BadRequestError('maxPaymentsSinInteres debe ser entero entre 1 y 3'));
+            (!Number.isInteger(cfg.maxPaymentsSinInteres) || cfg.maxPaymentsSinInteres < 1 || cfg.maxPaymentsSinInteres > 6)) {
+          return next(new BadRequestError('maxPaymentsSinInteres debe ser entero entre 1 y 6'));
         }
         if (cfg.maxPaymentsConInteres !== undefined &&
             (!Number.isInteger(cfg.maxPaymentsConInteres) || cfg.maxPaymentsConInteres < 1 || cfg.maxPaymentsConInteres > 6)) {
           return next(new BadRequestError('maxPaymentsConInteres debe ser entero entre 1 y 6'));
         }
         if (cfg.maxPaymentsSinInteres !== undefined && cfg.maxPaymentsConInteres !== undefined &&
-            cfg.maxPaymentsSinInteres >= cfg.maxPaymentsConInteres) {
-          return next(new BadRequestError('maxPaymentsSinInteres debe ser menor que maxPaymentsConInteres'));
+            cfg.maxPaymentsSinInteres > cfg.maxPaymentsConInteres) {
+          return next(new BadRequestError('maxPaymentsSinInteres no puede superar maxPaymentsConInteres'));
         }
         if (!Number.isInteger(cfg.paymentCount) || cfg.paymentCount < 1 || cfg.paymentCount > 6) {
           return next(new BadRequestError('paymentCount en levelConfigs debe ser un entero entre 1 y 6'));
@@ -552,12 +552,12 @@ router.post('/parameters/:versionId/level-configs', async (req: AuthenticatedReq
     const validLevels = ['PREGRADO', 'POSGRADO', 'UPB_Tech'];
     if (!validLevels.includes(body.levelScope)) return next(new BadRequestError('levelScope inválido'));
     if (!isValidDate(body.validFrom)) return next(new BadRequestError('validFrom debe tener formato YYYY-MM-DD'));
-    if (!Number.isInteger(body.maxPaymentsSinInteres) || body.maxPaymentsSinInteres < 1 || body.maxPaymentsSinInteres > 3)
-      return next(new BadRequestError('maxPaymentsSinInteres debe ser entero entre 1 y 3'));
+    if (!Number.isInteger(body.maxPaymentsSinInteres) || body.maxPaymentsSinInteres < 1 || body.maxPaymentsSinInteres > 6)
+      return next(new BadRequestError('maxPaymentsSinInteres debe ser entero entre 1 y 6'));
     if (!Number.isInteger(body.maxPaymentsConInteres) || body.maxPaymentsConInteres < 1 || body.maxPaymentsConInteres > 6)
       return next(new BadRequestError('maxPaymentsConInteres debe ser entero entre 1 y 6'));
-    if (body.maxPaymentsSinInteres >= body.maxPaymentsConInteres)
-      return next(new BadRequestError('maxPaymentsSinInteres debe ser menor que maxPaymentsConInteres'));
+    if (body.maxPaymentsSinInteres > body.maxPaymentsConInteres)
+      return next(new BadRequestError('maxPaymentsSinInteres no puede superar maxPaymentsConInteres'));
     if (!Array.isArray(body.rateRules) || body.rateRules.length === 0)
       return next(new BadRequestError('rateRules es obligatorio'));
     const adminUserId = String(req.user?.['userId'] ?? '');
@@ -801,6 +801,17 @@ router.get('/users/export/csv', async (req: AuthenticatedRequest, res: Response,
     res.setHeader('Content-Type',        'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Content-Length',      csvBuffer.length);
+
+    void auditLog({
+      action:     'STUDENTS_EXPORTED_CSV',
+      entity:     'USER',
+      entity_id:  adminUserId,
+      actor_type: 'ADMIN',
+      user_id:    adminUserId,
+      ip_address: extractIp(req),
+      details:    { totalExported: result.items.length, filename },
+    });
+
     res.send(csvBuffer);
   } catch (error) {
     next(error);

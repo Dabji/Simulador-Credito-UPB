@@ -138,8 +138,12 @@ export function errorHandler(
     path: req.originalUrl,
   });
 
+  const devMessage = process.env['NODE_ENV'] !== 'production' && err instanceof Error
+    ? err.message
+    : 'Ocurrió un error inesperado. Intenta de nuevo más tarde.';
+
   const response = buildErrorResponse(
-    'Ocurrió un error inesperado. Intenta de nuevo más tarde.',
+    devMessage,
     500,
     err instanceof Error ? err.stack : undefined,
   );

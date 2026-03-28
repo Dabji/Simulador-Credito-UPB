@@ -125,19 +125,17 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
       // undefined = no tocar; [] = reemplazar por vacío
       if (data.initialPaymentRules !== undefined) {
         await InitialPaymentRuleModel.destroy({ where: { parameter_version_id: id }, transaction: t });
-        for (const rule of data.initialPaymentRules) {
-          await InitialPaymentRuleModel.create(
-            {
-              id: crypto.randomUUID(),
-              level: rule.level,
-              modality: rule.modality,
-              extra_installments: rule.extraInstallments,
-              initial_pct_required: rule.initialPctRequired,
-              parameter_version_id: id,
-            },
-            { transaction: t },
-          );
-        }
+        await InitialPaymentRuleModel.bulkCreate(
+          data.initialPaymentRules.map(rule => ({
+            id: crypto.randomUUID(),
+            level: rule.level,
+            modality: rule.modality,
+            extra_installments: rule.extraInstallments,
+            initial_pct_required: rule.initialPctRequired,
+            parameter_version_id: id,
+          })),
+          { transaction: t },
+        );
       }
 
       // HU-PV-01: Reemplazar configuración por nivel si se proporcionó (estructura plana)
@@ -145,9 +143,10 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
         const createdBy = data.createdBy ?? 'SYSTEM';
 
         // ── Validaciones de negocio (reemplazan triggers BEFORE) ─────────
-        // Agrupar filas por (levelScope, validFrom) para validar por cabecera
+        // Solo validar niveles activos — los inactivos no tienen validFrom ni restricciones de tasa
         const validationMap = new Map<string, { maxSin: number; maxCon: number; counts: number[] }>();
         for (const lc of data.levelConfigs) {
+          if (!lc.isActive) continue;
           const key = `${lc.levelScope}|${lc.validFrom}`;
           const maxSin = lc.maxPaymentsSinInteres ?? 3;
           const maxCon = lc.maxPaymentsConInteres ?? 6;
@@ -167,9 +166,9 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
           if (!Number.isFinite(lc.rateMonthly) || lc.rateMonthly < 0 || lc.rateMonthly > 1) {
             throw new Error(`rateMonthly ${lc.rateMonthly} debe estar entre 0 y 1 para nivel ${lc.levelScope}`);
           }
-          // Regla 4: maxPaymentsSinInteres < maxPaymentsConInteres
-          if (maxSin >= maxCon) {
-            throw new Error(`maxPaymentsSinInteres (${maxSin}) debe ser menor que maxPaymentsConInteres (${maxCon}) en nivel ${lc.levelScope}`);
+          // Regla 4: maxPaymentsSinInteres <= maxPaymentsConInteres
+          if (maxSin > maxCon) {
+            throw new Error(`maxPaymentsSinInteres (${maxSin}) no puede superar maxPaymentsConInteres (${maxCon}) en nivel ${lc.levelScope}`);
           }
           entry.counts.push(lc.paymentCount);
         }
@@ -218,12 +217,13 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
         const todayCol = SequelizeParameterVersionRepository.todayInColombia();
         for (const [, header] of headerMap) {
           const lcId = crypto.randomUUID();
+          const validFromValue = header.isActive ? header.validFrom : (header.validFrom || todayCol);
           await LevelConfigModel.create(
             {
               id: lcId,
               level_scope: header.levelScope,
               is_active: header.isActive,
-              valid_from: header.validFrom,
+              valid_from: validFromValue,
               valid_to: header.isActive ? null : todayCol,
               max_payments_sin_interes: header.maxPaymentsSinInteres,
               max_payments_con_interes: header.maxPaymentsConInteres,
@@ -289,24 +289,24 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
         { transaction: t },
       );
 
-      for (const rule of data.initialPaymentRules) {
-        await InitialPaymentRuleModel.create(
-          {
-            id: crypto.randomUUID(),
-            level: rule.level,
-            modality: rule.modality,
-            extra_installments: rule.extraInstallments,
-            initial_pct_required: rule.initialPctRequired,
-            parameter_version_id: versionId,
-          },
-          { transaction: t },
-        );
-      }
+      await InitialPaymentRuleModel.bulkCreate(
+        data.initialPaymentRules.map(rule => ({
+          id: crypto.randomUUID(),
+          level: rule.level,
+          modality: rule.modality,
+          extra_installments: rule.extraInstallments,
+          initial_pct_required: rule.initialPctRequired,
+          parameter_version_id: versionId,
+        })),
+        { transaction: t },
+      );
 
       // HU-PV-01: Persistir configuración por nivel (estructura plana → agrupar por header)
       if (data.levelConfigs) {
         // ── Validaciones de negocio (reemplazan triggers BEFORE) ─────────
+        // Solo validar niveles activos — los inactivos no tienen validFrom ni restricciones
         for (const lc of data.levelConfigs) {
+          if (!lc.isActive) continue;
           const maxSin = lc.maxPaymentsSinInteres ?? 3;
           const maxCon = lc.maxPaymentsConInteres ?? 6;
           if (lc.paymentCount < 1 || lc.paymentCount > 6) {
@@ -318,8 +318,8 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
           if (!Number.isFinite(lc.rateMonthly) || lc.rateMonthly < 0 || lc.rateMonthly > 1) {
             throw new Error(`rateMonthly ${lc.rateMonthly} debe estar entre 0 y 1 para nivel ${lc.levelScope}`);
           }
-          if (maxSin >= maxCon) {
-            throw new Error(`maxPaymentsSinInteres (${maxSin}) debe ser menor que maxPaymentsConInteres (${maxCon}) en nivel ${lc.levelScope}`);
+          if (maxSin > maxCon) {
+            throw new Error(`maxPaymentsSinInteres (${maxSin}) no puede superar maxPaymentsConInteres (${maxCon}) en nivel ${lc.levelScope}`);
           }
         }
 
@@ -340,15 +340,17 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
           }
           headerMapCreate.get(key)!.rules.push({ paymentCount: lc.paymentCount, rateMonthly: lc.rateMonthly });
         }
+        const todayColCreate = SequelizeParameterVersionRepository.todayInColombia();
         for (const [, header] of headerMapCreate) {
           const lcId = crypto.randomUUID();
+          const validFromValue = header.isActive ? header.validFrom : (header.validFrom || todayColCreate);
           await LevelConfigModel.create(
             {
               id: lcId,
               level_scope: header.levelScope,
               is_active: header.isActive,
-              valid_from: header.validFrom,
-              valid_to: header.isActive ? null : SequelizeParameterVersionRepository.todayInColombia(),
+              valid_from: validFromValue,
+              valid_to: header.isActive ? null : todayColCreate,
               max_payments_sin_interes: header.maxPaymentsSinInteres,
               max_payments_con_interes: header.maxPaymentsConInteres,
               parameter_version_id: versionId,

@@ -308,6 +308,7 @@ export function FilterPanel({ fieldDefs, criteria, onChange, onClose }: FilterPa
     const keys = new Set(newCriteria.map(c => c.field));
     const kept = criteria.filter(c => !keys.has(c.field));
     onChange([...kept, ...newCriteria]);
+    onClose();
 
     // Limpiar selección y formulario
     setSelectedKeys(new Set());

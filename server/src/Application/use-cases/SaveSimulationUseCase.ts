@@ -53,14 +53,11 @@ export class SaveSimulationUseCase {
       );
     }
 
-    const rateEntry = activeVersion.interestRates.find(r => r.levelScope === dbLevel);
-    if (input.interestMode === 'con_interes' && (!rateEntry || rateEntry.rateMonthly == null)) {
-      throw new NotFoundError(
-        'La versión de parámetros activa no define una tasa de interés para este nivel',
-      );
-    }
+    const levelCfgForRate = activeVersion.levelConfigs.find(
+      c => c.levelScope === dbLevel && c.isActive && c.paymentCount === input.numberOfPayments,
+    );
     const appliedRate = input.interestMode === 'con_interes'
-      ? rateEntry!.rateMonthly
+      ? (levelCfgForRate?.rateMonthly ?? 0)
       : 0;
 
     // 3. Calcular la simulación (valida reglas de negocio)
