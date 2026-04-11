@@ -28,12 +28,14 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
   // La versión activa cambia rara vez (solo cuando un admin la modifica).
   // TTL de 60 s evita ir 4 veces a Aiven por cada request del simulador.
   private static _activeCache: ActiveParameterVersion | null = null;
+  private static _activeCacheValid = false;
   private static _activeCacheTs = 0;
   private static readonly CACHE_TTL_MS = 60_000; // 60 segundos
 
   /** Invalida el caché — llamar después de cualquier mutación de parámetros. */
   private static invalidateActiveCache(): void {
     SequelizeParameterVersionRepository._activeCache = null;
+    SequelizeParameterVersionRepository._activeCacheValid = false;
     SequelizeParameterVersionRepository._activeCacheTs = 0;
   }
 
@@ -46,7 +48,7 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
     // Servir desde caché si aún es válido
     const now = Date.now();
     if (
-      SequelizeParameterVersionRepository._activeCache !== null &&
+      SequelizeParameterVersionRepository._activeCacheValid &&
       now - SequelizeParameterVersionRepository._activeCacheTs < SequelizeParameterVersionRepository.CACHE_TTL_MS
     ) {
       return SequelizeParameterVersionRepository._activeCache;
@@ -67,12 +69,14 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
 
     if (!version) {
       SequelizeParameterVersionRepository._activeCache = null;
+      SequelizeParameterVersionRepository._activeCacheValid = true;
       SequelizeParameterVersionRepository._activeCacheTs = now;
       return null;
     }
 
     const result = await this.buildWithRules(version);
     SequelizeParameterVersionRepository._activeCache = result;
+    SequelizeParameterVersionRepository._activeCacheValid = true;
     SequelizeParameterVersionRepository._activeCacheTs = now;
     return result;
   }

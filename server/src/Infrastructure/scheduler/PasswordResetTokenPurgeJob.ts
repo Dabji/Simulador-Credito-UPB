@@ -33,6 +33,7 @@ import { env } from '../config/env';
 
 let intervalRef: ReturnType<typeof setInterval> | null = null;
 let timeoutRef: ReturnType<typeof setTimeout> | null = null;
+let isRunning = false;
 
 /**
  * Ejecuta la purga física de tokens expirados hace más de
@@ -48,10 +49,16 @@ export async function purgeExpiredTokens(): Promise<number> {
   const retentionDays = env.TOKEN_PURGE_RETENTION_DAYS;
   const batchSize     = env.TOKEN_PURGE_BATCH_SIZE;
 
+  if (isRunning) {
+    logger.warn('Token purge: ejecución anterior aún en curso, se omite este ciclo');
+    return 0;
+  }
+
   const sequelize = Database.getInstance().getSequelize();
 
   let totalDeleted = 0;
   let batchNumber  = 0;
+  isRunning = true;
 
   try {
     while (true) {
@@ -100,6 +107,8 @@ export async function purgeExpiredTokens(): Promise<number> {
       batchSize,
     });
     return 0;
+  } finally {
+    isRunning = false;
   }
 }
 
