@@ -85,5 +85,8 @@ ParameterVersionModel.init(
     sequelize,
     tableName: 'parameter_versions',
     timestamps: false,
+    indexes: [
+      { fields: ['valid_from', 'valid_to'], name: 'idx_pv_validity' },
+    ],
   },
 );

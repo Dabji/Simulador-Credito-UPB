@@ -82,7 +82,7 @@ router.post('/save', async (req: AuthenticatedRequest, res: Response, next: Next
 
     logger.info('Simulación guardada en BD', { id: result.id, userId });
 
-    await auditLog({
+    void auditLog({
       action:     'SIMULATION_SAVED',
       entity:     'SIMULATION',
       entity_id:  result.id,

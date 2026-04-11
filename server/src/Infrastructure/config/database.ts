@@ -8,6 +8,7 @@ import { Sequelize } from 'sequelize';
 import fs from 'fs';
 import path from 'path';
 import { env } from './env';
+import { queryContext } from './queryContext';
 
 export class Database {
   private static instance: Database | null = null;
@@ -48,14 +49,34 @@ export class Database {
       database: env.DB_NAME,
       username: env.DB_USER,
       password: env.DB_PASSWORD,
-      logging: env.NODE_ENV === 'development' ? console.log : false,
+      // ── Query Benchmark Logging (solo desarrollo) ──────────
+      // benchmark: true hace que Sequelize pase el tiempo (ms) al callback.
+      // SLOW QUERY: timing > 150 ms → console.warn (visible en amarillo).
+      // QUERY normal: timing ≤ 150 ms → console.log.
+      // En producción logging queda en false — sin ruido, sin overhead.
+      benchmark: env.NODE_ENV === 'development',
+      logging:
+        env.NODE_ENV === 'development'
+          ? (sql: string, timing?: number) => {
+              const ctx = queryContext.getStore();
+              if (ctx) ctx.count++;
+              const ms = timing ?? 0;
+              const snippet =
+                sql.length > 180 ? sql.substring(0, 180) + '…' : sql;
+              if (ms > 150) {
+                console.warn(`[SLOW QUERY ${ms}ms] ${snippet}`);
+              } else {
+                console.log(`[QUERY ${ms}ms] ${snippet}`);
+              }
+            }
+          : false,
       timezone: '-05:00', // America/Bogota (UTC-5)
       dialectOptions,
       pool: {
         max: 10,
-        min: 0,
+        min: 2,
         acquire: 30000,
-        idle: 10000,
+        idle: 60000,
       },
       define: {
         timestamps: true,

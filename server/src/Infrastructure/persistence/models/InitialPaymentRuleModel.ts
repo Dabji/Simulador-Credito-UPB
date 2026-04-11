@@ -63,5 +63,8 @@ InitialPaymentRuleModel.init(
     sequelize,
     tableName: 'initial_payment_rules',
     timestamps: false,
+    indexes: [
+      { unique: true, fields: ['parameter_version_id', 'level', 'modality', 'extra_installments'], name: 'uq_ipr_version_level_modality_extra' },
+    ],
   },
 );

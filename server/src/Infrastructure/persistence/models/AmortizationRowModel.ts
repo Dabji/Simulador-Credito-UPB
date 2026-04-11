@@ -75,5 +75,8 @@ AmortizationRowModel.init(
     sequelize,
     tableName: 'amortization_rows',
     timestamps: false,
+    indexes: [
+      { unique: true, fields: ['simulation_id', 'payment_no'], name: 'uq_ar_simulation_payment' },
+    ],
   },
 );

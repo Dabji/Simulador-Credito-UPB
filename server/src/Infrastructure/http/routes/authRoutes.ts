@@ -188,7 +188,7 @@ router.post('/login', validateLoginRequestWithAudit, async (req: Request, res: R
 
 
 
-    await auditLog({
+    void auditLog({
 
       action:     'LOGIN_SUCCESS',
 
@@ -218,7 +218,7 @@ router.post('/login', validateLoginRequestWithAudit, async (req: Request, res: R
 
   } catch (error) {
 
-    await auditLog({
+    void auditLog({
 
       action:     'LOGIN_FAILED',
 
@@ -294,7 +294,7 @@ router.post('/register', validateRequest(RegisterUserInputSchema), async (req: R
 
 
 
-    await auditLog({
+    void auditLog({
 
       action:     'USER_REGISTERED',
 
@@ -374,7 +374,7 @@ router.post('/forgot-password', validateRequest(ForgotPasswordInputSchema), asyn
 
 
 
-    await auditLog({
+    void auditLog({
 
       action:     'PASSWORD_RESET_REQUESTED',
 
@@ -432,7 +432,7 @@ router.post('/reset-password', validateRequest(ResetPasswordInputSchema), async 
 
 
 
-    await auditLog({
+    void auditLog({
 
       action:     'PASSWORD_RESET_COMPLETED',
 
@@ -804,7 +804,7 @@ router.post('/logout', authGuard, async (req: AuthenticatedRequest, res: Respons
 
 
 
-    await auditLog({
+    void auditLog({
 
       action:     'LOGOUT',
 

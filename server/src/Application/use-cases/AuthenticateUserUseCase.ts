@@ -9,6 +9,7 @@ import { User, UserRole } from '../../Core/entities/User';
 import type { IUserRepository } from '../../Core/repositories/IUserRepository';
 import { UnauthorizedError } from '../../Core/errors';
 import type { LoginUserInput } from '../dtos/LoginUserInput';
+import { logger } from '../../Infrastructure/logger';
 
 // Interfaz para el servicio de autenticación (LDAP, local, etc.)
 export interface IAuthService {
@@ -151,8 +152,13 @@ export class AuthenticateUserUseCase {
 
   // ── Genera JWT, actualiza last_login_at y retorna usuario sin password ──
   private async buildOutput(user: User): Promise<AuthenticateUserOutput> {
-    // Registrar el momento del login (last_login_at) en BD
-    await this.userRepository.updateLastLogin(user.id);
+    // Registrar el momento del login (last_login_at) — fire-and-forget: no bloquea la respuesta
+    void this.userRepository.updateLastLogin(user.id).catch((err: unknown) => {
+      logger.warn('No se pudo actualizar last_login_at', {
+        userId: user.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
 
     const token = this.tokenService.generate({
       userId: user.id,

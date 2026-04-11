@@ -187,5 +187,13 @@ SimulationModel.init(
     sequelize,
     tableName: 'simulations',
     timestamps: false,
+    indexes: [
+      { fields: ['user_id', 'saved_at'], name: 'idx_sim_user_saved' },
+      { fields: ['deleted_at'], name: 'idx_sim_deleted' },
+      { fields: ['user_id', 'deleted_at', 'saved_at'], name: 'idx_sim_user_deleted_saved' },
+      { fields: ['parameter_version_id'], name: 'idx_sim_version' },
+      { fields: ['academic_period', 'deleted_at'], name: 'idx_sim_period' },
+      { fields: ['level', 'modality', 'deleted_at'], name: 'idx_sim_level_modality' },
+    ],
   },
 );

@@ -109,5 +109,9 @@ LevelConfigModel.init(
     sequelize,
     tableName: 'level_configs',
     timestamps: false,
+    indexes: [
+      { fields: ['parameter_version_id'], name: 'idx_lc_version' },
+      { fields: ['parameter_version_id', 'level_scope'], name: 'idx_lc_version_scope' },
+    ],
   },
 );

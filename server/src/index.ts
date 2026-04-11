@@ -9,6 +9,7 @@ import { Database } from './Infrastructure/config/database';
 import { env } from './Infrastructure/config/env';
 import { logger } from './Infrastructure/logger';
 import { startPurgeScheduler } from './Infrastructure/scheduler/SimulationPurgeJob';
+import { startTokenPurgeScheduler } from './Infrastructure/scheduler/PasswordResetTokenPurgeJob';
 
 async function bootstrap(): Promise<void> {
   try {
@@ -18,8 +19,9 @@ async function bootstrap(): Promise<void> {
       await db.connect();
       logger.info('Conexión a MySQL establecida correctamente');
 
-      // 2. Iniciar scheduler de purga automática (configurable vía RETENTION_DAYS)
-      startPurgeScheduler();
+      // 2. Iniciar schedulers de purga automática
+      startPurgeScheduler();         // simulations — arranca a los 30s
+      startTokenPurgeScheduler();    // password_reset_tokens — arranca a los 60s
 
       // 3. Sincronizar modelos (en producción usar migraciones)
       if (env.NODE_ENV === 'development') {

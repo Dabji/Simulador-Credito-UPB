@@ -58,10 +58,15 @@ const envSchema = z.object({
   SMTP_FROM_EMAIL: z.string().optional(),
   FRONTEND_URL: z.string().default('http://localhost:5173'),
 
-  // ── Retención / Purga automática ─────────────────────────
+  // ── Retención / Purga automática — simulations ────────────
   RETENTION_DAYS: z.coerce.number().int().min(1).default(90),
   PURGE_INTERVAL_HOURS: z.coerce.number().min(1).max(596).default(24),
   PURGE_BATCH_SIZE: z.coerce.number().int().min(1).max(10000).default(500),
+
+  // ── Retención / Purga automática — password_reset_tokens ────
+  TOKEN_PURGE_RETENTION_DAYS: z.coerce.number().int().min(1).default(30),
+  TOKEN_PURGE_INTERVAL_HOURS: z.coerce.number().min(1).max(596).default(24),
+  TOKEN_PURGE_BATCH_SIZE: z.coerce.number().int().min(1).max(10000).default(1000),
 });
 
 /** Tipo inferido del esquema de entorno — utilizado en toda la app */

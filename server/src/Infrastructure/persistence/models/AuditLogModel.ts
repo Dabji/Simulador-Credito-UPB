@@ -91,5 +91,11 @@ AuditLogModel.init(
     sequelize,
     tableName: 'audit_logs',
     timestamps: false,
+    indexes: [
+      { fields: ['entity', 'entity_id'], name: 'idx_al_entity' },
+      { fields: ['user_id'], name: 'idx_al_user' },
+      { fields: ['entity', 'created_at'], name: 'idx_audit_entity_created' },
+      { fields: ['action', 'created_at'], name: 'idx_audit_action_created' },
+    ],
   },
 );
