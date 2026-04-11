@@ -13,6 +13,7 @@ import { authRoutes, simulatorRoutes, adminRoutes, userRoutes } from './routes';
 import simulatorPublicRoutes from './routes/simulatorPublicRoutes';
 import parameterPublicRoutes from './routes/parameterPublicRoutes';
 import { errorHandler } from './middlewares/errorHandler';
+import { queryCounterMiddleware } from './middlewares/queryCounterMiddleware';
 import { authGuard } from './middlewares/authGuard';
 import { roleGuard } from './middlewares/roleGuard';
 import { authLimiter, simulatorLimiter } from './middlewares/rateLimitGuard';
@@ -29,6 +30,7 @@ export function createApp(): express.Application {
 
   // ── Middlewares Globales ───────────────────────────────────
   app.set('trust proxy', 1);
+  app.use(queryCounterMiddleware);
   app.use(helmet({ contentSecurityPolicy: process.env.NODE_ENV === 'production' ? undefined : false }));
   app.use(cors());
   app.use(express.json());

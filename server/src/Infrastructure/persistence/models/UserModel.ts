@@ -56,7 +56,6 @@ UserModel.init(
     email: {
       type: DataTypes.STRING(255),
       allowNull: false,
-      unique: true,
     },
     first_name: {
       type: DataTypes.STRING(100),
@@ -73,7 +72,6 @@ UserModel.init(
     document_number: {
       type: DataTypes.STRING(20),
       allowNull: false,
-      unique: true,
     },
     password: {
       type: DataTypes.STRING(255),
@@ -118,5 +116,9 @@ UserModel.init(
     timestamps: true,
     createdAt: 'created_at',
     updatedAt: 'updated_at',
+    indexes: [
+      { unique: true, fields: ['email'], name: 'uq_users_email' },
+      { unique: true, fields: ['document_type', 'document_number'], name: 'uq_users_document' },
+    ],
   },
 );

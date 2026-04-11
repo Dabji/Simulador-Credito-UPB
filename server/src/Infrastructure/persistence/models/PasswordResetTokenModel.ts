@@ -55,7 +55,6 @@ PasswordResetTokenModel.init(
     token_hash: {
       type: DataTypes.STRING(255),
       allowNull: false,
-      unique: true,
     },
     expires_at: {
       type: DataTypes.DATE,
@@ -86,5 +85,10 @@ PasswordResetTokenModel.init(
     sequelize,
     tableName: 'password_reset_tokens',
     timestamps: false,
+    indexes: [
+      { unique: true, fields: ['token_hash'], name: 'uq_prt_token_hash' },
+      { fields: ['user_id'], name: 'idx_prt_user_id' },
+      { fields: ['expires_at', 'used_at'], name: 'idx_prt_expires' },
+    ],
   },
 );

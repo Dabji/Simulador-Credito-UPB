@@ -151,8 +151,8 @@ export class AuthenticateUserUseCase {
 
   // ── Genera JWT, actualiza last_login_at y retorna usuario sin password ──
   private async buildOutput(user: User): Promise<AuthenticateUserOutput> {
-    // Registrar el momento del login (last_login_at) en BD
-    await this.userRepository.updateLastLogin(user.id);
+    // Registrar el momento del login (last_login_at) — fire-and-forget: no bloquea la respuesta
+    void this.userRepository.updateLastLogin(user.id);
 
     const token = this.tokenService.generate({
       userId: user.id,

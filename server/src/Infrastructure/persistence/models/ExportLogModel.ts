@@ -85,5 +85,9 @@ ExportLogModel.init(
     sequelize,
     tableName: 'export_logs',
     timestamps: false,
+    indexes: [
+      { fields: ['simulation_id'], name: 'idx_el_simulation' },
+      { fields: ['user_id', 'exported_at'], name: 'idx_el_user_exported' },
+    ],
   },
 );

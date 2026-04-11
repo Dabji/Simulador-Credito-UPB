@@ -24,12 +24,34 @@ import type {
 
 export class SequelizeParameterVersionRepository implements IParameterVersionRepository {
 
+  // ── Caché en memoria de la versión activa ────────────────────────────
+  // La versión activa cambia rara vez (solo cuando un admin la modifica).
+  // TTL de 60 s evita ir 4 veces a Aiven por cada request del simulador.
+  private static _activeCache: ActiveParameterVersion | null = null;
+  private static _activeCacheTs = 0;
+  private static readonly CACHE_TTL_MS = 60_000; // 60 segundos
+
+  /** Invalida el caché — llamar después de cualquier mutación de parámetros. */
+  private static invalidateActiveCache(): void {
+    SequelizeParameterVersionRepository._activeCache = null;
+    SequelizeParameterVersionRepository._activeCacheTs = 0;
+  }
+
   /** Returns today's date (YYYY-MM-DD) in Colombia time (America/Bogota), regardless of server TZ. */
   private static todayInColombia(): string {
     return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date());
   }
 
   async findActive(): Promise<ActiveParameterVersion | null> {
+    // Servir desde caché si aún es válido
+    const now = Date.now();
+    if (
+      SequelizeParameterVersionRepository._activeCache !== null &&
+      now - SequelizeParameterVersionRepository._activeCacheTs < SequelizeParameterVersionRepository.CACHE_TTL_MS
+    ) {
+      return SequelizeParameterVersionRepository._activeCache;
+    }
+
     const today = SequelizeParameterVersionRepository.todayInColombia();
 
     const version = await ParameterVersionModel.findOne({
@@ -43,8 +65,16 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
       order: [['valid_from', 'DESC']],
     });
 
-    if (!version) return null;
-    return this.buildWithRules(version);
+    if (!version) {
+      SequelizeParameterVersionRepository._activeCache = null;
+      SequelizeParameterVersionRepository._activeCacheTs = now;
+      return null;
+    }
+
+    const result = await this.buildWithRules(version);
+    SequelizeParameterVersionRepository._activeCache = result;
+    SequelizeParameterVersionRepository._activeCacheTs = now;
+    return result;
   }
 
   async findById(id: string): Promise<ActiveParameterVersion | null> {
@@ -304,6 +334,8 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
       }
     });
 
+    SequelizeParameterVersionRepository.invalidateActiveCache();
+
     // Recargar versión actualizada
     const updated = await ParameterVersionModel.findByPk(id);
     if (!updated) return null;
@@ -412,6 +444,8 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
       }
     });
 
+    SequelizeParameterVersionRepository.invalidateActiveCache();
+
     const created = await ParameterVersionModel.findByPk(versionId);
     if (!created) throw new Error('No se pudo crear la versión de parámetros');
     return this.buildWithRules(created);
@@ -439,6 +473,8 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
         { where: { id }, transaction: t },
       );
     });
+
+    SequelizeParameterVersionRepository.invalidateActiveCache();
 
     // Recargar la versión actualizada
     await version.reload();
@@ -592,6 +628,8 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
       }
     });
 
+    SequelizeParameterVersionRepository.invalidateActiveCache();
+
     const created = await LevelConfigModel.findByPk(lcId);
     if (!created) throw new Error('No se pudo recuperar la configuración creada');
     return this.buildLevelConfigHeader(created);
@@ -603,6 +641,7 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
 
     const today = SequelizeParameterVersionRepository.todayInColombia();
     await lc.update({ is_active: false, valid_to: today });
+    SequelizeParameterVersionRepository.invalidateActiveCache();
     return this.buildLevelConfigHeader(lc);
   }
 
@@ -668,6 +707,8 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
       }
     });
 
+    SequelizeParameterVersionRepository.invalidateActiveCache();
+
     const created = await LevelConfigModel.findByPk(lcId);
     if (!created) throw new Error('No se pudo recuperar la configuración reactivada');
     return this.buildLevelConfigHeader(created);
@@ -684,6 +725,7 @@ export class SequelizeParameterVersionRepository implements IParameterVersionRep
     if (!rule) return null;
 
     await rule.update({ rate_monthly: newRate });
+    SequelizeParameterVersionRepository.invalidateActiveCache();
     return {
       id: rule.id,
       paymentCount: rule.payment_count,
