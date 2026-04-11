@@ -75,7 +75,9 @@ export async function purgeExpiredTokens(): Promise<number> {
         },
       );
 
-      const deleted = (meta as unknown as { affectedRows: number }).affectedRows ?? 0;
+      const deleted = typeof meta === 'number'
+        ? meta
+        : (meta as unknown as { affectedRows?: number }).affectedRows ?? 0;
       totalDeleted += deleted;
 
       logger.info(

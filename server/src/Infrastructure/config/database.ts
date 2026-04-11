@@ -54,7 +54,7 @@ export class Database {
       // SLOW QUERY: timing > 150 ms → console.warn (visible en amarillo).
       // QUERY normal: timing ≤ 150 ms → console.log.
       // En producción logging queda en false — sin ruido, sin overhead.
-      benchmark: true,
+      benchmark: env.NODE_ENV === 'development',
       logging:
         env.NODE_ENV === 'development'
           ? (sql: string, timing?: number) => {
