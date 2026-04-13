@@ -41,7 +41,7 @@
     "@types/supertest": "^7.2.0",
     "@types/swagger-ui-express": "^4.1.8",
     "@typescript-eslint/eslint-plugin": "^8.58.0",
-    "@typescript-eslint/parser": "^8.57.2",
+    "@typescript-eslint/parser": "^8.58.1",
     "eslint": "^10.2.0",
     "jest": "^30.3.0",
     "supertest": "^7.2.2",
