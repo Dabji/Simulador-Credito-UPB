@@ -5,6 +5,9 @@ const config: Config = {
   testEnvironment: 'node',
   roots: ['<rootDir>/src'],
   testMatch: ['**/__tests__/**/*.test.ts', '**/*.spec.ts'],
+  transform: {
+    '^.+\\.tsx?$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.test.json' }],
+  },
   moduleNameMapper: {
     '^@core/(.*)$': '<rootDir>/src/Core/$1',
     '^@application/(.*)$': '<rootDir>/src/Application/$1',
