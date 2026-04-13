@@ -29,13 +29,12 @@
     "forceConsistentCasingInFileNames": true,
 
     /* Path aliases */
-    "baseUrl": "./src",
     "paths": {
-      "@/*": ["./*"],
-      "@auth/*": ["modules/auth/*"],
-      "@simulator/*": ["modules/simulator/*"],
-      "@admin/*": ["modules/admin/*"],
-      "@shared/*": ["shared/*"]
+      "@/*": ["./src/*"],
+      "@auth/*": ["./src/modules/auth/*"],
+      "@simulator/*": ["./src/modules/simulator/*"],
+      "@admin/*": ["./src/modules/admin/*"],
+      "@shared/*": ["./src/shared/*"]
     }
   },
   "include": ["src"]
