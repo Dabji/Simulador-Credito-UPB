@@ -388,7 +388,7 @@ export function TermsPage() {
           <p className="mt-4 text-sm text-purple-800">
             Si deseas visualizar de mejor manera estos términos y condiciones en formato PDF,{' '}
             <a
-              href="/docs/requirements/terminos y condiciones micrositio.pdf"
+              href="/docs/requirements/terminos%20y%20condiciones%20micrositio.pdf"
               target="_blank"
               rel="noopener noreferrer"
               className="font-medium underline hover:no-underline"

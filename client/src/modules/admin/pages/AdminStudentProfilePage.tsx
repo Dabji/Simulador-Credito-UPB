@@ -241,12 +241,12 @@ export function AdminStudentProfilePage() {
     let sanitized = value;
     
     if (docRules) {
-      if (docRules.pattern.source === '^[0-9]+$') {
+      if (docRules.digitsOnly) {
         // Solo números (CC, CE, TI, RC)
         sanitized = value.replace(/[^0-9]/g, '');
       } else {
         // Alfanumérico (PA, DE, PT, PE, VI) - convertir a mayúsculas
-        sanitized = value.toUpperCase().replace(/[^A-Z0-9-]/g, '');
+        sanitized = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
       }
     }
     
