@@ -433,7 +433,7 @@ export function AdminStudentProfilePage() {
                   fieldKey="identificationNumber"
                   formValue={form.identificationNumber}
                   error={fieldErrors.identificationNumber}
-                  onChange={(field, value) => handleIdentificationChange(value)}
+                  onChange={(_, value) => handleIdentificationChange(value)}
                 />
 
                 <ProfileField
