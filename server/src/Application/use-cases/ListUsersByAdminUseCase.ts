@@ -9,6 +9,7 @@
 import { Op } from 'sequelize';
 import { UserModel } from '../../Infrastructure/persistence/models/UserModel';
 import type { AdminUserListItemOutput } from '../dtos/AdminUserListItemOutput';
+import type { DocumentType } from '../../Core/entities/User';
 
 export type UserFilterField =
   | 'identificationNumber'
@@ -172,7 +173,7 @@ export class ListUsersByAdminUseCase {
       firstName:            u.first_name,
       lastName:             u.last_name,
       fullName:             `${u.first_name} ${u.last_name}`,
-      documentType:         (u.document_type ?? undefined) as 'CC' | 'TI' | undefined,
+      documentType:         (u.document_type ?? undefined) as DocumentType | undefined,
       identificationNumber: u.document_number,
       email:                u.email,
       phone:                u.phone ?? undefined,

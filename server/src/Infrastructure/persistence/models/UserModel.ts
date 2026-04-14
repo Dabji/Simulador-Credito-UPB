@@ -7,12 +7,15 @@ import { DataTypes, Model } from 'sequelize';
 import type { Optional } from 'sequelize';
 import { Database } from '../../config/database';
 
+/** Tipos de documento de identidad soportados (issue #187) */
+export type DocumentTypeDB = 'CC' | 'CE' | 'DE' | 'PA' | 'PE' | 'PT' | 'RC' | 'TI' | 'VI';
+
 interface UserAttributes {
   id: string;
   email: string;
   first_name: string;
   last_name: string;
-  document_type: 'CC' | 'TI' | null;
+  document_type: DocumentTypeDB | null;
   document_number: string;
   password: string | null;
   phone: string | null;
@@ -32,7 +35,7 @@ export class UserModel extends Model<UserAttributes, UserCreationAttributes>
   declare email: string;
   declare first_name: string;
   declare last_name: string;
-  declare document_type: 'CC' | 'TI' | null;
+  declare document_type: DocumentTypeDB | null;
   declare document_number: string;
   declare password: string | null;
   declare phone: string | null;
@@ -66,7 +69,7 @@ UserModel.init(
       allowNull: false,
     },
     document_type: {
-      type: DataTypes.ENUM('CC', 'TI'),
+      type: DataTypes.ENUM('CC', 'CE', 'DE', 'PA', 'PE', 'PT', 'RC', 'TI', 'VI'),
       allowNull: true,
     },
     document_number: {

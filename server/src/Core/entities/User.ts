@@ -9,7 +9,8 @@ export enum UserRole {
   ADMIN = 'ADMIN',
 }
 
-export type DocumentType = 'CC' | 'TI';
+/** Tipos de documento soportados (9 tipos, issue #187) */
+export type DocumentType = 'CC' | 'CE' | 'DE' | 'PA' | 'PE' | 'PT' | 'RC' | 'TI' | 'VI';
 
 export interface UserProps {
   id: string;

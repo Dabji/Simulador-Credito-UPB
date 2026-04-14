@@ -6,7 +6,7 @@ import { z } from 'zod';
 
 export const UpdateMyProfileSchema = z.object({
   documentType: z
-    .enum(['CC', 'TI'], { message: 'Tipo de documento inválido. Debe ser CC o TI.' })
+    .enum(['CC', 'CE', 'DE', 'PA', 'PE', 'PT', 'RC', 'TI', 'VI'], { message: 'Tipo de documento inválido. Debe ser uno de: CC, CE, DE, PA, PE, PT, RC, TI, VI.' })
     .optional(),
   identificationNumber: z
     .string()

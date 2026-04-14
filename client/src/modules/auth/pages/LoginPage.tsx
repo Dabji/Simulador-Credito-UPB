@@ -6,6 +6,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { loginUser, NETWORK_ERROR_MESSAGE } from '@/shared/services/api';
 import { useAuth } from '../context/useAuth';
 import LogoUpb from '@/assets/images/logo-upb.png';
+import LogoUpbColor from '@/assets/images/logo-upb-color.png';
 import fondoLogin from '@/assets/images/login-bg.png';
 
 // ── Zod Schema ──────────────────────────────────────────────────────────────
@@ -131,6 +132,40 @@ function ErrorIcon({ type }: { type: LoginErrorType }) {
 const INPUT_BASE =
   'w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none transition-all duration-200 bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-purple-400 focus:border-purple-400';
 const LABEL_CLASS = 'block text-sm font-semibold text-gray-700 mb-1.5';
+
+// ── Componente: Logo animado clickeable — lleva a Landing ────────────────────
+
+function LoginLogoButton() {
+  const navigate = useNavigate();
+  const [logoHover, setLogoHover] = useState(false);
+
+  return (
+    <button
+      type="button"
+      onClick={() => navigate('/')}
+      onMouseEnter={() => setLogoHover(true)}
+      onMouseLeave={() => setLogoHover(false)}
+      className="absolute top-6 right-8 h-12 w-[120px] z-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-white/40 focus:ring-offset-2 overflow-hidden"
+      aria-label="Ir a la página principal"
+    >
+      {/* Logo gris — posición normal, al hover baja y desaparece */}
+      <img
+        src={LogoUpb}
+        alt="Logo Universidad Pontificia Bolivariana"
+        className="absolute inset-0 h-full w-full object-contain transition-transform duration-500 ease-in-out drop-shadow-md"
+        style={{ transform: logoHover ? 'translateY(100%)' : 'translateY(0)' }}
+      />
+      {/* Logo a color — arriba oculto, al hover baja a su posición */}
+      <img
+        src={LogoUpbColor}
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 h-full w-full object-contain transition-transform duration-500 ease-in-out"
+        style={{ transform: logoHover ? 'translateY(0) scale(1.35)' : 'translateY(-100%) scale(1.35)' }}
+      />
+    </button>
+  );
+}
 
 // ── Component ───────────────────────────────────────────────────────────────
 
@@ -383,14 +418,10 @@ export function LoginPage() {
         </div>
       </div>
 
-      {/* ── Columna derecha — Imagen campus + logo UPB ── */}
+      {/* ── Columna derecha — Imagen campus + logo UPB animado ── */}
       <div className="hidden lg:block lg:w-1/2 relative">
-        {/* Logo UPB en esquina superior derecha */}
-        <img
-          src={LogoUpb}
-          alt="Logo UPB"
-          className="absolute top-6 right-8 h-12 z-10"
-        />
+        {/* Logo UPB en esquina superior derecha — clickeable a Landing */}
+        <LoginLogoButton />
         <img
           src={fondoLogin}
           alt="Campus Universidad Pontificia Bolivariana"

@@ -23,6 +23,7 @@ import { AuthProvider } from './modules/auth/context/AuthContext';
 import { ProtectedRoute } from './shared/components/ProtectedRoute';
 import { PublicRoute } from './shared/components/PublicRoute';
 import { LandingPage } from './modules/landing/pages/LandingPage';
+import { TermsPage } from './modules/landing/pages/TermsPage';
 import { GuestMainPage } from './modules/simulator/pages/guest/GuestMainPage';
 import { GuestCreateSimulationPage } from './modules/simulator/pages/guest/GuestCreateSimulationPage';
 
@@ -40,6 +41,10 @@ export function App() {
 
           {/* Página principal: Landing pública */}
           <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
+
+          {/* Términos y condiciones — página pública (issue #187) */}
+          <Route path="/terms" element={<TermsPage />} />
+
           <Route path="/guest" element={<Navigate to="/guest/main" replace />} />
           <Route path="/guest/main" element={<PublicRoute><GuestMainPage /></PublicRoute>} />
           <Route path="/guest/simulator/create" element={<PublicRoute><GuestCreateSimulationPage /></PublicRoute>} />
