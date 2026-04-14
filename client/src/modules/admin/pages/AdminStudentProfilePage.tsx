@@ -17,7 +17,9 @@ import {
   type AdminUserProfileDTO,
   type AdminUpdateUserPayload,
   type AdminUserSimulationItemDTO,
+  type DocumentTypeCodeAPI,
 } from '@/shared/services/api';
+import { DOCUMENT_TYPES, getDocumentTypeInfo, getDocumentValidationRule } from '@/shared/utils/documentTypes';
 
 /* ── Helpers ─────────────────────────────────────────────── */
 
@@ -32,20 +34,22 @@ function formatCOP(n: number): string {
   return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
 }
 
-const DOC_TYPES: { value: 'CC' | 'TI'; label: string }[] = [
-  { value: 'CC', label: 'Cédula de Ciudadanía (CC)' },
-  { value: 'TI', label: 'Tarjeta de Identidad (TI)' },
-];
-
 /* ── Tipos internos ─────────────────────────────────────── */
 
 interface FormState {
   firstName:            string;
   lastName:             string;
-  documentType:         'CC' | 'TI' | '';
+  documentType:         DocumentTypeCodeAPI | '';
   identificationNumber: string;
   email:                string;
   phone:                string;
+}
+
+// Helper para obtener label de tipo de documento
+function getDocumentTypeLabel(code: string | undefined): string {
+  if (!code) return '—';
+  const info = getDocumentTypeInfo(code);
+  return info?.displayLabel ?? code;
 }
 
 interface FieldErrors {
@@ -66,8 +70,25 @@ function validate(form: FormState): FieldErrors {
   if (form.lastName.trim().length < 2)    errs.lastName  = 'Mínimo 2 caracteres.';
   if (form.lastName.trim().length > 60)   errs.lastName  = 'Máximo 60 caracteres.';
   if (!form.documentType)                 errs.documentType = 'Selecciona un tipo de documento.';
-  if (form.identificationNumber.trim().length < 5)  errs.identificationNumber = 'Mínimo 5 caracteres.';
-  if (form.identificationNumber.trim().length > 20) errs.identificationNumber = 'Máximo 20 caracteres.';
+  
+  // Validación específica por tipo de documento
+  const docRules = form.documentType ? getDocumentValidationRule(form.documentType) : null;
+  if (docRules) {
+    const idValue = form.identificationNumber.trim();
+    const docTypeName = getDocumentTypeInfo(form.documentType)?.name ?? 'documento';
+    if (!idValue) {
+      errs.identificationNumber = `Ingresa el número de ${docTypeName.toLowerCase()}.`;
+    } else if (!docRules.pattern.test(idValue)) {
+      errs.identificationNumber = `${docRules.message}. Ejemplo: ${docRules.placeholder}`;
+    } else if (idValue.length < docRules.minLength || idValue.length > docRules.maxLength) {
+      errs.identificationNumber = `El ${docTypeName.toLowerCase()} debe tener entre ${docRules.minLength} y ${docRules.maxLength} caracteres.`;
+    }
+  } else if (form.identificationNumber.trim().length < 5) {
+    errs.identificationNumber = 'Mínimo 5 caracteres.';
+  } else if (form.identificationNumber.trim().length > 20) {
+    errs.identificationNumber = 'Máximo 20 caracteres.';
+  }
+  
   if (!form.email.trim())                 errs.email = 'El correo es obligatorio.';
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) errs.email = 'Correo electrónico inválido.';
   if (form.phone && !/^\+?[0-9]{7,15}$/.test(form.phone.trim())) {
@@ -214,6 +235,25 @@ export function AdminStudentProfilePage() {
     setFieldErrors(prev => ({ ...prev, [field]: undefined }));
   }
 
+  // Handler especial para número de documento con sanitización
+  function handleIdentificationChange(value: string) {
+    const docRules = form.documentType ? getDocumentValidationRule(form.documentType) : null;
+    let sanitized = value;
+    
+    if (docRules) {
+      if (docRules.digitsOnly) {
+        // Solo números (CC, CE, TI, RC)
+        sanitized = value.replace(/[^0-9]/g, '');
+      } else {
+        // Alfanumérico (PA, DE, PT, PE, VI) - convertir a mayúsculas
+        sanitized = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      }
+    }
+    
+    setForm(prev => ({ ...prev, identificationNumber: sanitized }));
+    setFieldErrors(prev => ({ ...prev, identificationNumber: undefined }));
+  }
+
   async function handleSave() {
     const errs = validate(form);
     if (Object.keys(errs).length > 0) {
@@ -228,7 +268,7 @@ export function AdminStudentProfilePage() {
     const payload: AdminUpdateUserPayload = {
       firstName:            form.firstName.trim()            || undefined,
       lastName:             form.lastName.trim()             || undefined,
-      documentType:         (form.documentType as 'CC' | 'TI') || undefined,
+      documentType:         form.documentType || undefined,
       identificationNumber: form.identificationNumber.trim() || undefined,
       email:                form.email.trim()                || undefined,
       phone:                form.phone.trim()                || undefined,
@@ -255,7 +295,7 @@ export function AdminStudentProfilePage() {
       });
     }
 
-    setSaveMsg({ type: 'ok', text: '¡Cambios guardados correctamente! ✅' });
+    setSaveMsg({ type: 'ok', text: '¡Cambios guardados correctamente!' });
     setEditing(false);
 
     // Auto-ocultar mensaje de éxito
@@ -371,8 +411,8 @@ export function AdminStudentProfilePage() {
                         `}
                       >
                         <option value="">Seleccionar…</option>
-                        {DOC_TYPES.map(dt => (
-                          <option key={dt.value} value={dt.value}>{dt.label}</option>
+                        {DOCUMENT_TYPES.map(dt => (
+                          <option key={dt.code} value={dt.code}>{dt.displayLabel}</option>
                         ))}
                       </select>
                       {fieldErrors.documentType && (
@@ -381,7 +421,7 @@ export function AdminStudentProfilePage() {
                     </div>
                   ) : (
                     <p className="text-sm px-3 py-2 rounded-xl text-gray-800">
-                      {profile.documentType ?? '—'}
+                      {getDocumentTypeLabel(profile.documentType)}
                     </p>
                   )}
                 </div>
@@ -393,7 +433,7 @@ export function AdminStudentProfilePage() {
                   fieldKey="identificationNumber"
                   formValue={form.identificationNumber}
                   error={fieldErrors.identificationNumber}
-                  onChange={handleChange}
+                  onChange={(_, value) => handleIdentificationChange(value)}
                 />
 
                 <ProfileField

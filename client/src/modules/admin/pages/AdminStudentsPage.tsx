@@ -12,17 +12,21 @@ import {
   type AdminUserListItemDTO,
   type AdminUserFilterCriterion,
 } from '@/shared/services/api';
+import { DOCUMENT_TYPES } from '@/shared/utils/documentTypes';
 
 /* ── Constantes ─────────────────────────────────────────────── */
 
 const PAGE_SIZE = 10;
 
+/** Opciones de tipo de documento para el filtro (9 tipos, issue #187) */
+const DOCUMENT_TYPE_OPTIONS = DOCUMENT_TYPES.map((d) => ({
+  value: d.code,
+  label: d.displayLabel,
+}));
+
 const STUDENT_FIELD_DEFS: ReadonlyArray<FilterFieldDef> = [
+  { key: 'documentType',         label: 'Tipo de Documento',   type: 'select', options: DOCUMENT_TYPE_OPTIONS },
   { key: 'identificationNumber', label: 'N° Documento',        type: 'text',  supportsMultiple: true },
-  { key: 'documentType',         label: 'Tipo de Documento',   type: 'select', options: [
-    { value: 'CC', label: 'CC — Cédula de Ciudadanía' },
-    { value: 'TI', label: 'TI — Tarjeta de Identidad' },
-  ]},
   { key: 'fullName',             label: 'Nombre Completo',     type: 'text',  supportsMultiple: true },
   { key: 'email',                label: 'Correo Electrónico',  type: 'text',  supportsMultiple: true },
   { key: 'phone',                label: 'Número Celular',      type: 'text',  supportsMultiple: true },

@@ -4,7 +4,7 @@
 // ============================================================
 
 import bcrypt from 'bcrypt';
-import { User, UserRole } from '../../Core/entities/User';
+import { User, UserRole, type DocumentType } from '../../Core/entities/User';
 import type { IUserRepository } from '../../Core/repositories/IUserRepository';
 import { ConflictError } from '../../Core/errors';
 import type { RegisterUserInput } from '../dtos/RegisterUserInput';
@@ -32,7 +32,7 @@ export class RegisterUserUseCase {
       email: input.email,
       firstName: input.firstName,
       lastName: input.lastName,
-      documentType: input.documentType,
+      documentType: input.documentType as DocumentType,
       identificationNumber: input.documentNumber,
       password: hashedPassword,
       phone: input.phone,

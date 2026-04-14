@@ -19,6 +19,12 @@ import {
   getMySimulations,
 } from '@/shared/services/api';
 import type { MyProfileDTO, MySimulationItemDTO, UpdateMyProfilePayload } from '@/shared/services/api';
+import {
+  DOCUMENT_TYPES,
+  type DocumentTypeCode,
+  getDocumentValidationRule,
+  getDocumentTypeInfo,
+} from '@/shared/utils/documentTypes';
 
 // ── Helpers ───────────────────────────────────────────────────
 function formatDate(isoString: string): string {
@@ -31,11 +37,18 @@ function formatDate(isoString: string): string {
 
 // ── Tipos locales ─────────────────────────────────────────────
 interface FormState {
-  documentType: 'CC' | 'TI' | '';
+  documentType: DocumentTypeCode | '';
   identificationNumber: string;
   firstName: string;
   lastName: string;
   phone: string;
+}
+
+// Helper: obtener label de tipo de documento para modo lectura
+function getDocumentTypeLabel(code: string | undefined): string {
+  if (!code) return '—';
+  const doc = DOCUMENT_TYPES.find((d) => d.code === code);
+  return doc?.displayLabel ?? code;
 }
 
 type SaveStatus = 'idle' | 'loading' | 'success' | 'error';
@@ -139,19 +152,90 @@ export function UserProfilePage() {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    
+    // Si cambia el tipo de documento, limpiar el número para evitar inconsistencias
+    if (name === 'documentType') {
+      setForm((prev) => ({ 
+        ...prev, 
+        documentType: value as DocumentTypeCode | '', 
+        identificationNumber: '' 
+      }));
+    } else {
+      setForm((prev) => ({ ...prev, [name]: value }));
+    }
+  };
+
+  // Handler para el número de documento con sanitización según el tipo
+  const handleDocumentNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const rule = form.documentType ? getDocumentValidationRule(form.documentType) : null;
+    
+    if (!rule) {
+      setForm((prev) => ({ ...prev, identificationNumber: value }));
+      return;
+    }
+
+    // Sanitizar según el tipo de documento
+    let sanitized = value;
+    if (rule.digitsOnly) {
+      sanitized = value.replace(/\D/g, ''); // Solo números
+    } else if (rule.alphanumeric) {
+      sanitized = value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase(); // Alfanumérico mayúsculas
+    }
+    
+    setForm((prev) => ({ ...prev, identificationNumber: sanitized }));
+  };
+
+  // Validación local con mensajes claros
+  const validate = (): string | null => {
+    if (!form.documentType) {
+      return 'Selecciona un tipo de documento.';
+    }
+    
+    const docRules = getDocumentValidationRule(form.documentType);
+    if (docRules) {
+      const idValue = form.identificationNumber.trim();
+      const docTypeName = getDocumentTypeInfo(form.documentType)?.name ?? 'documento';
+      
+      if (!idValue) {
+        return `Ingresa el número de ${docTypeName.toLowerCase()}.`;
+      }
+      if (!docRules.pattern.test(idValue)) {
+        return `${docRules.message}. Ejemplo: ${docRules.placeholder}`;
+      }
+      if (idValue.length < docRules.minLength || idValue.length > docRules.maxLength) {
+        return `El ${docTypeName.toLowerCase()} debe tener entre ${docRules.minLength} y ${docRules.maxLength} caracteres.`;
+      }
+    }
+    
+    if (!form.firstName.trim()) {
+      return 'El nombre es obligatorio.';
+    }
+    if (!form.lastName.trim()) {
+      return 'El apellido es obligatorio.';
+    }
+    
+    return null;
   };
 
   const handleSave = async () => {
+    // Validar antes de enviar
+    const validationError = validate();
+    if (validationError) {
+      setSaveStatus('error');
+      setSaveError(validationError);
+      return;
+    }
+
     setSaveStatus('loading');
     setSaveError(null);
 
     const payload: UpdateMyProfilePayload = {
-      ...(form.documentType ? { documentType: form.documentType as 'CC' | 'TI' } : {}),
+      ...(form.documentType ? { documentType: form.documentType as DocumentTypeCode } : {}),
       identificationNumber: form.identificationNumber || undefined,
-      firstName:            form.firstName            || undefined,
-      lastName:             form.lastName             || undefined,
-      phone:                form.phone               || undefined,
+      firstName: form.firstName || undefined,
+      lastName: form.lastName || undefined,
+      phone: form.phone || undefined,
     };
 
     const res = await updateMyProfile(payload);
@@ -284,14 +368,17 @@ export function UserProfilePage() {
                     className={INPUT_BASE}
                   >
                     <option value="">Selecciona...</option>
-                    <option value="CC">Cédula de Ciudadanía (CC)</option>
-                    <option value="TI">Tarjeta de Identidad (TI)</option>
+                    {DOCUMENT_TYPES.map((doc) => (
+                      <option key={doc.code} value={doc.code}>
+                        {doc.displayLabel}
+                      </option>
+                    ))}
                   </select>
                 ) : (
                   <input
                     type="text"
                     readOnly
-                    value={form.documentType === 'CC' ? 'Cédula de Ciudadanía (CC)' : form.documentType === 'TI' ? 'Tarjeta de Identidad (TI)' : '—'}
+                    value={getDocumentTypeLabel(form.documentType)}
                     className={INPUT_DISABLED}
                   />
                 )}
@@ -306,13 +393,18 @@ export function UserProfilePage() {
                   id="identificationNumber"
                   name="identificationNumber"
                   type="text"
-                  inputMode="numeric"
-                  placeholder="Ej. 1094560321"
+                  inputMode={form.documentType && getDocumentValidationRule(form.documentType)?.digitsOnly ? 'numeric' : 'text'}
+                  placeholder={form.documentType ? getDocumentValidationRule(form.documentType)?.placeholder ?? 'Ej. 1094560321' : 'Primero seleccione tipo'}
                   value={form.identificationNumber}
-                  onChange={handleChange}
+                  onChange={handleDocumentNumberChange}
                   readOnly={!editing}
+                  disabled={!form.documentType && editing}
                   className={editing ? INPUT_BASE : INPUT_DISABLED}
+                  title={!form.documentType && editing ? 'Primero seleccione el tipo de documento' : undefined}
                 />
+                {editing && !form.documentType && (
+                  <p className="mt-1 text-xs text-gray-500">Seleccione primero el tipo de documento</p>
+                )}
               </div>
 
               {/* Nombre completo */}
