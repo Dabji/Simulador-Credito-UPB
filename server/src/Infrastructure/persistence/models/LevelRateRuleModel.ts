@@ -75,5 +75,8 @@ LevelRateRuleModel.init(
     sequelize,
     tableName: 'level_rate_rules',
     timestamps: false,
+    indexes: [
+      { unique: true, fields: ['level_config_id', 'payment_count'], name: 'uq_lrr_config_count' },
+    ],
   },
 );

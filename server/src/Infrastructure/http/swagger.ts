@@ -180,7 +180,7 @@ export const swaggerDocument: JsonObject = {
                         email: { type: 'string', format: 'email' },
                         firstName: { type: 'string' },
                         lastName: { type: 'string' },
-                        documentType: { type: 'string', enum: ['CC', 'TI'], nullable: true },
+                        documentType: { type: 'string', enum: ['CC', 'CE', 'DE', 'PA', 'PE', 'PT', 'RC', 'TI', 'VI'], nullable: true },
                         identificationNumber: { type: 'string' },
                         phone: { type: 'string', nullable: true },
                         role: { type: 'string', enum: ['STUDENT', 'ADMIN'] },

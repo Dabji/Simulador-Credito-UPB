@@ -18,6 +18,7 @@ import {
   exportMySimulationPdf,
   type StudentSimulationDetailDTO,
 } from '@/shared/services/api';
+import { getDocumentTypeInfo } from '@/shared/utils/documentTypes';
 
 /* ── Helpers ─────────────────────────────────────────────── */
 
@@ -53,6 +54,13 @@ function levelLabel(level: string): string {
 
 function modalityLabel(modality: string): string {
   return modality === 'con_interes' ? 'Con Intereses' : 'Sin Intereses';
+}
+
+// Helper para obtener label de tipo de documento
+function getDocumentTypeLabel(code: string | undefined): string {
+  if (!code) return '—';
+  const info = getDocumentTypeInfo(code);
+  return info?.displayLabel ?? code;
 }
 
 /* ── Read-only field ─────────────────────────────────────── */
@@ -264,7 +272,7 @@ export function StudentHistoryDetailPage() {
                 />
                 <ReadOnlyField
                   label="Tipo de Documento"
-                  value={simulation.student.documentType || '—'}
+                  value={getDocumentTypeLabel(simulation.student.documentType)}
                 />
                 <ReadOnlyField
                   label="Número de Identificación"

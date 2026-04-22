@@ -57,6 +57,23 @@ function levelLabel(level: string): string {
   return map[level] ?? level;
 }
 
+// Helper para obtener label completo del tipo de documento
+function documentTypeLabel(code: string | undefined): string {
+  if (!code) return '—';
+  const map: Record<string, string> = {
+    CC: 'Cédula de Ciudadanía (CC)',
+    CE: 'Cédula de Extranjería (CE)',
+    DE: 'Documento Extranjero (DE)',
+    PA: 'Pasaporte (PA)',
+    PE: 'Permiso Especial (PE)',
+    PT: 'Permiso Temporal (PT)',
+    RC: 'Registro Civil (RC)',
+    TI: 'Tarjeta de Identidad (TI)',
+    VI: 'Visa (VI)',
+  };
+  return map[code] ?? code;
+}
+
 // Dibuja segmento de pastel (polígono, evita dependencia de .arc())
 function drawPieSlice(
   doc: PDFKit.PDFDocument,
@@ -207,7 +224,7 @@ export function buildSimulationPdf(sim: PersistedSimulationWithUser): Promise<Bu
     sectionHeader('1. Datos del Estudiante');
 
     row2('Nombre Completo', `${stu.firstName} ${stu.lastName}`, 'Correo Electrónico', stu.email);
-    row2('Tipo de Documento', stu.documentType || '—', 'N° Identificación', stu.identificationNumber, true);
+    row2('Tipo de Documento', documentTypeLabel(stu.documentType), 'N° Identificación', stu.identificationNumber, true);
     row2('Número de Celular', stu.phone || 'No registrado', 'Nivel Educativo', levelLabel(sim.level));
     row2(
       'Tipo de Estudiante', sim.studentType === 'NUEVO' ? 'Nuevo' : 'Continuo',

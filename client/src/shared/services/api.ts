@@ -2,6 +2,11 @@ const API_BASE = '/api';
 
 export const NETWORK_ERROR_MESSAGE = 'Error de conexión con el servidor';
 
+// ── Tipos compartidos (issue #187) ────────────────────────────────────────
+
+/** Tipos de documento soportados (9 tipos, issue #187) */
+export type DocumentTypeCodeAPI = 'CC' | 'CE' | 'DE' | 'PA' | 'PE' | 'PT' | 'RC' | 'TI' | 'VI';
+
 // ── Tipos genéricos ───────────────────────────────────────────────────────
 
 interface ApiResponse<T> {
@@ -95,7 +100,7 @@ export interface UserData {
   readonly email: string;
   readonly firstName: string;
   readonly lastName: string;
-  readonly documentType?: 'CC' | 'TI';
+  readonly documentType?: DocumentTypeCodeAPI;
   readonly identificationNumber: string;
   readonly phone?: string;
   readonly role: 'STUDENT' | 'ADMIN';
@@ -165,7 +170,7 @@ export interface SimulationSummaryDTO {
 export interface RegisterUserPayload {
   readonly firstName: string;
   readonly lastName: string;
-  readonly documentType: 'CC' | 'TI';
+  readonly documentType: DocumentTypeCodeAPI;
   readonly documentNumber: string;
   readonly email: string;
   readonly phone: string;
@@ -430,7 +435,7 @@ export interface MyProfileDTO {
   readonly email: string;
   readonly firstName: string;
   readonly lastName: string;
-  readonly documentType?: 'CC' | 'TI';
+  readonly documentType?: DocumentTypeCodeAPI;
   readonly identificationNumber: string;
   readonly phone?: string;
   readonly role: 'STUDENT' | 'ADMIN';
@@ -439,7 +444,7 @@ export interface MyProfileDTO {
 
 /** Payload para PATCH /api/users/me */
 export interface UpdateMyProfilePayload {
-  documentType?: 'CC' | 'TI';
+  documentType?: DocumentTypeCodeAPI;
   identificationNumber?: string;
   firstName?: string;
   lastName?: string;
@@ -522,7 +527,7 @@ export interface AdminUserProfileDTO {
 
 export interface AdminUpdateUserPayload {
   email?: string;
-  documentType?: 'CC' | 'TI';
+  documentType?: DocumentTypeCodeAPI;
   identificationNumber?: string;
   firstName?: string;
   lastName?: string;

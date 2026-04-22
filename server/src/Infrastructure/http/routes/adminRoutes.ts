@@ -252,7 +252,7 @@ router.post('/parameters', async (req: AuthenticatedRequest, res: Response, next
 
     const created = await paramRepo.createVersion(createData);
 
-    await auditLog({
+    void auditLog({
       action: 'CREATE_PARAMETER_VERSION',
       entity: 'PARAMETER_VERSION',
       entity_id: created.id,
@@ -285,7 +285,7 @@ router.patch('/parameters/:id/activate', async (req: AuthenticatedRequest, res: 
 
     const adminUserId = String(req.user?.['userId'] ?? 'unknown');
 
-    await auditLog({
+    void auditLog({
       action: 'ACTIVATE_PARAMETER_VERSION',
       entity: 'PARAMETER_VERSION',
       entity_id: id,
@@ -479,7 +479,7 @@ router.put('/parameters/:id', async (req: AuthenticatedRequest, res: Response, n
     const changeSummary = changedFields.length > 0 ? `Campos modificados: ${changedFields.join(', ')}` : 'Sin cambios';
     const ipAddress = extractIp(req);
     const auditUserId = adminUserId !== 'unknown' ? adminUserId : null;
-    await auditLog({
+    void auditLog({
       action:     'UPDATE_PARAMETER_VERSION',
       entity:     'PARAMETER_VERSION',
       entity_id:  id,
@@ -571,7 +571,7 @@ router.post('/parameters/:versionId/level-configs', async (req: AuthenticatedReq
       createdBy: adminUserId,
       rateRules: body.rateRules,
     });
-    await auditLog({
+    void auditLog({
       action:     'LEVEL_CONFIG_CREATED',
       entity:     'LEVEL_CONFIG',
       entity_id:  created.id,
@@ -596,7 +596,7 @@ router.patch('/level-configs/:id/deactivate', async (req: AuthenticatedRequest, 
     const adminUserId = String(req.user?.['userId'] ?? '');
     const deactivated = await paramRepo.deactivateLevelConfig(id);
     if (!deactivated) return next(new NotFoundError('Configuración no encontrada o ya desactivada'));
-    await auditLog({
+    void auditLog({
       action:     'LEVEL_CONFIG_DEACTIVATED',
       entity:     'LEVEL_CONFIG',
       entity_id:  id,
@@ -636,7 +636,7 @@ router.post('/level-configs/:id/reactivate', async (req: AuthenticatedRequest, r
       createdBy: adminUserId,
       rateRules: body.rateRules,
     });
-    await auditLog({
+    void auditLog({
       action:     'LEVEL_CONFIG_REACTIVATED',
       entity:     'LEVEL_CONFIG',
       entity_id:  reactivated.id,
@@ -667,7 +667,7 @@ router.patch('/level-configs/:configId/rates/:paymentCount', async (req: Authent
     const adminUserId = String(req.user?.['userId'] ?? '');
     const updated = await paramRepo.updateLevelRateRule(configId, paymentCount, body.rateMonthly);
     if (!updated) return next(new NotFoundError('Regla de tasa no encontrada'));
-    await auditLog({
+    void auditLog({
       action:     'LEVEL_RATE_RULE_UPDATED',
       entity:     'LEVEL_RATE_RULE',
       entity_id:  updated.id,
@@ -858,7 +858,7 @@ router.patch(
       const updated = await updateUserUseCase.execute(targetUserId, payload);
       const changedFields = Object.keys(payload);
 
-      await auditLog({
+      void auditLog({
         action: 'ADMIN_USER_UPDATED',
         entity: 'USER',
         entity_id: targetUserId,
@@ -1134,10 +1134,6 @@ router.get('/simulations', async (req: AuthenticatedRequest, res: Response, next
   }
 });
 
-// ══════════════════════════════════════════════════════════════
-// HU-43: Detalle de una simulación (ADMIN)
-// ══════════════════════════════════════════════════════════════
-
 /**
  * GET /api/admin/simulations/:id
  * HU-43: Retorna el detalle completo de una simulación con datos del estudiante.
@@ -1197,7 +1193,7 @@ router.delete('/simulations/:id', async (req: AuthenticatedRequest, res: Respons
       return;
     }
 
-    await auditLog({
+    void auditLog({
       action: 'SIMULATION_DELETED',
       entity: 'SIMULATION',
       entity_id: simId,

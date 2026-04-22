@@ -184,7 +184,7 @@ router.patch('/me', validateRequest(UpdateMyProfileInputSchema), async (req: Aut
 
     const changedFields = Object.keys(data);
 
-    await auditLog({
+    void auditLog({
 
       action:     'PROFILE_UPDATED',
 
