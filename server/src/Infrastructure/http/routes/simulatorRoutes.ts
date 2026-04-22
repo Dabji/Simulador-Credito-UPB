@@ -104,7 +104,7 @@ router.post('/save', async (req: AuthenticatedRequest, res: Response, next: Next
 
     res.json({
       id: result.id,
-      savedAt: result.savedAt,
+      createdAt: result.createdAt,
       message: 'Simulación guardada exitosamente.',
       summary: result.summary,
     });

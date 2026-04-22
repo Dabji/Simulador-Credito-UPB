@@ -65,7 +65,7 @@ export function buildSimulationCsv(sim: PersistedSimulationWithUser): string {
   lines.push(row('Nivel educativo',           levelLabel(sim.level)));
   lines.push(row('Tipo de estudiante',        sim.studentType === 'NUEVO' ? 'Nuevo' : 'Continuo'));
   lines.push(row('Modalidad',                 s.interestMode === 'con_interes' ? 'Con Intereses' : 'Sin Intereses'));
-  lines.push(row('Fecha de creación',         new Date(sim.savedAt).toLocaleDateString('es-CO')));
+  lines.push(row('Fecha de creación',         new Date(sim.createdAt).toLocaleDateString('es-CO')));
   lines.push(row('Período académico',         s.academicPeriod || ''));
   lines.push('');
 

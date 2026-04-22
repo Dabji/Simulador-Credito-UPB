@@ -49,7 +49,7 @@ export async function purgeExpiredSimulations(): Promise<number> {
       attributes: ['id'],
       where: {
         deleted_at: null,
-        saved_at: { [Op.lte]: literal(`NOW() - INTERVAL ${retentionDays} DAY`) },
+        created_at: { [Op.lte]: literal(`NOW() - INTERVAL ${retentionDays} DAY`) },
       },
       limit: batchSize,
     });

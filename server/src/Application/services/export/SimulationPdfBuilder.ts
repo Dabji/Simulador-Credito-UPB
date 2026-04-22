@@ -232,7 +232,7 @@ export function buildSimulationPdf(sim: PersistedSimulationWithUser): Promise<Bu
       true,
     );
     row2(
-      'Fecha de Creación', fmtDateLong(new Date(sim.savedAt)),
+      'Fecha de Creación', fmtDateLong(new Date(sim.createdAt)),
       'Período Académico', s.academicPeriod || '—',
     );
 
