@@ -320,7 +320,6 @@ router.get('/history/:id', async (req: AuthenticatedRequest, res: Response, next
       return;
     }
 
-
     res.json(simulation);
   } catch (error) {
     next(error);

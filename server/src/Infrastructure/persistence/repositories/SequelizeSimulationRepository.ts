@@ -16,11 +16,9 @@ import { auditLog } from '../../../Application/services/AuditService';
 export class SequelizeSimulationRepository implements ISimulationRepository {
   async save(data: SaveSimulationData): Promise<{ id: string; createdAt: Date }> {
     const sequelize = Database.getInstance().getSequelize();
-    const createdAt = new Date();
-
-    await sequelize.transaction(async (t) => {
+    const createdAt = await sequelize.transaction(async (t) => {
       // 1. Crear simulación
-      await SimulationModel.create(
+      const createdSimulation = await SimulationModel.create(
         {
           id: data.id,
           student_type: data.studentType as 'NUEVO' | 'CONTINUO',
@@ -62,6 +60,7 @@ export class SequelizeSimulationRepository implements ISimulationRepository {
 
         await AmortizationRowModel.bulkCreate(rows, { transaction: t });
       }
+      return createdSimulation.created_at;
     });
 
 

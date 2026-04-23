@@ -291,10 +291,16 @@ export async function simulateCredit(
 }
 
 // Guarda una simulación destacada en memoria (in-memory backend)
+export interface SaveSimulationResponseDTO {
+  readonly id: string;
+  readonly message: string;
+  readonly createdAt: string;
+}
+
 export async function saveSimulation(
   input: SimulationInputDTO,
-): Promise<ApiResponse<{ id: string; message: string }>> {
-  return request<{ id: string; message: string }>('/simulator/save', {
+): Promise<ApiResponse<SaveSimulationResponseDTO>> {
+  return request<SaveSimulationResponseDTO>('/simulator/save', {
     method: 'POST',
     body: JSON.stringify(input),
   });
@@ -771,7 +777,7 @@ export async function adminExportSimulationCsv(id: string): Promise<{ blob: Blob
 export interface AdminSimulationDetailDTO {
   readonly id: string;
   readonly userId: string;
-  readonly savedAt: string;
+  readonly createdAt: string;
   readonly level: 'PREGRADO' | 'POSGRADO' | 'UPB_Tech';
   readonly studentType: 'NUEVO' | 'CONTINUO';
   readonly studentObservation: string | null;

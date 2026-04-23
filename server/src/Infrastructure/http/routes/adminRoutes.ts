@@ -1142,7 +1142,10 @@ router.get('/simulations/:id', async (req: AuthenticatedRequest, res: Response, 
   try {
     const simId = req.params['id'] as string;
     const simulation = await getSimByIdAdminUseCase.execute(simId);
-    res.json({ success: true, data: simulation });
+    res.json({
+      success: true,
+      data: simulation,
+    });
   } catch (error) {
     next(error);
   }
