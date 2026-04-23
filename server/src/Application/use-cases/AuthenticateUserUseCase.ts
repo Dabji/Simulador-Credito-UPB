@@ -5,7 +5,7 @@
 // ============================================================
 
 import bcrypt from 'bcrypt';
-import { User, UserRole, type DocumentType } from '../../Core/entities/User';
+import { User, UserRole } from '../../Core/entities/User';
 import type { IUserRepository } from '../../Core/repositories/IUserRepository';
 import { UnauthorizedError } from '../../Core/errors';
 import type { LoginUserInput } from '../dtos/LoginUserInput';
@@ -41,7 +41,7 @@ export class AuthenticateUserUseCase {
     private readonly tokenService: ITokenService,
   ) {}
 
-  private static readonly DEFAULT_ADMIN_DOCUMENT_TYPE: DocumentType = 'CC';
+  
 
   async execute(input: LoginUserInput): Promise<AuthenticateUserOutput> {
     if (input.role === 'STUDENT') {
