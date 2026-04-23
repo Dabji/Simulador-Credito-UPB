@@ -12,6 +12,30 @@ import { env } from '../config/env';
 import { logger } from '../logger';
 import { ServiceUnavailableError } from '../../Core/errors';
 
+/**
+ * Error sentinel para señalizar credenciales LDAP inválidas internamente.
+ * Se usa en lugar de un Error genérico con string mágico.
+ */
+class LdapInvalidCredentialsError extends Error {
+  constructor() {
+    super('LDAP_INVALID_CREDENTIALS');
+    this.name = 'LdapInvalidCredentialsError';
+  }
+}
+
+/**
+ * Escapa caracteres especiales en valores usados dentro de filtros LDAP
+ * para prevenir LDAP injection (RFC 4515).
+ */
+function escapeLdapFilter(value: string): string {
+  return value
+    .replace(/\\/g, '\\5c')
+    .replace(/\*/g, '\\2a')
+    .replace(/\(/g, '\\28')
+    .replace(/\)/g, '\\29')
+    .replace(/\0/g, '\\00');
+}
+
 export class LdapAuthService implements IAuthService {
   async authenticate(
     username: string,
@@ -51,7 +75,7 @@ export class LdapAuthService implements IAuthService {
           if (err) {
             if (err.name === 'InvalidCredentialsError') {
               logger.warn(`[LDAP] Credenciales inválidas para: ${upn}`);
-              reject(new Error('INVALID_CREDENTIALS')); // Rechazar inmediatamente
+              reject(new LdapInvalidCredentialsError()); // Rechazar inmediatamente
             } else {
               logger.error(`[LDAP] Error de bind para ${upn}:`, err);
               reject(new ServiceUnavailableError(
@@ -68,7 +92,9 @@ export class LdapAuthService implements IAuthService {
 
       // Solo si el bind fue exitoso, buscamos el usuario en el árbol configurado
       const searchResult = await new Promise<ldap.SearchEntry[]>((resolve, reject) => {
-        const searchFilter = `(|(userPrincipalName=${upn})(mail=${upn})(sAMAccountName=${usernameSinDominio}))`;
+        const safeUpn = escapeLdapFilter(upn);
+        const safeUsername = escapeLdapFilter(usernameSinDominio);
+        const searchFilter = `(|(userPrincipalName=${safeUpn})(mail=${safeUpn})(sAMAccountName=${safeUsername}))`;
         
         client.search(
           ldapBaseDn,
@@ -135,12 +161,12 @@ export class LdapAuthService implements IAuthService {
         identificationNumber: attrs.employeeID || '',
       };
 
-      logger.info(`[LDAP] Usuario ${upn} autenticado y autorizado`);
+      logger.info(`[LDAP] Usuario ${upn} autenticado en LDAP; autorización pendiente en la aplicación`);
       return ldapUserData;
 
     } catch (error) {
       // Si es credenciales inválidas, retornar null
-      if (error instanceof Error && error.message === 'INVALID_CREDENTIALS') {
+      if (error instanceof LdapInvalidCredentialsError) {
         return null;
       }
 

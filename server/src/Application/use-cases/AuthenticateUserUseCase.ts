@@ -1,5 +1,5 @@
 // ============================================================
-// Use Case: AuthenticateUser 
+// Use Case: AuthenticateUser (HU-02)
 // Lógica dual: STUDENT → BD local + bcrypt
 //              ADMIN   → LDAP/AD
 // ============================================================

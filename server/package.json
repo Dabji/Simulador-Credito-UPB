@@ -22,7 +22,6 @@
     "ldapjs": "^3.0.7",
     "mysql2": "^3.22.1",
     "nodemailer": "^8.0.5",
-    "passport-ldapauth": "^3.0.1",
     "pdfkit": "^0.18.0",
     "sequelize": "^6.37.8",
     "swagger-ui-express": "^5.0.1",
