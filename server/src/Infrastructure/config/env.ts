@@ -42,9 +42,9 @@ const envSchema = z.object({
 
   // ── LDAP / Active Directory ─────────────────────────────
   LDAP_URL: z.string().url().optional(),
-  LDAP_BIND_DN: z.string().optional(),
-  LDAP_BIND_PASSWORD: z.string().optional(),
-  LDAP_SEARCH_BASE: z.string().optional(),
+  LDAP_DOMAIN: z.string().optional(),
+  LDAP_BASE_DN: z.string().optional(),
+  LDAP_TIMEOUT_MS: z.coerce.number().int().min(100).max(30000).default(5000),
 
   // ── JWT ─────────────────────────────────────────────────
   JWT_SECRET: z.string().default('dev-secret-change-in-production'),
