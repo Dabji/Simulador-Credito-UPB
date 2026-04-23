@@ -43,7 +43,7 @@ export interface SimulationSummaryItem {
 export interface PersistedSimulation {
   readonly id: string;
   readonly userId: string;
-  readonly savedAt: Date;
+  readonly createdAt: Date;
   readonly summary: SimulationSummary;
 }
 
@@ -65,7 +65,7 @@ export interface PersistedSimulationWithUser extends PersistedSimulation {
 
 export interface ISimulationRepository {
   /** Persiste la simulación y sus filas de amortización (transacción) */
-  save(data: SaveSimulationData): Promise<{ id: string; savedAt: Date }>;
+  save(data: SaveSimulationData): Promise<{ id: string; createdAt: Date }>;
 
   /** Busca las simulaciones de un usuario (no borradas) */
   findByUserId(userId: string): Promise<PersistedSimulation[]>;

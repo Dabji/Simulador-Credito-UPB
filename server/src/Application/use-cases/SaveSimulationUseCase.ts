@@ -31,7 +31,7 @@ export class SaveSimulationUseCase {
   async execute(
     input: SimulationInput,
     userId: string,
-  ): Promise<{ id: string; savedAt: Date; summary: SimulationSummary; parameterVersionId: string; appliedRateMonthly: number }> {
+  ): Promise<{ id: string; createdAt: Date; summary: SimulationSummary; parameterVersionId: string; appliedRateMonthly: number }> {
     // 1. Obtener versión activa de parámetros
     const activeVersion = await this.paramRepo.findActive();
     if (!activeVersion) {
@@ -103,6 +103,6 @@ export class SaveSimulationUseCase {
     // 6. Persistir en BD (transacción)
     const result = await this.simulationRepo.save(data);
 
-    return { id: result.id, savedAt: result.savedAt, summary, parameterVersionId: activeVersion.id, appliedRateMonthly: appliedRate };
+    return { id: result.id, createdAt: result.createdAt, summary, parameterVersionId: activeVersion.id, appliedRateMonthly: appliedRate };
   }
 }

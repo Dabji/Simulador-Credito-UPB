@@ -45,7 +45,7 @@ interface FormState {
 }
 
 // Helper: obtener label de tipo de documento para modo lectura
-function getDocumentTypeLabel(code: string | undefined): string {
+function getDocumentTypeLabel(code: string): string {
   if (!code) return '—';
   const doc = DOCUMENT_TYPES.find((d) => d.code === code);
   return doc?.displayLabel ?? code;
@@ -111,7 +111,7 @@ export function UserProfilePage() {
       const p = profileRes.data.user;
       setProfile(p);
       setForm({
-        documentType:         p.documentType ?? '',
+        documentType:         p.documentType,
         identificationNumber: p.identificationNumber,
         firstName:            p.firstName,
         lastName:             p.lastName,
@@ -136,7 +136,7 @@ export function UserProfilePage() {
     if (editing && profile) {
       // Cancelar: restaurar valores originales
       setForm({
-        documentType:         profile.documentType ?? '',
+        documentType:         profile.documentType,
         identificationNumber: profile.identificationNumber,
         firstName:            profile.firstName,
         lastName:             profile.lastName,
@@ -249,7 +249,7 @@ export function UserProfilePage() {
     const updated = res.data.user;
     setProfile(updated);
     setForm({
-      documentType:         updated.documentType ?? '',
+      documentType:         updated.documentType,
       identificationNumber: updated.identificationNumber,
       firstName:            updated.firstName,
       lastName:             updated.lastName,

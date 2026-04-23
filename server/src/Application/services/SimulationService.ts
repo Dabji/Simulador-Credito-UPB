@@ -125,11 +125,11 @@ export class SimulationService {
 
     // Regla: valor financiado debe ser positivo
     const initialPayment = Money.of(input.initialPaymentValue);
-    const financed       = netTuition.subtract(initialPayment);
-    // numberOfPayments=1 significa cuota inicial = 100% (sin plan de cuotas), permitido
-    if (financed.amount < 0) {
+    if (initialPayment.amount > netTuition.amount) {
       throw new Error('El valor de cuota inicial supera la matrícula neta.');
     }
+    const financed = netTuition.subtract(initialPayment);
+    // numberOfPayments=1 significa cuota inicial = 100% (sin plan de cuotas), permitido
     if (financed.amount === 0 && input.numberOfPayments > 1) {
       throw new Error('El valor financiado es 0 pero se indicaron más de 1 cuota.');
     }

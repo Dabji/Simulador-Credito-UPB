@@ -168,18 +168,24 @@ export class ListUsersByAdminUseCase {
       offset,
     });
 
-    const items: AdminUserListItemOutput[] = rows.map((u) => ({
-      id:                   u.id,
-      firstName:            u.first_name,
-      lastName:             u.last_name,
-      fullName:             `${u.first_name} ${u.last_name}`,
-      documentType:         (u.document_type ?? undefined) as DocumentType | undefined,
-      identificationNumber: u.document_number,
-      email:                u.email,
-      phone:                u.phone ?? undefined,
-      role:                 u.role as 'STUDENT' | 'ADMIN',
-      createdAt:            u.created_at.toISOString(),
-    }));
+    const items: AdminUserListItemOutput[] = rows.map((u) => {
+      if (!u.document_type) {
+        throw new Error(`Invariante violada: el usuario ${u.id} no tiene document_type.`);
+      }
+
+      return {
+        id:                   u.id,
+        firstName:            u.first_name,
+        lastName:             u.last_name,
+        fullName:             `${u.first_name} ${u.last_name}`,
+        documentType:         u.document_type as DocumentType,
+        identificationNumber: u.document_number,
+        email:                u.email,
+        phone:                u.phone ?? undefined,
+        role:                 u.role as 'STUDENT' | 'ADMIN',
+        createdAt:            u.created_at.toISOString(),
+      };
+    });
 
     return {
       items,

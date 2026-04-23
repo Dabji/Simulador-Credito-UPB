@@ -64,7 +64,6 @@ AuditLogModel.init(
     actor_type: {
       type: DataTypes.STRING(20),
       allowNull: false,
-      defaultValue: 'ADMIN',
       validate: {
         isIn: [['ADMIN', 'STUDENT', 'SYSTEM']],
       },

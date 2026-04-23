@@ -9,7 +9,7 @@ export interface AdminUserProfileOutput {
   readonly firstName: string;
   readonly lastName: string;
   readonly fullName: string;
-  readonly documentType: DocumentType | undefined;
+  readonly documentType: DocumentType;
   readonly identificationNumber: string;
   readonly email: string;
   readonly phone: string | undefined;

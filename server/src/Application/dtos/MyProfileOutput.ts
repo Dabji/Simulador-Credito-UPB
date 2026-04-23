@@ -9,7 +9,7 @@ export interface MyProfileOutput {
   readonly email: string;
   readonly firstName: string;
   readonly lastName: string;
-  readonly documentType: DocumentType | undefined;
+  readonly documentType: DocumentType;
   readonly identificationNumber: string;
   readonly phone: string | undefined;
   readonly role: 'STUDENT' | 'ADMIN';
