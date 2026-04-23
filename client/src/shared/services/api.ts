@@ -100,7 +100,7 @@ export interface UserData {
   readonly email: string;
   readonly firstName: string;
   readonly lastName: string;
-  readonly documentType?: DocumentTypeCodeAPI;
+  readonly documentType: DocumentTypeCodeAPI;
   readonly identificationNumber: string;
   readonly phone?: string;
   readonly role: 'STUDENT' | 'ADMIN';
@@ -441,7 +441,7 @@ export interface MyProfileDTO {
   readonly email: string;
   readonly firstName: string;
   readonly lastName: string;
-  readonly documentType?: DocumentTypeCodeAPI;
+  readonly documentType: DocumentTypeCodeAPI;
   readonly identificationNumber: string;
   readonly phone?: string;
   readonly role: 'STUDENT' | 'ADMIN';
@@ -501,7 +501,7 @@ export interface AdminUserListItemDTO {
   readonly firstName: string;
   readonly lastName: string;
   readonly fullName: string;
-  readonly documentType?: 'CC' | 'TI';
+  readonly documentType: DocumentTypeCodeAPI;
   readonly identificationNumber: string;
   readonly email: string;
   readonly phone?: string;
@@ -522,7 +522,7 @@ export interface AdminUserProfileDTO {
   readonly firstName: string;
   readonly lastName: string;
   readonly fullName: string;
-  readonly documentType?: 'CC' | 'TI';
+  readonly documentType: DocumentTypeCodeAPI;
   readonly identificationNumber: string;
   readonly email: string;
   readonly phone?: string;

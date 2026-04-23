@@ -269,7 +269,7 @@ router.get('/history', async (req: AuthenticatedRequest, res: Response, next: Ne
       initialPaymentValue: Number(sim.initial_payment_value),
       firstPaymentDate: sim.first_payment_date,
       numberOfPayments: sim.total_payments,
-      academicPeriod: sim.academic_period ?? '',
+      academicPeriod: sim.academic_period,
     }));
 
 

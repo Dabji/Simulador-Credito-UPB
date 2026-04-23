@@ -46,7 +46,7 @@ interface FormState {
 }
 
 // Helper para obtener label de tipo de documento
-function getDocumentTypeLabel(code: string | undefined): string {
+function getDocumentTypeLabel(code: string): string {
   if (!code) return '—';
   const info = getDocumentTypeInfo(code);
   return info?.displayLabel ?? code;
@@ -194,7 +194,7 @@ export function AdminStudentProfilePage() {
         setForm({
           firstName:            p.firstName,
           lastName:             p.lastName,
-          documentType:         p.documentType ?? '',
+          documentType:         p.documentType,
           identificationNumber: p.identificationNumber,
           email:                p.email,
           phone:                p.phone ?? '',
@@ -220,7 +220,7 @@ export function AdminStudentProfilePage() {
     setForm({
       firstName:            profile.firstName,
       lastName:             profile.lastName,
-      documentType:         profile.documentType ?? '',
+      documentType:         profile.documentType,
       identificationNumber: profile.identificationNumber,
       email:                profile.email,
       phone:                profile.phone ?? '',
@@ -288,7 +288,7 @@ export function AdminStudentProfilePage() {
       setForm({
         firstName:            updated.firstName,
         lastName:             updated.lastName,
-        documentType:         updated.documentType ?? '',
+        documentType:         updated.documentType,
         identificationNumber: updated.identificationNumber,
         email:                updated.email,
         phone:                updated.phone ?? '',
@@ -581,7 +581,7 @@ export function AdminStudentProfilePage() {
                             {i + 1}
                           </span>
                           <div>
-                            <p className="font-semibold text-gray-700">Período: {sim.academicPeriod || '—'}</p>
+                            <p className="font-semibold text-gray-700">Período: {sim.academicPeriod}</p>
                             <p className="text-xs text-gray-400">{formatDate(sim.createdAt)}</p>
                           </div>
                         </div>

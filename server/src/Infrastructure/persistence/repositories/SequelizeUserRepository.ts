@@ -93,12 +93,17 @@ export class SequelizeUserRepository implements IUserRepository {
 
   // ── Mapper: ORM → Domain ───────────────────────────────────
   private toDomain(row: UserModel): User {
+    const documentType = row.document_type;
+    if (!documentType) {
+      throw new Error(`Invariante violada: el usuario ${row.id} no tiene document_type.`);
+    }
+
     return User.reconstitute({
       id: row.id,
       email: row.email,
       firstName: row.first_name,
       lastName: row.last_name,
-      documentType: row.document_type as DocumentType,
+      documentType: documentType as DocumentType,
       identificationNumber: row.document_number,
       password: row.password ?? undefined,
       phone: row.phone ?? undefined,

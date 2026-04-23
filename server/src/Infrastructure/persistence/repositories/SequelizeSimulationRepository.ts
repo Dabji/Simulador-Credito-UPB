@@ -156,7 +156,7 @@ export class SequelizeSimulationRepository implements ISimulationRepository {
         lastName: user?.last_name ?? '',
         identificationNumber: user?.document_number ?? '',
         email: user?.email ?? '',
-        documentType: user?.document_type ?? '',
+        documentType: user ? this.requireUserDocumentType(user) : '',
         phone: user?.phone ?? null,
       },
     };
@@ -174,7 +174,7 @@ export class SequelizeSimulationRepository implements ISimulationRepository {
 
     return simulations.map((sim) => ({
       id: sim.id,
-      academicPeriod: sim.academic_period,
+      academicPeriod: this.requireAcademicPeriod(sim),
       numberOfPayments: sim.total_payments,
       totalPaid: Number(sim.total_paid),
       createdAt: sim.created_at,
@@ -239,7 +239,7 @@ export class SequelizeSimulationRepository implements ISimulationRepository {
         initialPaymentPct: Number(sim.initial_payment_pct) * 100,
         financedValue: Number(sim.financed_value),
         interestMode: sim.modality === 'CON_INTERES' ? 'con_interes' : 'sin_interes',
-        academicPeriod: sim.academic_period,
+        academicPeriod: this.requireAcademicPeriod(sim),
         firstPaymentMonth: new Date(sim.first_payment_date).getMonth() + 1,
         numberOfPayments: sim.total_payments,
         periodicPayment: Number(sim.periodic_payment_value),
@@ -248,5 +248,23 @@ export class SequelizeSimulationRepository implements ISimulationRepository {
         schedule,
       },
     };
+  }
+
+  private requireAcademicPeriod(
+    sim: Pick<SimulationModel, 'id' | 'academic_period'>,
+  ): string {
+    if (!sim.academic_period) {
+      throw new Error(`Invariante violada: la simulación ${sim.id} no tiene academic_period.`);
+    }
+    return sim.academic_period;
+  }
+
+  private requireUserDocumentType(
+    user: Pick<UserModel, 'id' | 'document_type'>,
+  ): string {
+    if (!user.document_type) {
+      throw new Error(`Invariante violada: el usuario ${user.id} no tiene document_type.`);
+    }
+    return user.document_type;
   }
 }
