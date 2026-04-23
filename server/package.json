@@ -19,6 +19,7 @@
     "express-rate-limit": "^8.3.2",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
+    "ldapjs": "^3.0.7",
     "mysql2": "^3.20.0",
     "nodemailer": "^8.0.5",
     "passport-ldapauth": "^3.0.1",
@@ -31,6 +32,7 @@
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
+    "@types/ldapjs": "^3.0.6",
     "@types/pdfkit": "^0.17.5",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",

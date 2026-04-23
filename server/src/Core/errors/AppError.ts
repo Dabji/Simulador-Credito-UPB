@@ -83,3 +83,9 @@ export class ValidationError extends AppError {
     this.fieldErrors = fieldErrors;
   }
 }
+
+export class ServiceUnavailableError extends AppError {
+  constructor(message = 'Servicio no disponible', errorCode?: string) {
+    super(message, 503, true, errorCode);
+  }
+}
