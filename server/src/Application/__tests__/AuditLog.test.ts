@@ -52,7 +52,7 @@ jest.mock(
       findByUserId: jest.fn().mockResolvedValue([]),
       findById: jest.fn().mockResolvedValue(null),
       findSummariesByUserId: jest.fn().mockResolvedValue([]),
-      save: jest.fn().mockResolvedValue({ id: 'mock-id', savedAt: new Date() }),
+      save: jest.fn().mockResolvedValue({ id: 'mock-id', createdAt: new Date() }),
     })),
   }),
 );

@@ -208,6 +208,17 @@ describe('SimulationEngine', () => {
       expect(summary.totalInterest).toBe(Math.round(sumInterest));
     });
 
+    it('totalPaid debe incluir la cuota inicial más la suma de cuotas con interés', () => {
+      const input = makeInput({
+        numberOfPayments: 6,
+        interestMode: 'con_interes',
+      });
+      const activeVersion = makeActiveVersion();
+      const summary = engine.computeSummary(input, dummyParams, activeVersion);
+      const planSum = summary.schedule.reduce((s, r) => s + r.payment, 0);
+      expect(summary.totalPaid).toBe(Math.round(summary.initialPayment + planSum));
+    });
+
     it('la última fila debe tener finalBalance = 0 (absorbe residuo de redondeo)', () => {
       const input = makeInput({
         tuitionGross: 7_777_777,

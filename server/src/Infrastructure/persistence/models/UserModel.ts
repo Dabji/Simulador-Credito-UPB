@@ -15,7 +15,7 @@ interface UserAttributes {
   email: string;
   first_name: string;
   last_name: string;
-  document_type: DocumentTypeDB | null;
+  document_type: DocumentTypeDB;
   document_number: string;
   password: string | null;
   phone: string | null;
@@ -27,7 +27,7 @@ interface UserAttributes {
   updated_at: Date;
 }
 
-type UserCreationAttributes = Optional<UserAttributes, 'document_type' | 'password' | 'phone' | 'terms_accepted_at' | 'last_login_at' | 'created_at' | 'updated_at'>;
+type UserCreationAttributes = Optional<UserAttributes, 'password' | 'phone' | 'terms_accepted_at' | 'last_login_at' | 'created_at' | 'updated_at'>;
 
 export class UserModel extends Model<UserAttributes, UserCreationAttributes>
   implements UserAttributes {
@@ -35,7 +35,7 @@ export class UserModel extends Model<UserAttributes, UserCreationAttributes>
   declare email: string;
   declare first_name: string;
   declare last_name: string;
-  declare document_type: DocumentTypeDB | null;
+  declare document_type: DocumentTypeDB;
   declare document_number: string;
   declare password: string | null;
   declare phone: string | null;
@@ -70,7 +70,7 @@ UserModel.init(
     },
     document_type: {
       type: DataTypes.ENUM('CC', 'CE', 'DE', 'PA', 'PE', 'PT', 'RC', 'TI', 'VI'),
-      allowNull: true,
+      allowNull: false,
     },
     document_number: {
       type: DataTypes.STRING(20),

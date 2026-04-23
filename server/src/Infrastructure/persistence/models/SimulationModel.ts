@@ -11,7 +11,6 @@ import { Database } from '../../config/database';
 interface SimulationAttributes {
   id: string;
   created_at: Date;
-  saved_at: Date;
   deleted_at: Date | null;
   deleted_by: string | null;
   delete_reason: string | null;
@@ -30,7 +29,7 @@ interface SimulationAttributes {
   total_interest: number;
   total_paid: number;
   applied_rate_monthly: number;       // decimal(8,6)
-  academic_period: string | null;
+  academic_period: string;
   student_observation: string | null;
   user_id: string;
   parameter_version_id: string;
@@ -38,8 +37,8 @@ interface SimulationAttributes {
 
 type SimulationCreation = Optional<
   SimulationAttributes,
-  'created_at' | 'saved_at' | 'deleted_at' | 'deleted_by' | 'delete_reason' | 'student_observation' | 'academic_period'
->; // academic_period opcional en creación (defaultValue: null)
+  'created_at' | 'deleted_at' | 'deleted_by' | 'delete_reason' | 'student_observation'
+>;
 
 export class SimulationModel
   extends Model<SimulationAttributes, SimulationCreation>
@@ -47,7 +46,6 @@ export class SimulationModel
 {
   declare id: string;
   declare created_at: Date;
-  declare saved_at: Date;
   declare deleted_at: Date | null;
   declare deleted_by: string | null;
   declare delete_reason: string | null;
@@ -66,7 +64,7 @@ export class SimulationModel
   declare total_interest: number;
   declare total_paid: number;
   declare applied_rate_monthly: number;
-  declare academic_period: string | null;
+  declare academic_period: string;
   declare student_observation: string | null;
   declare user_id: string;
   declare parameter_version_id: string;
@@ -82,11 +80,6 @@ SimulationModel.init(
       defaultValue: DataTypes.UUIDV4,
     },
     created_at: {
-      type: DataTypes.DATE,
-      allowNull: false,
-      defaultValue: DataTypes.NOW,
-    },
-    saved_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
@@ -168,7 +161,7 @@ SimulationModel.init(
     },
     academic_period: {
       type: DataTypes.STRING(20),
-      allowNull: true,
+      allowNull: false,
     },
     student_observation: {
       type: DataTypes.STRING(255),
@@ -188,9 +181,8 @@ SimulationModel.init(
     tableName: 'simulations',
     timestamps: false,
     indexes: [
-      { fields: ['user_id', 'saved_at'], name: 'idx_sim_user_saved' },
-      { fields: ['deleted_at'], name: 'idx_sim_deleted' },
-      { fields: ['user_id', 'deleted_at', 'saved_at'], name: 'idx_sim_user_deleted_saved' },
+      { fields: ['deleted_at', 'created_at'], name: 'idx_sim_deleted_created' },
+      { fields: ['user_id', 'deleted_at', 'created_at'], name: 'idx_sim_user_deleted_created' },
       { fields: ['parameter_version_id'], name: 'idx_sim_version' },
       { fields: ['academic_period', 'deleted_at'], name: 'idx_sim_period' },
       { fields: ['level', 'modality', 'deleted_at'], name: 'idx_sim_level_modality' },

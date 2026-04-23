@@ -6,20 +6,69 @@
 // ============================================================
 
 import path from 'path';
+import { randomUUID } from 'crypto';
 import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
 dotenv.config({ path: path.resolve(process.cwd(), '..', '.env') });
 
 import { Database } from '../Infrastructure/config/database';
 import { UserModel } from '../Infrastructure/persistence/models/UserModel';
+import type { DocumentTypeDB } from '../Infrastructure/persistence/models/UserModel';
 import { ParameterVersionModel } from '../Infrastructure/persistence/models/ParameterVersionModel';
 import { InitialPaymentRuleModel } from '../Infrastructure/persistence/models/InitialPaymentRuleModel';
+
+type InitialPaymentLevel = 'PREGRADO' | 'POSGRADO' | 'UPB_Tech';
+type InitialPaymentModality = 'SIN_INTERES' | 'CON_INTERES';
+
+interface InstallmentRule {
+  readonly extra: number;
+  readonly pct: number;
+}
+
+interface RuleSetByModality {
+  readonly SIN_INTERES: readonly InstallmentRule[];
+  readonly CON_INTERES: readonly InstallmentRule[];
+}
+
+interface InitialPaymentSeedRule extends InstallmentRule {
+  readonly level: InitialPaymentLevel;
+  readonly modality: InitialPaymentModality;
+}
+
+const PAYMENT_LEVELS: readonly InitialPaymentLevel[] = ['PREGRADO', 'POSGRADO', 'UPB_Tech'];
+const PAYMENT_MODALITIES: readonly InitialPaymentModality[] = ['SIN_INTERES', 'CON_INTERES'];
+
+function toInstallmentRules(percentages: readonly number[]): readonly InstallmentRule[] {
+  return percentages.map((pct, extra) => ({ extra, pct }));
+}
+
+function buildInitialPaymentData(
+  rulesByLevel: Readonly<Record<InitialPaymentLevel, RuleSetByModality>>,
+): readonly InitialPaymentSeedRule[] {
+  const rows: InitialPaymentSeedRule[] = [];
+
+  for (const level of PAYMENT_LEVELS) {
+    for (const modality of PAYMENT_MODALITIES) {
+      for (const rule of rulesByLevel[level][modality]) {
+        rows.push({
+          level,
+          modality,
+          extra: rule.extra,
+          pct: rule.pct,
+        });
+      }
+    }
+  }
+
+  return rows;
+}
 
 async function seed(): Promise<void> {
   const db = Database.getInstance();
   await db.connect();
 
   const sequelize = db.getSequelize();
+  const adminDocumentType: DocumentTypeDB = 'CC';
 
   await sequelize.transaction(async (t) => {
     // ── 0. Obtener o crear usuario ADMIN (para FK created_by) ──
@@ -36,11 +85,12 @@ async function seed(): Promise<void> {
 
       admin = await UserModel.create(
         {
-          id: crypto.randomUUID(),
+          id: randomUUID(),
           email: 'admin@upb.edu.co',
           password: passwordHash,
           first_name: 'Admin',
           last_name: 'Sistema',
+          document_type: adminDocumentType,
           document_number: '0000000000',
           role: 'ADMIN',
           is_active: true,
@@ -55,7 +105,7 @@ async function seed(): Promise<void> {
     // ── 1. Versión de parámetros ─────────────────────────────
     // Periodo 2026-01: Dic 2025 → May 2026
     // Ventana de cuotas: Ene 1 → Jun 30 del 2026
-    const versionId = crypto.randomUUID();
+    const versionId = randomUUID();
 
     await ParameterVersionModel.create(
       {
@@ -83,50 +133,28 @@ async function seed(): Promise<void> {
     //   - extra_installments=3: cuota inicial 20%
     //
     // Para CON_INTERES, se permiten hasta 6 cuotas extras.
+    // El índice del porcentaje corresponde a extra_installments:
+    // [1.0, 0.5, 0.34] -> extras 0, 1 y 2 respectivamente.
+    const academicLevelRules: RuleSetByModality = {
+      SIN_INTERES: toInstallmentRules([1.0000, 0.5000, 0.3400, 0.2000]),
+      CON_INTERES: toInstallmentRules([1.0000, 0.5000, 0.3400, 0.2500, 0.2000, 0.2000, 0.2000]),
+    };
 
-    const initialPaymentData = [
-      // ─── PREGRADO ───
-      { level: 'PREGRADO', modality: 'SIN_INTERES', extra: 0, pct: 1.0000 },
-      { level: 'PREGRADO', modality: 'SIN_INTERES', extra: 1, pct: 0.5000 },
-      { level: 'PREGRADO', modality: 'SIN_INTERES', extra: 2, pct: 0.3400 },
-      { level: 'PREGRADO', modality: 'SIN_INTERES', extra: 3, pct: 0.2000 },
-      { level: 'PREGRADO', modality: 'CON_INTERES', extra: 0, pct: 1.0000 },
-      { level: 'PREGRADO', modality: 'CON_INTERES', extra: 1, pct: 0.5000 },
-      { level: 'PREGRADO', modality: 'CON_INTERES', extra: 2, pct: 0.3400 },
-      { level: 'PREGRADO', modality: 'CON_INTERES', extra: 3, pct: 0.2500 },
-      { level: 'PREGRADO', modality: 'CON_INTERES', extra: 4, pct: 0.2000 },
-      { level: 'PREGRADO', modality: 'CON_INTERES', extra: 5, pct: 0.2000 },
-      { level: 'PREGRADO', modality: 'CON_INTERES', extra: 6, pct: 0.2000 },
-      // ─── POSGRADO ───
-      { level: 'POSGRADO', modality: 'SIN_INTERES', extra: 0, pct: 1.0000 },
-      { level: 'POSGRADO', modality: 'SIN_INTERES', extra: 1, pct: 0.5000 },
-      { level: 'POSGRADO', modality: 'SIN_INTERES', extra: 2, pct: 0.3400 },
-      { level: 'POSGRADO', modality: 'SIN_INTERES', extra: 3, pct: 0.2000 },
-      { level: 'POSGRADO', modality: 'CON_INTERES', extra: 0, pct: 1.0000 },
-      { level: 'POSGRADO', modality: 'CON_INTERES', extra: 1, pct: 0.5000 },
-      { level: 'POSGRADO', modality: 'CON_INTERES', extra: 2, pct: 0.3400 },
-      { level: 'POSGRADO', modality: 'CON_INTERES', extra: 3, pct: 0.2500 },
-      { level: 'POSGRADO', modality: 'CON_INTERES', extra: 4, pct: 0.2000 },
-      { level: 'POSGRADO', modality: 'CON_INTERES', extra: 5, pct: 0.2000 },
-      { level: 'POSGRADO', modality: 'CON_INTERES', extra: 6, pct: 0.2000 },
-      // ─── UPB_Tech ───
-      { level: 'UPB_Tech', modality: 'SIN_INTERES', extra: 0, pct: 1.0000 },
-      { level: 'UPB_Tech', modality: 'SIN_INTERES', extra: 1, pct: 0.5000 },
-      { level: 'UPB_Tech', modality: 'SIN_INTERES', extra: 2, pct: 0.3400 },
-      { level: 'UPB_Tech', modality: 'SIN_INTERES', extra: 3, pct: 0.1500 },
-      { level: 'UPB_Tech', modality: 'CON_INTERES', extra: 0, pct: 1.0000 },
-      { level: 'UPB_Tech', modality: 'CON_INTERES', extra: 1, pct: 0.5000 },
-      { level: 'UPB_Tech', modality: 'CON_INTERES', extra: 2, pct: 0.3400 },
-      { level: 'UPB_Tech', modality: 'CON_INTERES', extra: 3, pct: 0.2500 },
-      { level: 'UPB_Tech', modality: 'CON_INTERES', extra: 4, pct: 0.2000 },
-      { level: 'UPB_Tech', modality: 'CON_INTERES', extra: 5, pct: 0.1500 },
-      { level: 'UPB_Tech', modality: 'CON_INTERES', extra: 6, pct: 0.1500 },
-    ] as const;
+    const rulesByLevel: Readonly<Record<InitialPaymentLevel, RuleSetByModality>> = {
+      PREGRADO: academicLevelRules,
+      POSGRADO: academicLevelRules,
+      UPB_Tech: {
+        SIN_INTERES: toInstallmentRules([1.0000, 0.5000, 0.3400, 0.1500]),
+        CON_INTERES: toInstallmentRules([1.0000, 0.5000, 0.3400, 0.2500, 0.2000, 0.1500, 0.1500]),
+      },
+    };
+
+    const initialPaymentData = buildInitialPaymentData(rulesByLevel);
 
     for (const rule of initialPaymentData) {
       await InitialPaymentRuleModel.create(
         {
-          id: crypto.randomUUID(),
+          id: randomUUID(),
           level: rule.level,
           modality: rule.modality,
           extra_installments: rule.extra,

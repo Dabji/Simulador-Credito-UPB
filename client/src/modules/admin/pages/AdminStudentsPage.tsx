@@ -349,7 +349,7 @@ export function AdminStudentsPage() {
                           className="px-2 py-0.5 rounded-full text-xs font-bold"
                           style={{ backgroundColor: '#F3E8FF', color: '#6b21a8' }}
                         >
-                          {u.documentType ?? '—'}
+                          {u.documentType}
                         </span>
                       </td>
                       <td className="px-4 py-3 font-medium text-gray-800 whitespace-nowrap">{u.fullName}</td>
