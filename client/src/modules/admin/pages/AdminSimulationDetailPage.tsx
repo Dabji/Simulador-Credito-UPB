@@ -307,7 +307,7 @@ export function AdminSimulationDetailPage() {
                 />
                 <ReadOnlyField
                   label="Fecha de Creación"
-                  value={simulation.createdAt ? formatDate(simulation.createdAt) : 'â€”'}
+                  value={formatDate(simulation.createdAt)}
                 />
                 <ReadOnlyField
                   label="Período Académico"
