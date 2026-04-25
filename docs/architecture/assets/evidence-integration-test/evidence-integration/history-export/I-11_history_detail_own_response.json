@@ -1,0 +1,62 @@
+{
+    "id": "f182edd4-6058-4dc2-bccb-d7eee4ce329d",
+    "userId": "934d23b0-10ca-4f12-9932-41e4d4fc971f",
+    "createdAt": "2026-04-24T15:54:58.000Z",
+    "summary": {
+        "id": "f182edd4-6058-4dc2-bccb-d7eee4ce329d",
+        "tuitionGross": 10000000,
+        "scholarshipPct": 0,
+        "tuitionNet": 10000000,
+        "initialPayment": 2000000,
+        "initialPaymentPct": 20,
+        "financedValue": 8000000,
+        "interestMode": "con_interes",
+        "academicPeriod": "2026-01",
+        "firstPaymentMonth": 1,
+        "numberOfPayments": 4,
+        "periodicPayment": 2720177,
+        "totalPaid": 10160531,
+        "totalInterest": 160530,
+        "schedule": [
+            {
+                "period": 2,
+                "date": "2026-02-01",
+                "initialBalance": 8000000,
+                "principal": 2640177,
+                "interest": 80000,
+                "payment": 2720177,
+                "finalBalance": 5359823
+            },
+            {
+                "period": 3,
+                "date": "2026-03-01",
+                "initialBalance": 5359823,
+                "principal": 2666579,
+                "interest": 53598,
+                "payment": 2720177,
+                "finalBalance": 2693244
+            },
+            {
+                "period": 4,
+                "date": "2026-04-01",
+                "initialBalance": 2693245,
+                "principal": 2693245,
+                "interest": 26932,
+                "payment": 2720177,
+                "finalBalance": 0
+            }
+        ]
+    },
+    "level": "PREGRADO",
+    "studentType": "NUEVO",
+    "studentObservation": "Caso guardado I-09",
+    "appliedRateMonthly": 0.01,
+    "student": {
+        "firstName": "Juan",
+        "lastName": "Test",
+        "identificationNumber": "1099001234",
+        "email": "juantest57@upb.edu.co",
+        "documentType": "CC",
+        "phone": "3001234567"
+    }
+}

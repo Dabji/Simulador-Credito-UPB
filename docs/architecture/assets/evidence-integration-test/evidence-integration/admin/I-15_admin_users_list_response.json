@@ -1,0 +1,131 @@
+{
+    "success": true,
+    "data": {
+        "items": [
+            {
+                "id": "934d23b0-10ca-4f12-9932-41e4d4fc971f",
+                "firstName": "Juan",
+                "lastName": "Test",
+                "fullName": "Juan Test",
+                "documentType": "CC",
+                "identificationNumber": "1099001234",
+                "email": "juantest57@upb.edu.co",
+                "phone": "3007654321",
+                "role": "STUDENT",
+                "createdAt": "2026-04-24T12:33:36.000Z"
+            },
+            {
+                "id": "434721e8-c17e-4d6d-a22f-f6a1dca3bb14",
+                "firstName": "Carlos",
+                "lastName": "Figueroa",
+                "fullName": "Carlos Figueroa",
+                "documentType": "CE",
+                "identificationNumber": "1029304850",
+                "email": "carlos@upb.edu.co",
+                "phone": "3206839102",
+                "role": "STUDENT",
+                "createdAt": "2026-04-21T18:10:30.000Z"
+            },
+            {
+                "id": "b83b9c32-5346-4224-9710-2fbfa0cb0325",
+                "firstName": "Javier Alejandro",
+                "lastName": "Ortiz",
+                "fullName": "Javier Alejandro Ortiz",
+                "documentType": "CC",
+                "identificationNumber": "1098464321",
+                "email": "javierortiz@gmail.com",
+                "phone": "3185663241",
+                "role": "STUDENT",
+                "createdAt": "2026-04-15T13:45:49.000Z"
+            },
+            {
+                "id": "a94103ea-6a71-4f45-9fc6-52e2d42b6d22",
+                "firstName": "Maria Alejandra",
+                "lastName": "Hernandez Castillo",
+                "fullName": "Maria Alejandra Hernandez Castillo",
+                "documentType": "VI",
+                "identificationNumber": "VI123456",
+                "email": "vanecasti@gmail.com",
+                "phone": "3017866667",
+                "role": "STUDENT",
+                "createdAt": "2026-04-14T00:34:14.000Z"
+            },
+            {
+                "id": "ff031176-201a-4e14-95e3-30db01563407",
+                "firstName": "Leonardo",
+                "lastName": "Dicaprio",
+                "fullName": "Leonardo Dicaprio",
+                "documentType": "CC",
+                "identificationNumber": "1234567899",
+                "email": "leo@outlook.com",
+                "phone": "987654322",
+                "role": "STUDENT",
+                "createdAt": "2026-03-28T04:10:16.000Z"
+            },
+            {
+                "id": "b47517ac-e11a-48d0-9471-16166aafb456",
+                "firstName": "gabriel matias",
+                "lastName": "rodriguez",
+                "fullName": "gabriel matias rodriguez",
+                "documentType": "TI",
+                "identificationNumber": "1052838811",
+                "email": "salchichahuesuda@gmail.com",
+                "phone": "3123408608",
+                "role": "STUDENT",
+                "createdAt": "2026-03-20T12:21:24.000Z"
+            },
+            {
+                "id": "1bb0ad65-beee-4df6-a381-0970e9ea3375",
+                "firstName": "Test",
+                "lastName": "Recovery",
+                "fullName": "Test Recovery",
+                "documentType": "CC",
+                "identificationNumber": "99887766",
+                "email": "passwordreset@hotmail.com",
+                "phone": "3009876543",
+                "role": "STUDENT",
+                "createdAt": "2026-03-09T21:38:44.000Z"
+            },
+            {
+                "id": "36e6b586-0f15-4a71-8f41-a27af91ade53",
+                "firstName": "Enrique",
+                "lastName": "Rueda",
+                "fullName": "Enrique Rueda",
+                "documentType": "CC",
+                "identificationNumber": "123456760",
+                "email": "javier.lizarazo@upb.edu.co",
+                "phone": "3017866667",
+                "role": "STUDENT",
+                "createdAt": "2026-03-04T21:15:36.000Z"
+            },
+            {
+                "id": "3d052bf3-927c-41cd-9992-b5ae9d2c70aa",
+                "firstName": "Jhonathan",
+                "lastName": "Carvajal",
+                "fullName": "Jhonathan Carvajal",
+                "documentType": "CC",
+                "identificationNumber": "1098565324",
+                "email": "jhonslecrvj@gmail.com",
+                "phone": "327484325",
+                "role": "STUDENT",
+                "createdAt": "2026-03-03T21:25:07.000Z"
+            },
+            {
+                "id": "2a87cabe-dcfd-4327-825e-8647a5cd7fb5",
+                "firstName": "David Eduardo",
+                "lastName": "Florez Duran",
+                "fullName": "David Eduardo Florez Duran",
+                "documentType": "TI",
+                "identificationNumber": "1097783551",
+                "email": "davideduardoflorez10@gmail.com",
+                "phone": "3158780557",
+                "role": "STUDENT",
+                "createdAt": "2026-03-03T18:52:56.000Z"
+            }
+        ],
+        "page": 1,
+        "pageSize": 10,
+        "total": 17,
+        "totalPages": 2
+    }
+}

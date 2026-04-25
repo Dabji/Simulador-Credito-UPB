@@ -1,0 +1,25 @@
+PS C:\Users\RICHARD\Documents\UPB\Semestre_5\P1\SimuladorCreditos\Simulador-Credito-UPB> npm run test --workspace=server -- --runInBand --runTestsByPath src/Application/__tests__/schemas.test.ts
+>> 
+
+> server@1.0.0 test
+> jest --forceExit --detectOpenHandles --runInBand --runTestsByPath src/Application/__tests__/schemas.test.ts
+
+ FAIL  src/Application/__tests__/schemas.test.ts
+  ● Test suite failed to run
+
+    ENOENT: no such file or directory, open 'C:\Users\RICHARD\Documents\UPB\Semestre_5\P1\SimuladorCreditos\Simulador-Credito-UPB\server\src\Application\__tests__\schemas.test.ts'
+
+      at runTestInternal (../node_modules/jest-runner/build/index.js:133:27)
+
+Test Suites: 1 failed, 1 total
+Tests:       0 total
+Snapshots:   0 total
+Time:        0.365 s
+Ran all test suites within paths "src/Application/__tests__/schemas.test.ts".
+npm error Lifecycle script `test` failed with error:
+npm error code 1
+npm error path C:\Users\RICHARD\Documents\UPB\Semestre_5\P1\SimuladorCreditos\Simulador-Credito-UPB\server
+npm error workspace server@1.0.0
+npm error location C:\Users\RICHARD\Documents\UPB\Semestre_5\P1\SimuladorCreditos\Simulador-Credito-UPB\server
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c jest --forceExit --detectOpenHandles --runInBand --runTestsByPath src/Application/__tests__/schemas.test.ts

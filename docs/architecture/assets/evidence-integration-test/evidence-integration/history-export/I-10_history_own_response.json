@@ -1,0 +1,21 @@
+{
+    "items": [
+        {
+            "id": "f182edd4-6058-4dc2-bccb-d7eee4ce329d",
+            "createdAt": "2026-04-24T15:54:58.000Z",
+            "studentName": "Juan Test",
+            "studentEmail": "juantest57@upb.edu.co",
+            "modality": "CON_INTERES",
+            "financedValue": 8000000,
+            "initialPaymentValue": 2000000,
+            "firstPaymentDate": "2026-02-01",
+            "numberOfPayments": 4,
+            "academicPeriod": "2026-01"
+        }
+    ],
+    "page": 1,
+    "pageSize": 10,
+    "total": 1,
+    "totalPages": 1
+}
+

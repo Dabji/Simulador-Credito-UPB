@@ -1,0 +1,45 @@
+{
+    "id": "808131b6-71e0-43fe-897c-595b6d58d93a",
+    "tuitionGross": 10000000,
+    "scholarshipPct": 0,
+    "tuitionNet": 10000000,
+    "initialPayment": 2000000,
+    "initialPaymentPct": 20,
+    "financedValue": 8000000,
+    "interestMode": "con_interes",
+    "academicPeriod": "2026-01",
+    "firstPaymentMonth": 2,
+    "numberOfPayments": 4,
+    "periodicPayment": 2720177,
+    "totalPaid": 10160531,
+    "totalInterest": 160530,
+    "schedule": [
+        {
+            "period": 2,
+            "date": "2026-02-01",
+            "initialBalance": 8000000,
+            "principal": 2640177,
+            "interest": 80000,
+            "payment": 2720177,
+            "finalBalance": 5359823
+        },
+        {
+            "period": 3,
+            "date": "2026-03-01",
+            "initialBalance": 5359823,
+            "principal": 2666579,
+            "interest": 53598,
+            "payment": 2720177,
+            "finalBalance": 2693244
+        },
+        {
+            "period": 4,
+            "date": "2026-04-01",
+            "initialBalance": 2693244,
+            "principal": 2693245,
+            "interest": 26932,
+            "payment": 2720177,
+            "finalBalance": 0
+        }
+    ]
+}

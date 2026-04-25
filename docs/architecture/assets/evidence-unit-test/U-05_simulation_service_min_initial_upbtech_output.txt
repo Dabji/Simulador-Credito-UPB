@@ -1,0 +1,20 @@
+PS C:\Users\RICHARD\Documents\UPB\Semestre_5\P1\SimuladorCreditos\Simulador-Credito-UPB> npm run test --workspace=server -- --runInBand --runTestsByPath src/Application/__tests__/SimulationService.test.ts
+>> 
+
+> server@1.0.0 test
+> jest --forceExit --detectOpenHandles --runInBand --runTestsByPath src/Application/__tests__/SimulationService.test.ts
+
+ PASS  src/Application/__tests__/SimulationService.test.ts
+  SimulationService
+    √ rechaza pregrado cuando la cuota inicial es menor al 20% (23 ms)
+    √ rechaza UPB Tech cuando la cuota inicial es menor al 15% (2 ms)
+    √ usa la regla institucional activa cuando existe una cuota inicial mínima más estricta (2 ms)
+    √ rechaza un mes de primera cuota que no pertenece al periodo académico (3 ms)
+    √ rechaza cuando la cuota inicial supera la matrícula neta (3 ms)
+    √ rechaza cuando el valor financiado es 0 pero se solicitan más cuotas (3 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+Snapshots:   0 total
+Time:        2.252 s, estimated 4 s
+Ran all test suites within paths "src/Application/__tests__/SimulationService.test.ts".
