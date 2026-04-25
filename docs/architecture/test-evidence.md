@@ -19,6 +19,7 @@ capturados el **24 de marzo de 2026**.
 4. [Cobertura de Código (Server)](#4-cobertura-de-código-server)
 5. [Análisis de Cobertura](#5-análisis-de-cobertura)
 6. [Estrategia de Testing](#6-estrategia-de-testing)
+7. [Evidencia Documental - HU-57 Integracion](#7-evidencia-documental---hu-57-integracion)
 
 ---
 
@@ -258,6 +259,55 @@ graph TD
 | **Integration**     | Supertest                | 🟡 Parcial           | Endpoints auth + simulator                   |
 | **E2E**             | Playwright               | 🔴 Planificado       | Sprint 3+                                    |
 
+---
+
+## 7. Evidencia Documental - HU-57 Integracion
+
+### 7.1 Resumen Ejecutivo
+
+| Campo | Detalle |
+|---|---|
+| Historia de usuario | `HU-57` |
+| Documento maestro | [`docs/architecture/integration-test.md`](./integration-test.md) |
+| Alcance | Integracion API (`24` casos), funcional/manual (`16` casos) y regresion basica (`7` casos), con soporte previo de ambiente (`6` validaciones) y Gate `HU-56` (`14` evidencias unitarias de apoyo) |
+| Fecha de ejecucion | Ventana consolidada entre `23/04/2026` y `25/04/2026` |
+| Ambiente validado | Frontend `http://localhost:5173`, backend `http://localhost:3000/api`, MySQL local, navegador + DevTools, Postman, terminal y soporte de BD/logs |
+| Resultado global | ✅ `47/47 PASS` en el plan HU-57 (`24` integracion API + `16` funcional/manual + `7` regresion), con `0 FAIL` y `0 BLOCKED` |
+| Observaciones generales | Cierre documental completo, sin hallazgos funcionales criticos. Se documento como observacion de ambiente la ausencia del seed `juantest@upb.edu.co`, resuelta con uso de estudiante alternativo activo. La version de parametros operativa validada fue `52fe8170-293f-4c43-9660-f045de2daf7f` |
+
+### 7.2 Cobertura por Bloque
+
+| Bloque | Planificados | Ejecutados | PASS | FAIL | BLOCKED | Evidencia principal |
+|---|---:|---:|---:|---:|---:|---|
+| `auth` | 10 | 10 | 10 | 0 | 0 | Login, registro, logout, recovery y reset con bodies, status y token |
+| `simulator` | 3 | 3 | 3 | 0 | 0 | Preview, save y validaciones del motor desde API |
+| `history-export` | 3 | 3 | 3 | 0 | 0 | Historial, detalle y exportacion de simulaciones propias |
+| `profile-parameters` | 3 | 3 | 3 | 0 | 0 | Perfil propio, actualizacion visible y parametros publicos |
+| `admin` | 5 | 5 | 5 | 0 | 0 | Login admin, estudiantes, parametros, simulaciones y restricciones |
+| `functional-manual` | 16 | 16 | 16 | 0 | 0 | Flujo HU-57 alineado con matriz oficial `F-01` a `F-16` |
+| `regression` | 7 | 7 | 7 | 0 | 0 | Revalidacion final de login, preview, save, detalle, export, admin y parametros |
+| **Total HU-57** | **47** | **47** | **47** | **0** | **0** | Cobertura cerrada y consolidada documentalmente |
+
+### 7.3 Soportes Documentales Destacados
+
+| Tipo de evidencia | Contenido consolidado | Rutas / ejemplos |
+|---|---|---|
+| `JSON / Body API` | Respuestas completas de auth, simulator, history-export, profile-parameters y admin | `docs/architecture/assets/evidence-integration-test/evidence-integration/auth/`, `simulator/`, `history-export/`, `profile-parameters/`, `admin/` |
+| `Capturas funcionales` | Navegacion manual, storage, redirecciones, formularios, resmenes, historial, paneles student/admin | `docs/architecture/assets/evidence-integration-test/evidence-integration/functional-manual/` |
+| `Regresion final` | Login estudiante/admin, preview, save, detalle, export PDF, consumo de parametros activos | `docs/architecture/assets/evidence-integration-test/evidence-integration/regression/` |
+| `Archivos exportados` | PDF y CSV generados desde detalle student y modulos admin | `F-08_student_export_pdf_file_01.pdf`, `F-10_admin_students_export_csv_file_01.csv`, `F-12_admin_simulation_export_pdf_file_01.pdf`, `F-12_admin_simulation_export_csv_file_01.csv`, `R-05_export_pdf_file_01.pdf` |
+| `Ambiente y prerequisitos` | Frontend, Swagger, health, parametros activos, logs de backend y consultas BD | `docs/architecture/assets/evidence-integration-test/evidence-integration/environment/` |
+| `Gate HU-56` | Soporte unitario previo para reglas financieras y validaciones base | `docs/architecture/assets/evidence-unit-test/` |
+
+### 7.4 Hallazgos y Cierre
+
+| Item | Detalle |
+|---|---|
+| Hallazgo controlado 1 | El usuario esperado `juantest@upb.edu.co` no estaba sembrado en BD; se uso `richardcarvajalb@gmail.com` como estudiante alternativo activo sin bloquear HU-57 |
+| Hallazgo controlado 2 | La gestion de parametros admin se recondujo sobre la version activa existente para evitar solapamiento de vigencias durante la evidencia de `I-16` |
+| Estado final | HU-57 quedo documentado de forma completa en `integration-test.md`, con trazabilidad de ambiente, integracion API, funcional/manual y regresion |
+| Resultado documental | Base documental cerrada, consistente con evidencias reales y lista para revision academica o de QA |
+
 ### Convenciones de Testing
 
 | Regla          | Descripción                                                                             |
@@ -441,85 +491,85 @@ Como resultado, el motor de cálculo del simulador queda validado en sus reglas 
 
 #### CP-U01
 
-![](assets/evidencias/image1.jpeg)
-![](assets/evidencias/image2.jpeg)
+![](assets/evidence-unit-test/image1.jpeg)
+![](assets/evidence-unit-test/image2.jpeg)
 
 #### CP-U02
 
-![](assets/evidencias/image3.jpeg)
-![](assets/evidencias/image4.jpeg)
-![](assets/evidencias/image5.jpeg)
-![](assets/evidencias/image6.jpeg)
+![](assets/evidence-unit-test/image3.jpeg)
+![](assets/evidence-unit-test/image4.jpeg)
+![](assets/evidence-unit-test/image5.jpeg)
+![](assets/evidence-unit-test/image6.jpeg)
 
 #### CP-U03
 
-![](assets/evidencias/image7.jpeg)
-![](assets/evidencias/image8.jpeg)
+![](assets/evidence-unit-test/image7.jpeg)
+![](assets/evidence-unit-test/image8.jpeg)
 
 #### CP-U04
 
-![](assets/evidencias/image9.jpeg)
-![](assets/evidencias/image10.jpeg)
+![](assets/evidence-unit-test/image9.jpeg)
+![](assets/evidence-unit-test/image10.jpeg)
 
 #### CP-U05
 
-![](assets/evidencias/image11.jpeg)
-![](assets/evidencias/image12.jpeg)
+![](assets/evidence-unit-test/image11.jpeg)
+![](assets/evidence-unit-test/image12.jpeg)
 
 #### CP-U06
 
-![](assets/evidencias/image13.jpeg)
-![](assets/evidencias/image14.jpeg)
+![](assets/evidence-unit-test/image13.jpeg)
+![](assets/evidence-unit-test/image14.jpeg)
 
 #### CP-U07
 
-![](assets/evidencias/image15.jpeg)
-![](assets/evidencias/image16.jpeg)
-![](assets/evidencias/image17.jpeg)
+![](assets/evidence-unit-test/image15.jpeg)
+![](assets/evidence-unit-test/image16.jpeg)
+![](assets/evidence-unit-test/image17.jpeg)
 
 #### CP-U08
 
-![](assets/evidencias/image18.jpeg)
-![](assets/evidencias/image19.jpeg)
-![](assets/evidencias/image20.jpeg)
-![](assets/evidencias/image21.jpeg)
-![](assets/evidencias/image22.jpeg)
-![](assets/evidencias/image23.jpeg)
-![](assets/evidencias/image24.jpeg)
-![](assets/evidencias/image25.jpeg)
-![](assets/evidencias/image26.jpeg)
+![](assets/evidence-unit-test/image18.jpeg)
+![](assets/evidence-unit-test/image19.jpeg)
+![](assets/evidence-unit-test/image20.jpeg)
+![](assets/evidence-unit-test/image21.jpeg)
+![](assets/evidence-unit-test/image22.jpeg)
+![](assets/evidence-unit-test/image23.jpeg)
+![](assets/evidence-unit-test/image24.jpeg)
+![](assets/evidence-unit-test/image25.jpeg)
+![](assets/evidence-unit-test/image26.jpeg)
 
 #### CP-U09
 
-![](assets/evidencias/image27.jpeg)
-![](assets/evidencias/image28.jpeg)
+![](assets/evidence-unit-test/image27.jpeg)
+![](assets/evidence-unit-test/image28.jpeg)
 
 #### CP-U10
 
-![](assets/evidencias/image29.jpeg)
+![](assets/evidence-unit-test/image29.jpeg)
 
 #### CP-U11
 
-![](assets/evidencias/image30.jpeg)
+![](assets/evidence-unit-test/image30.jpeg)
 
 #### CP-U12
 
-![](assets/evidencias/image31.jpeg)
-![](assets/evidencias/image32.jpeg)
-![](assets/evidencias/image33.jpeg)
-![](assets/evidencias/image34.jpeg)
-![](assets/evidencias/image35.jpeg)
-![](assets/evidencias/image36.jpeg)
+![](assets/evidence-unit-test/image31.jpeg)
+![](assets/evidence-unit-test/image32.jpeg)
+![](assets/evidence-unit-test/image33.jpeg)
+![](assets/evidence-unit-test/image34.jpeg)
+![](assets/evidence-unit-test/image35.jpeg)
+![](assets/evidence-unit-test/image36.jpeg)
 
 #### CP-U13
 
-![](assets/evidencias/image37.jpeg)
-![](assets/evidencias/image38.jpeg)
+![](assets/evidence-unit-test/image37.jpeg)
+![](assets/evidence-unit-test/image38.jpeg)
 
 #### CP-U14
 
-![](assets/evidencias/image39.jpeg)
-![](assets/evidencias/image40.jpeg)
+![](assets/evidence-unit-test/image39.jpeg)
+![](assets/evidence-unit-test/image40.jpeg)
 
 ---
 

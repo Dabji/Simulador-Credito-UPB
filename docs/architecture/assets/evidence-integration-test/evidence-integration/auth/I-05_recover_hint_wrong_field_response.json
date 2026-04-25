@@ -1,0 +1,15 @@
+{
+  "documentNumber": "1099001234",
+
+    "success": false,
+    "error": {
+        "message": "Los datos enviados no son válidos.",
+        "statusCode": 400,
+        "errorCode": "VALIDATION_ERROR",
+        "fieldErrors": {
+            "identificationNumber": [
+                "Invalid input: expected string, received undefined"
+            ]
+        }
+    }
+}

@@ -1,0 +1,48 @@
+﻿Campo,Valor
+Simulador,Crédito Educativo UPB
+Fecha de generación,24 de abril de 2026
+
+Nombre completo,Carlos Figueroa
+Correo electrónico,carlos@upb.edu.co
+Tipo de documento,CE
+Número de identificación,1029304850
+Número de celular,3206839102
+Nivel educativo,Pregrado
+Tipo de estudiante,Nuevo
+Modalidad,Con Intereses
+Fecha de creación,21/4/2026
+Período académico,2026-02
+
+Resumen financiero,
+Valor matrícula (bruto),8200000
+Beca / descuento (%),0
+Matrícula neta,8200000
+Cuota inicial,1640000
+Cuota inicial (%),20
+Valor a financiar,6560000
+Tasa de interés mensual (%),3
+Número de cuotas,6
+Cuota fija mensual estimada,1432406
+Total a pagar,8802030
+Total intereses,602031
+Observaciones,
+
+Cronograma de amortización,,,,,,
+Cuota inicial (no genera intereses),1640000,20%,,,,
+
+N° Cuota,Fecha,Saldo Inicial (COP),Capital (COP),Interés (COP),Valor Cuota (COP),Saldo Final (COP)
+2,Junio de 2026,6560000,1235606,196800,1432406,5324394
+3,Julio de 2026,5324394,1272674,159732,1432406,4051720
+4,Agosto de 2026,4051720,1310854,121552,1432406,2740866
+5,Septiembre de 2026,2740866,1350180,82226,1432406,1390686
+6,Octubre de 2026,1390685,1390685,41721,1432406,0
+
+Evolución del saldo,,
+N° Cuota,Fecha,Saldo Final (COP)
+2,Junio de 2026,5324394
+3,Julio de 2026,4051720
+4,Agosto de 2026,2740866
+5,Septiembre de 2026,1390686
+6,Octubre de 2026,0
+
+Nota,Los valores son referenciales y pueden variar según políticas institucionales vigentes.
