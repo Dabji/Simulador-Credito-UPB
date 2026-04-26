@@ -23,6 +23,7 @@ las elecciones técnicas del proyecto.
 | ADR-006 | [React 19 + Vite como stack frontend](#adr-006--react-19--vite-como-stack-frontend) | ✅ Adoptada |
 | ADR-007 | [MySQL en Aiven Cloud con Sequelize ORM](#adr-007--mysql-en-aiven-cloud-con-sequelize-orm) | ✅ Adoptada |
 | ADR-008 | [Soft-Delete + Purga Automática de Simulaciones](#adr-008--soft-delete--purga-automática-de-simulaciones) | ✅ Adoptada |
+| ADR-009 | [Ambientes y manejo de secretos fail-fast](#adr-009--ambientes-y-manejo-de-secretos-fail-fast) | ✅ Adoptada |
 
 ---
 
@@ -428,6 +429,59 @@ Usar **npm workspaces** nativos con la siguiente estructura:
 - ✅ **Trazabilidad**: Toda eliminación queda registrada en `audit_logs`.
 - ✅ **Cumplimiento**: La política de retención de 90 días se aplica automáticamente.
 - ⚠️ **Crecimiento de BD**: Las simulaciones "eliminadas" ocupan espacio hasta la purga.
+
+---
+
+## ADR-009 — Ambientes y manejo de secretos fail-fast
+
+| Campo | Detalle |
+|---|---|
+| **Fecha** | Abril 2026 |
+| **Estado** | ✅ Adoptada |
+| **Contexto** | La HU-58 requiere estandarizar cómo frontend y backend consumen variables de entorno, evitar credenciales en código fuente y documentar la estrategia de despliegue para Local, Testing/Staging y Producción WAN. |
+
+### Decisión
+
+Se adopta una estrategia centralizada de configuración por ambiente:
+
+1. **Plantilla única**: `.env.example` vive en la raíz del monorepo y contiene únicamente valores dummy.
+2. **Exclusión explícita**: `.gitignore` bloquea `.env`, variantes locales, certificados SSL/TLS y `server/certs/`.
+3. **Validación fail-fast**: `server/src/Infrastructure/config/env.ts` usa Zod para detener el arranque si falta una variable crítica o si un secreto conserva un placeholder.
+4. **Frontend controlado**: Vite lee variables desde la raíz y el cliente solo consume `VITE_API_URL`, asumida pública.
+5. **Producción sin secretos versionados**: PM2, el sistema operativo o el pipeline CI/CD inyectan credenciales reales.
+
+### Flujo de configuración
+
+```mermaid
+flowchart LR
+    EX[".env.example<br/>(dummy)"] --> DEV[".env local<br/>(gitignored)"]
+    DEV --> BE["Backend env.ts<br/>Zod fail-fast"]
+    DEV --> FE["Frontend Vite<br/>VITE_API_URL"]
+    PM2["PM2 / CI-CD"] --> PROD["Producción WAN<br/>secrets inyectados"]
+    PROD --> BE
+
+    style EX fill:#FEF3C7,stroke:#D97706,color:#000
+    style DEV fill:#FEE2E2,stroke:#DC2626,color:#000
+    style BE fill:#DCFCE7,stroke:#16A34A,color:#000
+    style FE fill:#DBEAFE,stroke:#2563EB,color:#000
+```
+
+### Consecuencias
+
+- ✅ **Menor riesgo de filtración**: Las credenciales reales no se documentan ni se versionan.
+- ✅ **Arranque seguro**: El backend falla temprano si falta `JWT_SECRET`, credenciales de BD o reglas obligatorias de producción.
+- ✅ **Onboarding claro**: Nuevos desarrolladores copian `.env.example`, completan `.env` y siguen una guía única.
+- ✅ **Separación por ambiente**: Desarrollo, staging y producción tienen secretos independientes.
+- ⚠️ **Más disciplina operativa**: Cada variable nueva debe agregarse a `.env.example`, al esquema Zod y a la matriz documental.
+
+### Evidencia
+
+| Artefacto | Ubicación |
+|---|---|
+| Plantilla segura | [`.env.example`](../../.env.example) |
+| Validación backend | [`server/src/Infrastructure/config/env.ts`](../../server/src/Infrastructure/config/env.ts) |
+| Documento HU-58 | [`docs/architecture/environments-and-secrets.md`](./environments-and-secrets.md) |
+| Versión Word | [`docs/architecture/environments-and-secrets.docx`](./environments-and-secrets.docx) |
 
 ---
 

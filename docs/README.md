@@ -15,6 +15,8 @@ docs/
 ├── architecture/           # 🏗️ Sustento técnico (ADRs, flujos, evidencias)
 │   ├── technical-decisions.md
 │   ├── system-design.md
+│   ├── environments-and-secrets.md
+│   ├── environments-and-secrets.docx
 │   └── test-evidence.md
 ├── requirements/           # Requisitos, charter, backlog y especificaciones
 ├── diagrams/               # Diagramas UML por módulo (StarUML)
@@ -34,8 +36,10 @@ Documentación técnica que fundamenta las decisiones de diseño y demuestra la 
 
 | Archivo | Descripción |
 |---|---|
-| [`technical-decisions.md`](./architecture/technical-decisions.md) | **8 ADRs** — Clean Architecture, Strategy Pattern, validación Zod + XSS, autenticación dual JWT/LDAP, monorepo npm workspaces, stack React 19 + Vite, MySQL Aiven Cloud, soft-delete + purga automática. |
+| [`technical-decisions.md`](./architecture/technical-decisions.md) | **9 ADRs** — Clean Architecture, Strategy Pattern, validación Zod + XSS, autenticación dual JWT/LDAP, monorepo npm workspaces, stack React 19 + Vite, MySQL Aiven Cloud, soft-delete + purga automática y manejo seguro de ambientes/secretos. |
 | [`system-design.md`](./architecture/system-design.md) | **Flujos técnicos** — Diagrama de secuencia completo de una simulación (Form → Middleware → UseCase → Engine → Strategy), modelo de seguridad Defense in Depth (7 capas), flujo de autenticación, exportación PDF, ciclo de vida de simulaciones y modelo ER detallado. |
+| [`environments-and-secrets.md`](./architecture/environments-and-secrets.md) | **HU-58** — Definición de ambientes Local, Testing/Staging y Producción WAN; matriz de variables; estrategia de secretos; guía de configuración local y evidencia documental. |
+| [`environments-and-secrets.docx`](./architecture/environments-and-secrets.docx) | **Versión Word** — Documento editable para entrega formal o revisión externa de la HU-58. |
 | [`test-evidence.md`](./architecture/test-evidence.md) | **Evidencias de testing** — Salida de Jest (4 suites, 50 tests) y Vitest (2 suites, 6 tests), reporte de cobertura de código, análisis de componentes con alta/baja cobertura y plan de mejora por sprint. |
 
 ---
