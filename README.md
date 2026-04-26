@@ -246,7 +246,7 @@ classDiagram
 | 💰 **Lineamientos Financieros** | Formatos oficiales de solicitud de crédito del área financiera UPB. | [`docs/financial-guidelines/`](./docs/financial-guidelines/) |
 | 🤝 **Actas de Reunión** | Actas firmadas de reuniones con el área financiera (7 sesiones). | [`docs/meeting-minutes/`](./docs/meeting-minutes/) |
 | 🏃 **Sprints** | Backlogs y presentaciones de cada Sprint. | [`docs/sprints/`](./docs/sprints/) |
-| 🏗️ **Sustento Técnico** | Decisiones arquitectónicas, flujos de datos y evidencias de testing. | [`docs/architecture/`](./docs/architecture/) |
+| 🏗️ **Sustento Técnico** | Decisiones arquitectónicas, flujos de datos, ambientes, secretos y evidencias de testing. | [`docs/architecture/`](./docs/architecture/) |
 
 ### 🛡️ Sustento Técnico — Arquitectura y Evidencias
 
@@ -254,8 +254,10 @@ Documentación técnica que fundamenta las decisiones de diseño y demuestra la 
 
 | Documento | Descripción |
 |---|---|
-| 📝 [**Decisiones Técnicas (ADR)**](./docs/architecture/technical-decisions.md) | 8 Architecture Decision Records: Clean Architecture, Strategy Pattern, Zod validation, autenticación dual JWT+LDAP, monorepo, stack frontend, MySQL Aiven, soft-delete + purga automática. |
+| 📝 [**Decisiones Técnicas (ADR)**](./docs/architecture/technical-decisions.md) | 9 Architecture Decision Records: Clean Architecture, Strategy Pattern, Zod validation, autenticación dual JWT+LDAP, monorepo, stack frontend, MySQL Aiven, soft-delete + purga automática y manejo seguro de ambientes/secretos. |
 | ⚙️ [**Diseño del Sistema**](./docs/architecture/system-design.md) | Flujos de datos completos con diagramas Mermaid: pipeline de simulación (SimulationForm → Engine → AmortizationTable), modelo de seguridad Defense in Depth (7 capas), flujo de autenticación, exportación PDF, ciclo de vida de simulaciones y modelo ER detallado. |
+| 🔐 [**Ambientes y Secretos (HU-58)**](./docs/architecture/environments-and-secrets.md) | Estrategia oficial de configuración para Local, Testing/Staging y Producción WAN; matriz de variables; exclusión de secretos y guía rápida de `.env`. |
+| 📄 [**Ambientes y Secretos — DOCX**](./docs/architecture/environments-and-secrets.docx) | Versión editable Word para entrega formal o revisión externa. |
 | 🧪 [**Evidencias de Testing**](./docs/architecture/test-evidence.md) | Resultados de ejecución de Jest (50 tests backend) y Vitest (6 tests frontend), reporte de cobertura de código, análisis de priorización y estrategia de testing por sprint. |
 
 ---
@@ -299,7 +301,7 @@ simulador-credito-upb/
 │   └── package.json
 │
 ├── docs/                            # 📖 Documentación del proyecto
-│   ├── architecture/               # 🏗️ ADRs, flujos técnicos, evidencias de testing
+│   ├── architecture/               # 🏗️ ADRs, flujos técnicos, ambientes, secretos y testing
 │   ├── requirements/                # Charter, backlog, especificaciones
 │   ├── diagrams/                    # Diagramas UML por módulo
 │   ├── database/                    # ER diagram + diccionario de datos
@@ -340,6 +342,9 @@ npm install
 cp .env.example .env
 # Edita .env con tus credenciales de BD (Aiven), LDAP, SMTP y JWT
 ```
+
+> 🔐 Consulta la guía completa de ambientes y secretos en
+> [`docs/architecture/environments-and-secrets.md`](./docs/architecture/environments-and-secrets.md).
 
 ### Desarrollo
 
