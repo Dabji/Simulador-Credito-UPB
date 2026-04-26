@@ -1,0 +1,45 @@
+PS C:\Users\RICHARD\Documents\UPB\Semestre_5\P1\SimuladorCreditos\Simulador-Credito-UPB> npm run test --workspace=server -- --runInBand --runTestsByPath src/Application/__tests__/SimulationEngine.test.ts
+>> 
+
+> server@1.0.0 test
+> jest --forceExit --detectOpenHandles --runInBand --runTestsByPath src/Application/__tests__/SimulationEngine.test.ts
+
+ PASS  src/Application/__tests__/SimulationEngine.test.ts
+  SimulationEngine
+    Sin interés (cuota lineal)
+      √ debe generar numberOfPayments-1 filas en la tabla (#58) (8 ms)
+      √ debe calcular cuota lineal = financedValue / (n-1) (1 ms)
+      √ debe tener interest = 0 en todas las filas sin interés (2 ms)
+      √ la última fila debe tener finalBalance = 0 (2 ms)
+      √ totalPaid debe incluir la cuota inicial + suma del plan (2 ms)
+      √ numberOfPayments=1 debe producir schedule vacío (solo cuota inicial) (1 ms)
+    Con interés (Sistema Francés)
+      √ debe calcular cuota fija con fórmula M = P*r*(1+r)^n / ((1+r)^n - 1) (2 ms)
+      √ interest en cada fila debe ser round(balance * tasa) (1 ms)
+      √ totalInterest debe ser la suma de todos los intereses del plan (1 ms)
+      √ totalPaid debe incluir la cuota inicial más la suma de cuotas con interés (1 ms)
+      √ la última fila debe tener finalBalance = 0 (absorbe residuo de redondeo) (1 ms)
+      √ debe lanzar error si no hay activeVersion para con_interes (13 ms)
+      √ debe usar la tasa de posgrado cuando educationLevel=posgrado (1 ms)
+    HU-PV-02 — Modalidad derivada desde levelConfigs
+      √ debe forzar sin_interes cuando numberOfPayments <= maxPaymentsSinInteres (1 ms)
+      √ debe forzar con_interes cuando numberOfPayments > maxPaymentsSinInteres (2 ms)
+      √ debe usar la tasa de levelConfigs en lugar de interestRates (1 ms)
+      √ debe ignorar configs inactivos y caer en fallback legacy (sin_interes <= 3) (1 ms)
+    Reglas de negocio
+      √ #57 — upbTech debe ignorar beca (scholarshipPct → 0) (1 ms)
+      √ #59 — forzar sin_interes si numberOfPayments <= 3 y se envió con_interes (1 ms)
+      √ beca del 50% debe reducir tuitionNet a la mitad (2 ms)
+    Fechas de pago (#60 — mes calendario)
+      √ debe avanzar mes a mes desde firstPaymentMonth (1 ms)
+      √ debe cruzar año correctamente (dic → ene) (1 ms)
+    SimulationSummary
+      √ debe incluir un id UUID (1 ms)
+      √ financedValue = tuitionNet - initialPayment (1 ms)
+      √ los periods deben empezar en 2 y ser consecutivos (1 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       25 passed, 25 total
+Snapshots:   0 total
+Time:        1.713 s, estimated 2 s
+Ran all test suites within paths "src/Application/__tests__/SimulationEngine.test.ts".

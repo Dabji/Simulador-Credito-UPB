@@ -1,0 +1,250 @@
+{
+    "success": true,
+    "data": {
+        "id": "52fe8170-293f-4c43-9660-f045de2daf7f",
+        "validFrom": "2026-04-24",
+        "validTo": null,
+        "installmentsWindowFrom": "2026-06-01",
+        "installmentsWindowTo": "2026-06-01",
+        "paymentPeriodDays": 30,
+        "initialPaymentRules": [
+            {
+                "level": "PREGRADO",
+                "modality": "SIN_INTERES",
+                "extraInstallments": 0,
+                "initialPctRequired": 0.2
+            },
+            {
+                "level": "PREGRADO",
+                "modality": "CON_INTERES",
+                "extraInstallments": 3,
+                "initialPctRequired": 0.25
+            },
+            {
+                "level": "POSGRADO",
+                "modality": "SIN_INTERES",
+                "extraInstallments": 0,
+                "initialPctRequired": 0.3
+            },
+            {
+                "level": "POSGRADO",
+                "modality": "CON_INTERES",
+                "extraInstallments": 3,
+                "initialPctRequired": 0.3
+            },
+            {
+                "level": "UPB_Tech",
+                "modality": "SIN_INTERES",
+                "extraInstallments": 0,
+                "initialPctRequired": 0.15
+            },
+            {
+                "level": "UPB_Tech",
+                "modality": "CON_INTERES",
+                "extraInstallments": 3,
+                "initialPctRequired": 0.15
+            }
+        ],
+        "levelConfigs": [
+            {
+                "id": "25da1afc-bf86-4231-87d5-fe2f96f177cb",
+                "levelScope": "UPB_Tech",
+                "isActive": true,
+                "validFrom": "2026-04-21",
+                "validTo": null,
+                "maxPaymentsSinInteres": 3,
+                "maxPaymentsConInteres": 6,
+                "paymentCount": 1,
+                "rateMonthly": 0
+            },
+            {
+                "id": "25da1afc-bf86-4231-87d5-fe2f96f177cb",
+                "levelScope": "UPB_Tech",
+                "isActive": true,
+                "validFrom": "2026-04-21",
+                "validTo": null,
+                "maxPaymentsSinInteres": 3,
+                "maxPaymentsConInteres": 6,
+                "paymentCount": 2,
+                "rateMonthly": 0
+            },
+            {
+                "id": "25da1afc-bf86-4231-87d5-fe2f96f177cb",
+                "levelScope": "UPB_Tech",
+                "isActive": true,
+                "validFrom": "2026-04-21",
+                "validTo": null,
+                "maxPaymentsSinInteres": 3,
+                "maxPaymentsConInteres": 6,
+                "paymentCount": 3,
+                "rateMonthly": 0
+            },
+            {
+                "id": "25da1afc-bf86-4231-87d5-fe2f96f177cb",
+                "levelScope": "UPB_Tech",
+                "isActive": true,
+                "validFrom": "2026-04-21",
+                "validTo": null,
+                "maxPaymentsSinInteres": 3,
+                "maxPaymentsConInteres": 6,
+                "paymentCount": 4,
+                "rateMonthly": 0.01
+            },
+            {
+                "id": "25da1afc-bf86-4231-87d5-fe2f96f177cb",
+                "levelScope": "UPB_Tech",
+                "isActive": true,
+                "validFrom": "2026-04-21",
+                "validTo": null,
+                "maxPaymentsSinInteres": 3,
+                "maxPaymentsConInteres": 6,
+                "paymentCount": 5,
+                "rateMonthly": 0.01
+            },
+            {
+                "id": "25da1afc-bf86-4231-87d5-fe2f96f177cb",
+                "levelScope": "UPB_Tech",
+                "isActive": true,
+                "validFrom": "2026-04-21",
+                "validTo": null,
+                "maxPaymentsSinInteres": 3,
+                "maxPaymentsConInteres": 6,
+                "paymentCount": 6,
+                "rateMonthly": 0.01
+            },
+            {
+                "id": "91fa4cfa-1047-4ef5-9957-0ddbd198563d",
+                "levelScope": "PREGRADO",
+                "isActive": true,
+                "validFrom": "2026-04-11",
+                "validTo": null,
+                "maxPaymentsSinInteres": 3,
+                "maxPaymentsConInteres": 6,
+                "paymentCount": 1,
+                "rateMonthly": 0
+            },
+            {
+                "id": "91fa4cfa-1047-4ef5-9957-0ddbd198563d",
+                "levelScope": "PREGRADO",
+                "isActive": true,
+                "validFrom": "2026-04-11",
+                "validTo": null,
+                "maxPaymentsSinInteres": 3,
+                "maxPaymentsConInteres": 6,
+                "paymentCount": 2,
+                "rateMonthly": 0
+            },
+            {
+                "id": "91fa4cfa-1047-4ef5-9957-0ddbd198563d",
+                "levelScope": "PREGRADO",
+                "isActive": true,
+                "validFrom": "2026-04-11",
+                "validTo": null,
+                "maxPaymentsSinInteres": 3,
+                "maxPaymentsConInteres": 6,
+                "paymentCount": 3,
+                "rateMonthly": 0
+            },
+            {
+                "id": "91fa4cfa-1047-4ef5-9957-0ddbd198563d",
+                "levelScope": "PREGRADO",
+                "isActive": true,
+                "validFrom": "2026-04-11",
+                "validTo": null,
+                "maxPaymentsSinInteres": 3,
+                "maxPaymentsConInteres": 6,
+                "paymentCount": 4,
+                "rateMonthly": 0.01
+            },
+            {
+                "id": "91fa4cfa-1047-4ef5-9957-0ddbd198563d",
+                "levelScope": "PREGRADO",
+                "isActive": true,
+                "validFrom": "2026-04-11",
+                "validTo": null,
+                "maxPaymentsSinInteres": 3,
+                "maxPaymentsConInteres": 6,
+                "paymentCount": 5,
+                "rateMonthly": 0.01
+            },
+            {
+                "id": "91fa4cfa-1047-4ef5-9957-0ddbd198563d",
+                "levelScope": "PREGRADO",
+                "isActive": true,
+                "validFrom": "2026-04-11",
+                "validTo": null,
+                "maxPaymentsSinInteres": 3,
+                "maxPaymentsConInteres": 6,
+                "paymentCount": 6,
+                "rateMonthly": 0.01
+            },
+            {
+                "id": "1e40eee4-93f5-4bba-b1fa-d600caa3026d",
+                "levelScope": "POSGRADO",
+                "isActive": true,
+                "validFrom": "2026-04-08",
+                "validTo": null,
+                "maxPaymentsSinInteres": 3,
+                "maxPaymentsConInteres": 6,
+                "paymentCount": 1,
+                "rateMonthly": 0
+            },
+            {
+                "id": "1e40eee4-93f5-4bba-b1fa-d600caa3026d",
+                "levelScope": "POSGRADO",
+                "isActive": true,
+                "validFrom": "2026-04-08",
+                "validTo": null,
+                "maxPaymentsSinInteres": 3,
+                "maxPaymentsConInteres": 6,
+                "paymentCount": 2,
+                "rateMonthly": 0
+            },
+            {
+                "id": "1e40eee4-93f5-4bba-b1fa-d600caa3026d",
+                "levelScope": "POSGRADO",
+                "isActive": true,
+                "validFrom": "2026-04-08",
+                "validTo": null,
+                "maxPaymentsSinInteres": 3,
+                "maxPaymentsConInteres": 6,
+                "paymentCount": 3,
+                "rateMonthly": 0
+            },
+            {
+                "id": "1e40eee4-93f5-4bba-b1fa-d600caa3026d",
+                "levelScope": "POSGRADO",
+                "isActive": true,
+                "validFrom": "2026-04-08",
+                "validTo": null,
+                "maxPaymentsSinInteres": 3,
+                "maxPaymentsConInteres": 6,
+                "paymentCount": 4,
+                "rateMonthly": 0.01
+            },
+            {
+                "id": "1e40eee4-93f5-4bba-b1fa-d600caa3026d",
+                "levelScope": "POSGRADO",
+                "isActive": true,
+                "validFrom": "2026-04-08",
+                "validTo": null,
+                "maxPaymentsSinInteres": 3,
+                "maxPaymentsConInteres": 6,
+                "paymentCount": 5,
+                "rateMonthly": 0.01
+            },
+            {
+                "id": "1e40eee4-93f5-4bba-b1fa-d600caa3026d",
+                "levelScope": "POSGRADO",
+                "isActive": true,
+                "validFrom": "2026-04-08",
+                "validTo": null,
+                "maxPaymentsSinInteres": 3,
+                "maxPaymentsConInteres": 6,
+                "paymentCount": 6,
+                "rateMonthly": 0.01
+            }
+        ]
+    },
+    "message": "Versión activada correctamente."
+}

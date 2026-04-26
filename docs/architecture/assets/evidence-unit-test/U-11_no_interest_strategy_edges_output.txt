@@ -1,0 +1,17 @@
+PS C:\Users\RICHARD\Documents\UPB\Semestre_5\P1\SimuladorCreditos\Simulador-Credito-UPB> npm run test --workspace=server -- --runInBand --runTestsByPath src/Application/__tests__/NoInterestStrategy.test.ts
+>> 
+
+> server@1.0.0 test
+> jest --forceExit --detectOpenHandles --runInBand --runTestsByPath src/Application/__tests__/NoInterestStrategy.test.ts
+
+ PASS  src/Application/__tests__/NoInterestStrategy.test.ts
+  NoInterestStrategy
+    √ calcula P / n para cuota sin interés (4 ms)
+    √ retorna 0 cuando el principal es 0 (1 ms)
+    √ retorna 0 cuando el número de cuotas es 0 (1 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       3 passed, 3 total
+Snapshots:   0 total
+Time:        2.536 s
+Ran all test suites within paths "src/Application/__tests__/NoInterestStrategy.test.ts".

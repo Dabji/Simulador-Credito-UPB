@@ -147,69 +147,69 @@ Como resultado, el motor de calculo del simulador queda validado en sus reglas m
 ## 7. Evidencias Visuales por Caso (HU-56)
 
 ### CP-U01
-![](assets/evidencias/image1.jpeg)
-![](assets/evidencias/image2.jpeg)
+![](assets/evidence-unit-test/image1.jpeg)
+![](assets/evidence-unit-test/image2.jpeg)
 
 ### CP-U02
-![](assets/evidencias/image3.jpeg)
-![](assets/evidencias/image4.jpeg)
-![](assets/evidencias/image5.jpeg)
-![](assets/evidencias/image6.jpeg)
+![](assets/evidence-unit-test/image3.jpeg)
+![](assets/evidence-unit-test/image4.jpeg)
+![](assets/evidence-unit-test/image5.jpeg)
+![](assets/evidence-unit-test/image6.jpeg)
 
 ### CP-U03
-![](assets/evidencias/image7.jpeg)
-![](assets/evidencias/image8.jpeg)
+![](assets/evidence-unit-test/image7.jpeg)
+![](assets/evidence-unit-test/image8.jpeg)
 
 ### CP-U04
-![](assets/evidencias/image9.jpeg)
-![](assets/evidencias/image10.jpeg)
+![](assets/evidence-unit-test/image9.jpeg)
+![](assets/evidence-unit-test/image10.jpeg)
 
 ### CP-U05
-![](assets/evidencias/image11.jpeg)
-![](assets/evidencias/image12.jpeg)
+![](assets/evidence-unit-test/image11.jpeg)
+![](assets/evidence-unit-test/image12.jpeg)
 
 ### CP-U06
-![](assets/evidencias/image13.jpeg)
-![](assets/evidencias/image14.jpeg)
+![](assets/evidence-unit-test/image13.jpeg)
+![](assets/evidence-unit-test/image14.jpeg)
 
 ### CP-U07
-![](assets/evidencias/image15.jpeg)
-![](assets/evidencias/image16.jpeg)
-![](assets/evidencias/image17.jpeg)
+![](assets/evidence-unit-test/image15.jpeg)
+![](assets/evidence-unit-test/image16.jpeg)
+![](assets/evidence-unit-test/image17.jpeg)
 
 ### CP-U08
-![](assets/evidencias/image18.jpeg)
-![](assets/evidencias/image19.jpeg)
-![](assets/evidencias/image20.jpeg)
-![](assets/evidencias/image21.jpeg)
-![](assets/evidencias/image22.jpeg)
-![](assets/evidencias/image23.jpeg)
-![](assets/evidencias/image24.jpeg)
-![](assets/evidencias/image25.jpeg)
-![](assets/evidencias/image26.jpeg)
+![](assets/evidence-unit-test/image18.jpeg)
+![](assets/evidence-unit-test/image19.jpeg)
+![](assets/evidence-unit-test/image20.jpeg)
+![](assets/evidence-unit-test/image21.jpeg)
+![](assets/evidence-unit-test/image22.jpeg)
+![](assets/evidence-unit-test/image23.jpeg)
+![](assets/evidence-unit-test/image24.jpeg)
+![](assets/evidence-unit-test/image25.jpeg)
+![](assets/evidence-unit-test/image26.jpeg)
 
 ### CP-U09
-![](assets/evidencias/image27.jpeg)
-![](assets/evidencias/image28.jpeg)
+![](assets/evidence-unit-test/image27.jpeg)
+![](assets/evidence-unit-test/image28.jpeg)
 
 ### CP-U10
-![](assets/evidencias/image29.jpeg)
+![](assets/evidence-unit-test/image29.jpeg)
 
 ### CP-U11
-![](assets/evidencias/image30.jpeg)
+![](assets/evidence-unit-test/image30.jpeg)
 
 ### CP-U12
-![](assets/evidencias/image31.jpeg)
-![](assets/evidencias/image32.jpeg)
-![](assets/evidencias/image33.jpeg)
-![](assets/evidencias/image34.jpeg)
-![](assets/evidencias/image35.jpeg)
-![](assets/evidencias/image36.jpeg)
+![](assets/evidence-unit-test/image31.jpeg)
+![](assets/evidence-unit-test/image32.jpeg)
+![](assets/evidence-unit-test/image33.jpeg)
+![](assets/evidence-unit-test/image34.jpeg)
+![](assets/evidence-unit-test/image35.jpeg)
+![](assets/evidence-unit-test/image36.jpeg)
 
 ### CP-U13
-![](assets/evidencias/image37.jpeg)
-![](assets/evidencias/image38.jpeg)
+![](assets/evidence-unit-test/image37.jpeg)
+![](assets/evidence-unit-test/image38.jpeg)
 
 ### CP-U14
-![](assets/evidencias/image39.jpeg)
-![](assets/evidencias/image40.jpeg)
+![](assets/evidence-unit-test/image39.jpeg)
+![](assets/evidence-unit-test/image40.jpeg)
