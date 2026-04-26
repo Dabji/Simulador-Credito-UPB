@@ -13,19 +13,21 @@ const ENV_PATH_CANDIDATES = [
   path.resolve(process.cwd(), '..', '.env'),
 ];
 
+const nodeEnv = process.env.NODE_ENV ?? 'development';
+const isProduction = nodeEnv === 'production';
 const envPath = ENV_PATH_CANDIDATES.find((candidate) => fs.existsSync(candidate));
 
-if (envPath) {
+if (envPath && !isProduction) {
   const dotenvResult = dotenv.config({ path: envPath });
 
   if (dotenvResult.error) {
     console.warn(`No se pudo cargar .env desde ${envPath}: ${dotenvResult.error.message}`);
-  } else if ((process.env.NODE_ENV ?? 'development') === 'development') {
+  } else if (nodeEnv === 'development') {
     const count = Object.keys(dotenvResult.parsed ?? {}).length;
     console.log(`.env cargado desde ${envPath} (${count} variables)`);
   }
-} else if ((process.env.NODE_ENV ?? 'development') !== 'production') {
-  console.warn('No se encontro archivo .env. Se usaran variables del sistema si existen.');
+} else if (!isProduction && !envPath) {
+  console.warn('No se encontró archivo .env. Se usarán variables del sistema si existen.');
 }
 
 const PLACEHOLDER_PATTERN = /(dummy|placeholder|change-in-production|your_|tu_|_aqui|here|password_temporal)/i;
@@ -39,7 +41,7 @@ function emptyToUndefined(value: unknown): unknown {
 function requiredString(name: string) {
   return z.preprocess(
     emptyToUndefined,
-    z.string({ error: `${name} es obligatoria` }).trim().min(1, `${name} no puede estar vacia`),
+    z.string().trim().min(1, `${name} no puede estar vacia`),
   );
 }
 
@@ -53,7 +55,7 @@ function optionalString() {
 function requiredSecret(name: string, minLength = 1) {
   return z.preprocess(
     emptyToUndefined,
-    z.string({ error: `${name} es obligatoria` })
+    z.string()
       .trim()
       .min(minLength, `${name} debe tener al menos ${minLength} caracteres`)
       .refine((value) => !PLACEHOLDER_PATTERN.test(value), {
@@ -100,7 +102,7 @@ function optionalPortString(name: string) {
 
 const baseEnvSchema = z.object({
   // Servidor
-  PORT: z.preprocess(emptyToUndefined, portString('PORT').default('3000')),
+  PORT: portString('PORT').default('3000'),
   NODE_ENV: z.preprocess(
     emptyToUndefined,
     z.enum(['development', 'production', 'test']).default('development'),
@@ -221,7 +223,11 @@ function formatEnvErrors(error: z.ZodError): string {
   return error.issues
     .map((issue) => {
       const key = issue.path.length > 0 ? issue.path.join('.') : 'ENV';
-      return `- ${key}: ${issue.message}`;
+      const message =
+        issue.code === 'invalid_type' && 'expected' in issue && issue.expected === 'string'
+          ? `${key} es obligatoria`
+          : issue.message;
+      return `- ${key}: ${message}`;
     })
     .join('\n');
 }
@@ -230,7 +236,7 @@ function validateEnv(): EnvConfig {
   const result = envSchema.safeParse(process.env);
 
   if (!result.success) {
-    console.error('Variables de entorno invalidas:');
+    console.error('Variables de entorno inválidas:');
     console.error(formatEnvErrors(result.error));
     process.exit(1);
   }
