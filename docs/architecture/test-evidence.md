@@ -1,4 +1,4 @@
-<div align="center">
+﻿<div align="center">
 
 # 🧪 Evidencias de Testing — Simulador de Crédito UPB
 
@@ -345,47 +345,52 @@ Las siguientes capturas provienen de Pull Requests del proyecto y evidencian la 
 
 </div>
 
-## Sprint 3 — HU-56 Motor de Cálculo
+## Sprint 3 — HU-56 Pruebas Unitarias
 
-Documento actualizado con la ejecución real de pruebas unitarias del backend realizada el **21 de abril de 2026** sobre el workspace actual del proyecto.
+Documento actualizado con la ejecucion real de pruebas unitarias del backend realizada el **21 de abril de 2026**, reorganizado con base en la estructura actual de evidencias en `docs/architecture/assets/evidence-unit-test/`.
 
-### 1. Resumen Ejecutivo
+### 1. Panorama General
 
-La HU-56 quedó implementada y verificada con enfoque unitario sobre el núcleo financiero, sin mezclar UI, HTTP ni persistencia real.
+| Campo | Detalle |
+|---|---|
+| Historia de usuario | `HU-56` |
+| Objetivo | Validar de forma aislada el nucleo financiero del simulador, sin mezclar UI, HTTP ni persistencia real |
+| Alcance principal | `14` casos priorizados (`U-01` a `U-14`) para motor de calculo, validaciones de servicio, estrategias y esquemas Zod |
+| Fecha de ejecucion base | `21/04/2026` |
+| Ambiente de ejecucion | Backend local en Node.js/TypeScript con Jest sobre `server/` |
+| Resultado global HU-56 | `PASS` |
+| Resultado backend completo | `10` suites aprobadas, `94` pruebas aprobadas, `0` fallos |
+| Evidencia principal | Carpetas `environment/`, `simulation-engine/`, `simulation-service/`, `strategies/`, `summary/` y `validation-schemas/` |
 
-Resultado de ejecución del backend:
+La HU-56 se enfoco en garantizar que el componente matematico y financiero mas sensible del simulador quedara cubierto por pruebas repetibles, trazables y aisladas. En terminos funcionales, se validaron modalidad sin interes, modalidad con interes, reglas institucionales, redondeos, totales, fechas y validaciones de entrada.
 
-| Métrica         | Resultado |
-| --------------- | --------: |
-| Test Suites     | 10 passed |
-| Tests           | 94 passed |
-| Failures        |         0 |
-| Resultado final |      PASS |
+### 2. Ambiente y Preparacion
 
-Cobertura más relevante para HU-56:
+| Campo | Detalle |
+|---|---|
+| Workspace | Monorepo `Simulador-Credito-UPB` |
+| Carpeta objetivo | `server/` |
+| Framework de pruebas | `Jest` |
+| Modo recomendado | `--runInBand` |
+| Justificacion operativa | Evitar errores `spawn EPERM` en PowerShell durante ejecucion local |
+| Dependencias externas | No requeridas para las suites HU-56; se usan fixtures y objetos en memoria |
+| Evidencia de ambiente | `assets/evidence-unit-test/environment/backend-local-running.png` |
 
-| Componente                      | Statements | Branches | Functions |   Lines |
-| ------------------------------- | ---------: | -------: | --------: | ------: |
-| `SimulationEngine.ts`           |     92.68% |   88.00% |    83.33% |  92.30% |
-| `SimulationService.ts`          |     76.56% |   51.92% |    66.66% |  80.70% |
-| `FrenchAmortizationStrategy.ts` |     95.45% |   90.00% |   100.00% |  94.11% |
-| `NoInterestStrategy.ts`         |    100.00% |  100.00% |   100.00% | 100.00% |
-| `SimulationInput.ts`            |    100.00% |  100.00% |   100.00% | 100.00% |
-| `LoginUserInput.ts`             |    100.00% |  100.00% |   100.00% | 100.00% |
-| `ResetPasswordInput.ts`         |    100.00% |  100.00% |   100.00% | 100.00% |
-| `RegisterUserInput.ts`          |     84.61% |   50.00% |   100.00% | 100.00% |
+Evidencia de ambiente:
+
+![](assets/evidence-unit-test/environment/backend-local-running.png)
 
 ---
 
-### 2. Comandos Ejecutados
+### 3. Comandos Ejecutados
 
-Comando de validación puntual para las suites nuevas de HU-56:
+**Validacion puntual de suites reforzadas para HU-56**
 
 ```powershell
 npm.cmd test -- --runInBand --runTestsByPath src/Application/__tests__/SimulationService.test.ts src/Application/__tests__/FrenchAmortizationStrategy.test.ts src/Application/__tests__/NoInterestStrategy.test.ts src/Application/__tests__/ValidationSchemas.test.ts
 ```
 
-Resultado:
+Resultado observado:
 
 ```text
 Test Suites: 4 passed, 4 total
@@ -393,13 +398,13 @@ Tests:       18 passed, 18 total
 Snapshots:   0 total
 ```
 
-Comando de validación completa del backend:
+**Validacion completa del backend**
 
 ```powershell
 npm.cmd test -- --runInBand
 ```
 
-Resultado:
+Resultado observado:
 
 ```text
 Test Suites: 10 passed, 10 total
@@ -408,13 +413,13 @@ Snapshots:   0 total
 Time:        4.766 s
 ```
 
-Comando de cobertura:
+**Cobertura global del backend**
 
 ```powershell
 npm.cmd run test:coverage -- --runInBand
 ```
 
-Resultado:
+Resultado observado:
 
 ```text
 Test Suites: 10 passed, 10 total
@@ -423,153 +428,166 @@ Snapshots:   0 total
 Time:        5.397 s
 ```
 
----
+Evidencia consolidada:
 
-### 3. Suites Relevantes para HU-56
-
-| Suite                        | Archivo                                                               | Enfoque                                                                                   |
-| ---------------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `SimulationEngine`           | `server/src/Application/__tests__/SimulationEngine.test.ts`           | Fórmula PMT, modalidad sin interés, redondeos, totales, reglas institucionales y fechas   |
-| `SimulationService`          | `server/src/Application/__tests__/SimulationService.test.ts`          | Validaciones de cuota inicial, período, financiado y reglas de negocio previas al cálculo |
-| `FrenchAmortizationStrategy` | `server/src/Application/__tests__/FrenchAmortizationStrategy.test.ts` | Bordes del cálculo con interés                                                            |
-| `NoInterestStrategy`         | `server/src/Application/__tests__/NoInterestStrategy.test.ts`         | Bordes del cálculo sin interés                                                            |
-| `ValidationSchemas`          | `server/src/Application/__tests__/ValidationSchemas.test.ts`          | Validaciones Zod/DTO de simulación, login, registro y reset                               |
+![](assets/evidence-unit-test/summary/jest-run-all.png)
 
 ---
 
-### 4. Trazabilidad HU-56
+### 4. Inventario de Suites Relevantes para HU-56
 
-La siguiente matriz mapea los **14 casos unitarios priorizados** del anexo operativo contra la evidencia automatizada implementada en el proyecto.
+| Suite | Archivo | Rol dentro de HU-56 | Casos HU-56 cubiertos |
+|---|---|---|---|
+| `SimulationEngine` | `server/src/Application/__tests__/SimulationEngine.test.ts` | Calculo financiero central, reglas institucionales, fechas, redondeos y consistencia de totales | `U-01`, `U-02`, `U-03`, `U-06`, `U-07`, `U-08`, `U-09` |
+| `SimulationService` | `server/src/Application/__tests__/SimulationService.test.ts` | Validaciones previas al calculo y restricciones de negocio | `U-04`, `U-05`, soporte parcial de `U-09` |
+| `FrenchAmortizationStrategy` | `server/src/Application/__tests__/FrenchAmortizationStrategy.test.ts` | Bordes matematicos y resolucion de tasa en estrategia con interes | `U-10` |
+| `NoInterestStrategy` | `server/src/Application/__tests__/NoInterestStrategy.test.ts` | Comportamiento base y bordes de estrategia sin interes | `U-11` |
+| `ValidationSchemas` | `server/src/Application/__tests__/ValidationSchemas.test.ts` | Validaciones Zod/DTO de simulacion, registro, login y reset | `U-12`, `U-13`, `U-14` |
 
-| ID     | Regla del diseño                                                     | Evidencia automatizada                                                                                                                                                                                                                            | Estado |
-| ------ | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| `U-01` | Cuota lineal sin interés = financiado / (n-1)                        | `SimulationEngine.test.ts`: `debe calcular cuota lineal = financedValue / (n-1)`, `debe generar numberOfPayments-1 filas en la tabla (#58)`, `debe tener interest = 0 en todas las filas sin interés`                                             | PASS   |
-| `U-02` | Fórmula PMT francesa con interés                                     | `SimulationEngine.test.ts`: `debe calcular cuota fija con formula M = P*r*(1+r)^n / ((1+r)^n - 1)`, `totalInterest debe ser la suma de todos los intereses del plan`, `totalPaid debe incluir la cuota inicial mas la suma de cuotas con interés` | PASS   |
-| `U-03` | UPB Tech ignora beca                                                 | `SimulationEngine.test.ts`: `#57 - upbTech debe ignorar beca (scholarshipPct -> 0)`                                                                                                                                                               | PASS   |
-| `U-04` | Cuota inicial mínima pregrado                                        | `SimulationService.test.ts`: `rechaza pregrado cuando la cuota inicial es menor al 20%`                                                                                                                                                           | PASS   |
-| `U-05` | Cuota inicial mínima UPB Tech                                        | `SimulationService.test.ts`: `rechaza UPB Tech cuando la cuota inicial es menor al 15%`                                                                                                                                                           | PASS   |
-| `U-06` | Forzar sin interés cuando n <= 3                                     | `SimulationEngine.test.ts`: `#59 - forzar sin_interes si numberOfPayments <= 3 y se envio con_interes`                                                                                                                                            | PASS   |
-| `U-07` | Último saldo exactamente en cero                                     | `SimulationEngine.test.ts`: `la ultima fila debe tener finalBalance = 0 (absorbe residuo de redondeo)`                                                                                                                                            | PASS   |
-| `U-08` | Totales consistentes                                                 | `SimulationEngine.test.ts`: `totalPaid debe incluir la cuota inicial + suma del plan`, `totalInterest debe ser la suma de todos los intereses del plan`, `totalPaid debe incluir la cuota inicial mas la suma de cuotas con interés`              | PASS   |
-| `U-09` | Fechas consecutivas válidas y error si el mes está fuera del período | `SimulationEngine.test.ts`: `debe avanzar mes a mes desde firstPaymentMonth`, `debe cruzar año correctamente (dic -> ene)`; `SimulationService.test.ts`: `rechaza un mes de primera cuota que no pertenece al periodo academico`                  | PASS   |
-| `U-10` | Bordes FrenchAmortizationStrategy: P=0, n=0, r=0, r~0                | `FrenchAmortizationStrategy.test.ts`: `retorna 0 cuando el principal es 0`, `retorna 0 cuando el numero de cuotas es 0`, `cae a cuota lineal cuando la tasa es 0`, `cae a cuota lineal cuando la tasa es practicamente 0`                         | PASS   |
-| `U-11` | Bordes NoInterestStrategy: P/n, P=0, n=0                             | `NoInterestStrategy.test.ts`: `calcula P / n para cuota sin interes`, `retorna 0 cuando el principal es 0`, `retorna 0 cuando el numero de cuotas es 0`                                                                                           | PASS   |
-| `U-12` | Validaciones Zod críticas de simulación y registro                   | `ValidationSchemas.test.ts`: `rechaza payload invalido de simulacion para pregrado con cuota inicial menor al 20%`, `rechaza registro con formato de documento invalido para el tipo seleccionado`                                                | PASS   |
-| `U-13` | Validación Zod de login                                              | `ValidationSchemas.test.ts`: `rechaza login con correo vacio, contraseña vacia o rol invalido`                                                                                                                                                    | PASS   |
-| `U-14` | Validación Zod de reset                                              | `ValidationSchemas.test.ts`: `rechaza reset de contraseña con token faltante y confirmacion inconsistente`                                                                                                                                        | PASS   |
+Cobertura mas relevante observada:
 
----
-
-### 5. Hallazgos Técnicos Relevantes
-
-Durante la implementación y verificación de HU-56 se identificaron y resolvieron hallazgos que impactaban la confiabilidad del backend:
-
-1. Se corrigió la validación de `SimulationService` para detectar correctamente cuando la cuota inicial supera la matrícula neta.
-2. Se cerró la migración `savedAt -> createdAt` en los puntos que aún bloqueaban la suite completa del backend.
-3. Se ejecutó Jest en modo serial con `--runInBand` para evitar el error de sandbox `spawn EPERM` en PowerShell.
+| Componente | Statements | Branches | Functions | Lines |
+|---|---:|---:|---:|---:|
+| `SimulationEngine.ts` | 92.68% | 88.00% | 83.33% | 92.30% |
+| `SimulationService.ts` | 76.56% | 51.92% | 66.66% | 80.70% |
+| `FrenchAmortizationStrategy.ts` | 95.45% | 90.00% | 100.00% | 94.11% |
+| `NoInterestStrategy.ts` | 100.00% | 100.00% | 100.00% | 100.00% |
+| `SimulationInput.ts` | 100.00% | 100.00% | 100.00% | 100.00% |
+| `LoginUserInput.ts` | 100.00% | 100.00% | 100.00% | 100.00% |
+| `ResetPasswordInput.ts` | 100.00% | 100.00% | 100.00% | 100.00% |
+| `RegisterUserInput.ts` | 84.61% | 50.00% | 100.00% | 100.00% |
 
 ---
 
-### 6. Conclusión
+### 5. Trazabilidad HU-56
 
-La HU-56 queda soportada por una base de pruebas unitarias repetible, aislada y trazable contra el diseño de pruebas. Los **14 casos priorizados** del anexo operativo se encuentran cubiertos y la ejecución real del backend finalizó en estado **PASS**.
-
-Como resultado, el motor de cálculo del simulador queda validado en sus reglas más sensibles:
-
-- modalidad sin interés
-- modalidad con interés
-- redondeos y saldo final
-- totales
-- fechas
-- reglas institucionales
-- validaciones previas al cálculo
-- validaciones Zod de entrada relacionadas
+| ID | Regla o comportamiento | Suite / archivo | Evidencia automatizada principal | Carpeta de evidencia | Estado |
+|---|---|---|---|---|---|
+| `U-01` | Cuota lineal sin interes = financiado / `(n-1)` | `SimulationEngine.test.ts` | `debe calcular cuota lineal = financedValue / (n-1)` | `simulation-engine/` | `PASS` |
+| `U-02` | Formula PMT francesa con interes | `SimulationEngine.test.ts` | `debe calcular cuota fija con formula M = P*r*(1+r)^n / ((1+r)^n - 1)` | `simulation-engine/` | `PASS` |
+| `U-03` | UPB Tech ignora beca | `SimulationEngine.test.ts` | `#57 - upbTech debe ignorar beca (scholarshipPct -> 0)` | `simulation-engine/` | `PASS` |
+| `U-04` | Cuota inicial minima pregrado | `SimulationService.test.ts` | `rechaza pregrado cuando la cuota inicial es menor al 20%` | `simulation-service/` | `PASS` |
+| `U-05` | Cuota inicial minima UPB Tech | `SimulationService.test.ts` | `rechaza UPB Tech cuando la cuota inicial es menor al 15%` | `simulation-service/` | `PASS` |
+| `U-06` | Forzar sin interes cuando `n <= 3` | `SimulationEngine.test.ts` | `#59 - forzar sin_interes si numberOfPayments <= 3 y se envio con_interes` | `simulation-engine/` | `PASS` |
+| `U-07` | Ultimo saldo exactamente en cero | `SimulationEngine.test.ts` | `la ultima fila debe tener finalBalance = 0 (absorbe residuo de redondeo)` | `simulation-engine/` | `PASS` |
+| `U-08` | Totales consistentes | `SimulationEngine.test.ts` | `totalPaid` y `totalInterest` coherentes con el cronograma | `simulation-engine/` | `PASS` |
+| `U-09` | Fechas consecutivas validas y error si el mes esta fuera del periodo | `SimulationEngine.test.ts` + `SimulationService.test.ts` | avance mes a mes, cruce de ano y rechazo de mes invalido | `simulation-engine/` | `PASS` |
+| `U-10` | Bordes de `FrenchAmortizationStrategy` | `FrenchAmortizationStrategy.test.ts` | principal 0, cuotas 0, tasa 0, tasa casi 0, tasa faltante | `strategies/french-amortization/` | `PASS` |
+| `U-11` | Bordes de `NoInterestStrategy` | `NoInterestStrategy.test.ts` | `P/n`, principal 0, cuotas 0 | `strategies/no-interest/` | `PASS` |
+| `U-12` | Validaciones Zod criticas de simulacion y registro | `ValidationSchemas.test.ts` | rechazo de payload invalido en simulacion y registro | `validation-schemas/` | `PASS` |
+| `U-13` | Validacion Zod de login | `ValidationSchemas.test.ts` | rechazo por correo, password o rol invalido | `validation-schemas/` | `PASS` |
+| `U-14` | Validacion Zod de reset | `ValidationSchemas.test.ts` | rechazo por token faltante y confirmacion inconsistente | `validation-schemas/` | `PASS` |
 
 ---
 
-### 7. Evidencias Visuales por Caso (HU-56)
+### 6. Cobertura Complementaria Agregada
 
-#### CP-U01
+Ademas de los `14` casos priorizados, HU-56 quedo reforzada con validaciones adicionales:
 
-![](assets/evidence-unit-test/image1.jpeg)
-![](assets/evidence-unit-test/image2.jpeg)
+- en `SimulationService.test.ts`: regla institucional mas estricta, cuota inicial mayor que matricula neta y financiado en cero con mas cuotas
+- en `FrenchAmortizationStrategy.test.ts`: tasa faltante y ausencia de `activeVersion`
+- en `SimulationEngine.test.ts`: integridad de cronograma, modalidad derivada desde `levelConfigs`, tasas por nivel y consistencia de resumen
 
-#### CP-U02
+Estas validaciones complementarias no sustituyen la matriz `U-01` a `U-14`, pero fortalecen la confiabilidad del motor financiero.
 
-![](assets/evidence-unit-test/image3.jpeg)
-![](assets/evidence-unit-test/image4.jpeg)
-![](assets/evidence-unit-test/image5.jpeg)
-![](assets/evidence-unit-test/image6.jpeg)
+---
 
-#### CP-U03
+### 7. Registro Detallado por Bloque de Evidencia
 
-![](assets/evidence-unit-test/image7.jpeg)
-![](assets/evidence-unit-test/image8.jpeg)
+#### 7.1 `simulation-engine`
 
-#### CP-U04
+![](assets/evidence-unit-test/simulation-engine/cp-u01-sin-interes-lineal-01.png)
+![](assets/evidence-unit-test/simulation-engine/cp-u01-sin-interes-lineal-jest-02.png)
+![](assets/evidence-unit-test/simulation-engine/cp-u02-pmt-francesa-01.png)
+![](assets/evidence-unit-test/simulation-engine/cp-u02-pmt-francesa-02.png)
+![](assets/evidence-unit-test/simulation-engine/cp-u02-pmt-francesa-jest-03.png)
+![](assets/evidence-unit-test/simulation-engine/cp-u02-pmt-francesa-jest-04.png)
+![](assets/evidence-unit-test/simulation-engine/cp-u03-upbtech-ignora-beca-01.png)
+![](assets/evidence-unit-test/simulation-engine/cp-u03-upbtech-ignora-beca-jest-02.png)
+![](assets/evidence-unit-test/simulation-engine/cp-u06-forzar-sin-interes-n-menor-igual-3-01.png)
+![](assets/evidence-unit-test/simulation-engine/cp-u06-forzar-sin-interes-n-menor-igual-3-jest-02.png)
+![](assets/evidence-unit-test/simulation-engine/cp-u07-ultimo-saldo-cero-01.png)
+![](assets/evidence-unit-test/simulation-engine/cp-u07-ultimo-saldo-cero-jest-02.png)
+![](assets/evidence-unit-test/simulation-engine/cp-u07-ultimo-saldo-cero-jest-03.png)
+![](assets/evidence-unit-test/simulation-engine/cp-u08-totales-consistentes-simulacion1-01.png)
+![](assets/evidence-unit-test/simulation-engine/cp-u08-totales-consistentes-simulacion1-02.png)
+![](assets/evidence-unit-test/simulation-engine/cp-u08-totales-consistentes-simulacion2-03.png)
+![](assets/evidence-unit-test/simulation-engine/cp-u08-totales-consistentes-simulacion2-04.png)
+![](assets/evidence-unit-test/simulation-engine/cp-u08-totales-consistentes-simulacion3-05.png)
+![](assets/evidence-unit-test/simulation-engine/cp-u08-totales-consistentes-simulacion3-06.png)
+![](assets/evidence-unit-test/simulation-engine/cp-u08-totales-consistentes-simulacion4-07.png)
+![](assets/evidence-unit-test/simulation-engine/cp-u08-totales-consistentes-simulacion4-08.png)
+![](assets/evidence-unit-test/simulation-engine/cp-u08-totales-consistentes-jest-09.png)
+![](assets/evidence-unit-test/simulation-engine/cp-u08-totales-consistentes-jest-10.png)
+![](assets/evidence-unit-test/simulation-engine/cp-u09-fechas-periodo-validos-01.png)
+![](assets/evidence-unit-test/simulation-engine/cp-u09-fechas-periodo-validos-jest-02.png)
 
-![](assets/evidence-unit-test/image9.jpeg)
-![](assets/evidence-unit-test/image10.jpeg)
+#### 7.2 `simulation-service`
 
-#### CP-U05
+![](assets/evidence-unit-test/simulation-service/cp-u04-cuota-inicial-minima-pregrado-01.png)
+![](assets/evidence-unit-test/simulation-service/cp-u04-cuota-inicial-minima-pregrado-jest-02.png)
+![](assets/evidence-unit-test/simulation-service/cp-u05-cuota-inicial-minima-upbtech-01.png)
+![](assets/evidence-unit-test/simulation-service/cp-u05-cuota-inicial-minima-upbtech-jest-02.png)
 
-![](assets/evidence-unit-test/image11.jpeg)
-![](assets/evidence-unit-test/image12.jpeg)
+#### 7.3 `strategies`
 
-#### CP-U06
+![](assets/evidence-unit-test/strategies/french-amortization/cp-u10-bordes-calculo-jets-01.png)
+![](assets/evidence-unit-test/strategies/no-interest/cp-u11-bordes-calculo-jets-01.png)
 
-![](assets/evidence-unit-test/image13.jpeg)
-![](assets/evidence-unit-test/image14.jpeg)
+#### 7.4 `validation-schemas`
 
-#### CP-U07
+![](assets/evidence-unit-test/validation-schemas/cp-u12-zod-simulacion-01.png)
+![](assets/evidence-unit-test/validation-schemas/cp-u12-zod-simulacion-02.png)
+![](assets/evidence-unit-test/validation-schemas/cp-u12-zod-simulacion-03.png)
+![](assets/evidence-unit-test/validation-schemas/cp-u12-zod-registro-04.png)
+![](assets/evidence-unit-test/validation-schemas/cp-u12-zod-registro-05.png)
+![](assets/evidence-unit-test/validation-schemas/cp-u12-zod-simulacion-registro-jets-05.png)
+![](assets/evidence-unit-test/validation-schemas/cp-u13-zod-login-01.png)
+![](assets/evidence-unit-test/validation-schemas/cp-u13-zod-login-jets-02.png)
+![](assets/evidence-unit-test/validation-schemas/cp-u14-zod-reset-01.png)
+![](assets/evidence-unit-test/validation-schemas/cp-u14-zod-rest-jets-02.png)
 
-![](assets/evidence-unit-test/image15.jpeg)
-![](assets/evidence-unit-test/image16.jpeg)
-![](assets/evidence-unit-test/image17.jpeg)
+#### 7.5 `summary`
 
-#### CP-U08
+![](assets/evidence-unit-test/summary/jest-run-all.png)
 
-![](assets/evidence-unit-test/image18.jpeg)
-![](assets/evidence-unit-test/image19.jpeg)
-![](assets/evidence-unit-test/image20.jpeg)
-![](assets/evidence-unit-test/image21.jpeg)
-![](assets/evidence-unit-test/image22.jpeg)
-![](assets/evidence-unit-test/image23.jpeg)
-![](assets/evidence-unit-test/image24.jpeg)
-![](assets/evidence-unit-test/image25.jpeg)
-![](assets/evidence-unit-test/image26.jpeg)
+---
 
-#### CP-U09
+### 8. Hallazgos Tecnicos Relevantes
 
-![](assets/evidence-unit-test/image27.jpeg)
-![](assets/evidence-unit-test/image28.jpeg)
+1. Se corrigieron validaciones de `SimulationService` para escenarios limite de cuota inicial y financiado.
+2. Se cerro la migracion `savedAt -> createdAt` en los puntos que afectaban pruebas del backend.
+3. Se mantuvo `--runInBand` como modo recomendado para estabilidad en PowerShell.
+4. La evidencia unitaria se normalizo por bloques (`simulation-engine`, `simulation-service`, `strategies`, `validation-schemas`, `summary`).
 
-#### CP-U10
+---
 
-![](assets/evidence-unit-test/image29.jpeg)
+### 9. Resumen Final de Cobertura
 
-#### CP-U11
+| Bloque | Casos HU-56 asociados | Estado | Observacion |
+|---|---|---|---|
+| `environment` | soporte de ambiente | `PASS` | backend local operativo documentado |
+| `simulation-engine` | `U-01`, `U-02`, `U-03`, `U-06`, `U-07`, `U-08`, `U-09` | `PASS` | bloque central del motor financiero |
+| `simulation-service` | `U-04`, `U-05` | `PASS` | validaciones previas al calculo |
+| `strategies` | `U-10`, `U-11` | `PASS` | bordes matematicos de estrategias |
+| `validation-schemas` | `U-12`, `U-13`, `U-14` | `PASS` | validaciones Zod/DTO criticas |
+| `summary` | consolidado general | `PASS` | evidencia del run completo `10/10 suites`, `94/94 tests` |
 
-![](assets/evidence-unit-test/image30.jpeg)
+La HU-56 queda respaldada por una base de pruebas unitarias repetible, aislada del flujo UI/API y trazable contra la matriz priorizada.
 
-#### CP-U12
+---
 
-![](assets/evidence-unit-test/image31.jpeg)
-![](assets/evidence-unit-test/image32.jpeg)
-![](assets/evidence-unit-test/image33.jpeg)
-![](assets/evidence-unit-test/image34.jpeg)
-![](assets/evidence-unit-test/image35.jpeg)
-![](assets/evidence-unit-test/image36.jpeg)
+### 10. Anexos y Estructura de Evidencia
 
-#### CP-U13
-
-![](assets/evidence-unit-test/image37.jpeg)
-![](assets/evidence-unit-test/image38.jpeg)
-
-#### CP-U14
-
-![](assets/evidence-unit-test/image39.jpeg)
-![](assets/evidence-unit-test/image40.jpeg)
+| Carpeta | Contenido principal |
+|---|---|
+| `docs/architecture/assets/evidence-unit-test/environment/` | soporte de ambiente local para ejecucion unitaria |
+| `docs/architecture/assets/evidence-unit-test/simulation-engine/` | casos `U-01`, `U-02`, `U-03`, `U-06`, `U-07`, `U-08`, `U-09` |
+| `docs/architecture/assets/evidence-unit-test/simulation-service/` | casos `U-04`, `U-05` |
+| `docs/architecture/assets/evidence-unit-test/strategies/french-amortization/` | caso `U-10` |
+| `docs/architecture/assets/evidence-unit-test/strategies/no-interest/` | caso `U-11` |
+| `docs/architecture/assets/evidence-unit-test/validation-schemas/` | casos `U-12`, `U-13`, `U-14` |
+| `docs/architecture/assets/evidence-unit-test/summary/` | evidencia consolidada de ejecucion total |
 
 ---
 
@@ -582,3 +600,4 @@ Como resultado, el motor de cálculo del simulador queda validado en sus reglas 
 <sub>🔙 <a href="../../README.md">Volver al README principal</a> · <a href="./technical-decisions.md">Decisiones Técnicas</a> · <a href="./system-design.md">Diseño del Sistema</a> · <a href="../README.md">Índice de Documentación</a></sub>
 
 </div>
+
