@@ -93,32 +93,40 @@ localmente a partir de `.env.example` y no se sube al repositorio.
 | Secretos | Definidos en `.env`, excluido por Git |
 | LDAP / SMTP | Opcionales si el flujo probado no los requiere |
 
-### 3.2. Testing / Staging
+### 3.2. 🟡 Pre-Producción / Staging
 
-Ambiente previo a producción para validar integraciones, pruebas de aceptación y
-despliegues candidatos. Debe usar datos no productivos o anonimizados, secretos
-propios del ambiente y una base de datos separada.
+Ambiente actualmente operativo para validar integraciones, pruebas de aceptación
+y despliegues candidatos. Su despliegue es automatizado mediante GitHub Actions
+y runner self-hosted sobre Red Hat Enterprise Linux.
+
+| Elemento | Valor actual |
+|---|---|
+| Documento técnico | [`docs/deployment/PRE-PROD-ENVIRONMENT.md`](../deployment/PRE-PROD-ENVIRONMENT.md) |
+| Despliegue | Automatizado vía `.github/workflows/deploy.yml` |
+| Trigger | `push` a `main` |
+| Runner | Self-hosted runner en RHEL |
+| Base de datos | Aiven Cloud MySQL con `DB_SSL=true` |
+| Frontend | React/Vite publicado por Nginx |
+| Backend | Node.js + PM2 cluster |
+| Secretos | GitHub Repository Secrets |
+| Variables | GitHub Repository Variables |
+
+### 3.3. 🟢 Producción CTIC
+
+Ambiente productivo objetivo para operación institucional on-premise. CTIC no
+usa GitHub Actions para producción; el despliegue se realiza con scripts `.sh`,
+Nginx como reverse proxy, PM2 y MariaDB administrada por CTIC.
 
 | Elemento | Valor esperado |
 |---|---|
-| Variables | Inyectadas por pipeline CI/CD o gestor de procesos |
-| Datos | Sintéticos, anonimizados o no productivos |
-| Secretos | Diferentes a desarrollo y producción |
-| URL | Pública o privada, estable para pruebas de integración |
-
-### 3.3. Producción — Despliegue WAN
-
-Ambiente expuesto a usuarios reales. No debe depender de archivos `.env`
-versionados ni de valores locales. Los secretos se inyectan desde PM2, variables
-del servidor, pipeline CI/CD o secret manager.
-
-| Elemento | Valor esperado |
-|---|---|
-| `NODE_ENV` | `production` |
-| Base de datos | MySQL Aiven con `DB_SSL=true` |
-| Certificado CA | Provisionado fuera de Git, por ejemplo `server/certs/ca.pem` |
-| `FRONTEND_URL` | Dominio WAN real, nunca `localhost` |
-| `VITE_API_URL` | Endpoint público del backend, por ejemplo `https://simulador.example.edu/api` |
+| Documento técnico | [`docs/deployment/CTIC-PROD-DEPLOYMENT.md`](../deployment/CTIC-PROD-DEPLOYMENT.md) |
+| Despliegue | Manual/script on-premise con `server/scripts/deploy-rhel.sh` |
+| Sistema operativo | Red Hat Enterprise Linux |
+| Backend | Node.js en puerto interno `3000` |
+| Frontend | `/usr/share/nginx/html/simulador` |
+| Reverse proxy | Nginx expone `80/443` y enruta `/api/*` |
+| Base de datos | MariaDB 10.6+ local o dedicada administrada por CTIC |
+| Secretos | Archivo manual `server/.env`, no versionado |
 
 ---
 
