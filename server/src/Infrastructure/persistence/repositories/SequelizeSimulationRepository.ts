@@ -14,17 +14,13 @@ import type { AmortizationRowDTO } from '../../../Application/dtos/SimulationSum
 import { auditLog } from '../../../Application/services/AuditService';
 
 export class SequelizeSimulationRepository implements ISimulationRepository {
-  async save(data: SaveSimulationData): Promise<{ id: string; savedAt: Date }> {
+  async save(data: SaveSimulationData): Promise<{ id: string; createdAt: Date }> {
     const sequelize = Database.getInstance().getSequelize();
-    const savedAt = new Date();
-
-
-    await sequelize.transaction(async (t) => {
+    const createdAt = await sequelize.transaction(async (t) => {
       // 1. Crear simulación
-      await SimulationModel.create(
+      const createdSimulation = await SimulationModel.create(
         {
           id: data.id,
-          saved_at: savedAt,
           student_type: data.studentType as 'NUEVO' | 'CONTINUO',
           level: data.level as 'PREGRADO' | 'POSGRADO' | 'UPB_Tech',
           modality: data.modality as 'SIN_INTERES' | 'CON_INTERES',
@@ -64,10 +60,11 @@ export class SequelizeSimulationRepository implements ISimulationRepository {
 
         await AmortizationRowModel.bulkCreate(rows, { transaction: t });
       }
+      return createdSimulation.created_at;
     });
 
 
-    return { id: data.id, savedAt };
+    return { id: data.id, createdAt };
   }
 
 
@@ -77,7 +74,7 @@ export class SequelizeSimulationRepository implements ISimulationRepository {
         user_id: userId,
         deleted_at: null,
       },
-      order: [['saved_at', 'DESC']],
+      order: [['created_at', 'DESC']],
     });
 
 
@@ -159,7 +156,7 @@ export class SequelizeSimulationRepository implements ISimulationRepository {
         lastName: user?.last_name ?? '',
         identificationNumber: user?.document_number ?? '',
         email: user?.email ?? '',
-        documentType: user?.document_type ?? '',
+        documentType: user ? this.requireUserDocumentType(user) : '',
         phone: user?.phone ?? null,
       },
     };
@@ -177,7 +174,7 @@ export class SequelizeSimulationRepository implements ISimulationRepository {
 
     return simulations.map((sim) => ({
       id: sim.id,
-      academicPeriod: sim.academic_period ?? '',
+      academicPeriod: this.requireAcademicPeriod(sim),
       numberOfPayments: sim.total_payments,
       totalPaid: Number(sim.total_paid),
       createdAt: sim.created_at,
@@ -232,7 +229,7 @@ export class SequelizeSimulationRepository implements ISimulationRepository {
     return {
       id: sim.id,
       userId: sim.user_id,
-      savedAt: sim.saved_at,
+      createdAt: sim.created_at,
       summary: {
         id: sim.id,
         tuitionGross: Number(sim.tuition_gross),
@@ -242,7 +239,7 @@ export class SequelizeSimulationRepository implements ISimulationRepository {
         initialPaymentPct: Number(sim.initial_payment_pct) * 100,
         financedValue: Number(sim.financed_value),
         interestMode: sim.modality === 'CON_INTERES' ? 'con_interes' : 'sin_interes',
-        academicPeriod: sim.academic_period ?? '',
+        academicPeriod: this.requireAcademicPeriod(sim),
         firstPaymentMonth: new Date(sim.first_payment_date).getMonth() + 1,
         numberOfPayments: sim.total_payments,
         periodicPayment: Number(sim.periodic_payment_value),
@@ -251,5 +248,23 @@ export class SequelizeSimulationRepository implements ISimulationRepository {
         schedule,
       },
     };
+  }
+
+  private requireAcademicPeriod(
+    sim: Pick<SimulationModel, 'id' | 'academic_period'>,
+  ): string {
+    if (!sim.academic_period) {
+      throw new Error(`Invariante violada: la simulación ${sim.id} no tiene academic_period.`);
+    }
+    return sim.academic_period;
+  }
+
+  private requireUserDocumentType(
+    user: Pick<UserModel, 'id' | 'document_type'>,
+  ): string {
+    if (!user.document_type) {
+      throw new Error(`Invariante violada: el usuario ${user.id} no tiene document_type.`);
+    }
+    return user.document_type;
   }
 }

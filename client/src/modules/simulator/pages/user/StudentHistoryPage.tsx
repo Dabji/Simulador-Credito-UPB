@@ -339,7 +339,7 @@ export function StudentHistoryPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                        {item.academicPeriod || '—'}
+                        {item.academicPeriod}
                       </td>
                       <td className="px-4 py-3 text-gray-700 whitespace-nowrap font-mono text-xs">
                         {formatCOP(item.financedValue)}

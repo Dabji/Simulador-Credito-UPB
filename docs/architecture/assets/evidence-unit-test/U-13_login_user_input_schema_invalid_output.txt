@@ -1,0 +1,19 @@
+PS C:\Users\RICHARD\Documents\UPB\Semestre_5\P1\SimuladorCreditos\Simulador-Credito-UPB> npm run test --workspace=server -- --runInBand --runTestsByPath src/Application/__tests__/ValidationSchemas.test.ts
+>> 
+
+> server@1.0.0 test
+> jest --forceExit --detectOpenHandles --runInBand --runTestsByPath src/Application/__tests__/ValidationSchemas.test.ts
+
+ PASS  src/Application/__tests__/ValidationSchemas.test.ts
+  Validation Schemas
+    √ rechaza payload inválido de simulación para pregrado con cuota inicial menor al 20% (8 ms)
+    √ rechaza registro con formato de documento inválido para el tipo seleccionado (2 ms)
+    √ rechaza login con correo vacío, contraseña vacía o rol inválido (2 ms)
+    √ rechaza reset de contraseña con token faltante y confirmación inconsistente (2 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       4 passed, 4 total
+Snapshots:   0 total
+Time:        2.188 s, estimated 3 s
+Ran all test suites within paths "src/Application/__tests__/ValidationSchemas.test.ts".
+

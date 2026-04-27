@@ -104,7 +104,7 @@ router.post('/save', async (req: AuthenticatedRequest, res: Response, next: Next
 
     res.json({
       id: result.id,
-      savedAt: result.savedAt,
+      createdAt: result.createdAt,
       message: 'Simulación guardada exitosamente.',
       summary: result.summary,
     });
@@ -269,7 +269,7 @@ router.get('/history', async (req: AuthenticatedRequest, res: Response, next: Ne
       initialPaymentValue: Number(sim.initial_payment_value),
       firstPaymentDate: sim.first_payment_date,
       numberOfPayments: sim.total_payments,
-      academicPeriod: sim.academic_period ?? '',
+      academicPeriod: sim.academic_period,
     }));
 
 
@@ -319,7 +319,6 @@ router.get('/history/:id', async (req: AuthenticatedRequest, res: Response, next
       res.status(404).json({ error: 'Simulación no encontrada.' });
       return;
     }
-
 
     res.json(simulation);
   } catch (error) {

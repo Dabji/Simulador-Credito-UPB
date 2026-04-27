@@ -57,7 +57,7 @@ function modalityLabel(modality: string): string {
 }
 
 // Helper para obtener label de tipo de documento
-function getDocumentTypeLabel(code: string | undefined): string {
+function getDocumentTypeLabel(code: string): string {
   if (!code) return '—';
   const info = getDocumentTypeInfo(code);
   return info?.displayLabel ?? code;
@@ -307,11 +307,11 @@ export function AdminSimulationDetailPage() {
                 />
                 <ReadOnlyField
                   label="Fecha de Creación"
-                  value={formatDate(simulation.savedAt)}
+                  value={formatDate(simulation.createdAt)}
                 />
                 <ReadOnlyField
                   label="Período Académico"
-                  value={s.academicPeriod || '—'}
+                  value={s.academicPeriod}
                 />
               </div>
             </div>

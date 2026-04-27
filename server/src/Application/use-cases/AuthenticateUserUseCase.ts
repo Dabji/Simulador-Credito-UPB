@@ -41,6 +41,8 @@ export class AuthenticateUserUseCase {
     private readonly tokenService: ITokenService,
   ) {}
 
+  
+
   async execute(input: LoginUserInput): Promise<AuthenticateUserOutput> {
     if (input.role === 'STUDENT') {
       return this.authenticateStudent(input.email, input.password);
@@ -92,47 +94,29 @@ export class AuthenticateUserUseCase {
     email: string,
     password: string,
   ): Promise<AuthenticateUserOutput> {
+    // Autenticar contra LDAP
     const ldapUser = await this.authService.authenticate(email, password);
 
-    if (ldapUser) {
-      // Flujo LDAP exitoso: buscar o crear el admin en la BD local
-      let user = await this.userRepository.findByEmail(ldapUser.email);
-
-      if (!user) {
-        user = User.create({
-          id: crypto.randomUUID(),
-          email: ldapUser.email,
-          firstName: ldapUser.firstName,
-          lastName: ldapUser.lastName,
-          identificationNumber: ldapUser.identificationNumber,
-          role: UserRole.ADMIN,
-          isActive: true,
-        });
-        user = await this.userRepository.save(user);
-      }
-
-      return await this.buildOutput(user);
-    }
-
-    // Fallback: autenticar con bcrypt contra la BD local (útil en desarrollo
-    // cuando LDAP no está disponible o el admin fue creado via seed).
-    const user = await this.userRepository.findByEmail(email);
-
-    if (!user || !user.password) {
+    // Si LDAP no autentica, rechazar acceso
+    if (!ldapUser) {
       throw new UnauthorizedError(
-        'El correo electrónico o la contraseña son incorrectos.',
-        'INVALID_CREDENTIALS',
+        'Las credenciales institucionales son inválidas o el usuario no está autorizado.',
+        'LDAP_INVALID_CREDENTIALS',
       );
     }
 
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch) {
+    // Buscar el usuario en la BD local por email
+    const user = await this.userRepository.findByEmail(ldapUser.email);
+
+    // Si no existe en BD local, rechazar acceso (no autocrear admins)
+    if (!user) {
       throw new UnauthorizedError(
-        'El correo electrónico o la contraseña son incorrectos.',
-        'INVALID_CREDENTIALS',
+        'No tienes permisos de administrador para este sistema.',
+        'ADMIN_NOT_FOUND',
       );
     }
 
+    // Validar que tenga rol ADMIN
     if (user.role !== UserRole.ADMIN) {
       throw new UnauthorizedError(
         'Esta cuenta no tiene permisos de administrador. Usa la pestaña Estudiante para iniciar sesión.',
@@ -140,13 +124,15 @@ export class AuthenticateUserUseCase {
       );
     }
 
+    // Validar que la cuenta esté activa
     if (!user.isActive) {
       throw new UnauthorizedError(
-        'Tu cuenta ha sido desactivada. Contacta al administrador.',
+        'Tu cuenta de administrador ha sido desactivada. Contacta al administrador del sistema.',
         'ACCOUNT_DISABLED',
       );
     }
 
+    // Si todo está correcto, generar JWT y permitir acceso
     return await this.buildOutput(user);
   }
 

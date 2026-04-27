@@ -1,0 +1,22 @@
+{
+    "success": true,
+    "data": [
+        {
+            "id": "52fe8170-293f-4c43-9660-f045de2daf7f",
+            "validFrom": "2026-03-24",
+            "validTo": null,
+            "notes": null,
+            "createdAt": "2026-03-23T15:51:19.000Z",
+            "isActive": true
+        },
+        {
+            "id": "3c2b0497-3888-44ef-a874-5be8f5ace16c",
+            "validFrom": "2026-03-23",
+            "validTo": "2026-03-23",
+            "notes": null,
+            "createdAt": "2026-03-02T08:43:03.000Z",
+            "isActive": false
+        }
+    ]
+}
+

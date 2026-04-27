@@ -58,8 +58,7 @@ function levelLabel(level: string): string {
 }
 
 // Helper para obtener label completo del tipo de documento
-function documentTypeLabel(code: string | undefined): string {
-  if (!code) return '—';
+function documentTypeLabel(code: string): string {
   const map: Record<string, string> = {
     CC: 'Cédula de Ciudadanía (CC)',
     CE: 'Cédula de Extranjería (CE)',
@@ -232,8 +231,8 @@ export function buildSimulationPdf(sim: PersistedSimulationWithUser): Promise<Bu
       true,
     );
     row2(
-      'Fecha de Creación', fmtDateLong(new Date(sim.savedAt)),
-      'Período Académico', s.academicPeriod || '—',
+      'Fecha de Creación', fmtDateLong(new Date(sim.createdAt)),
+      'Período Académico', s.academicPeriod,
     );
 
     y += 6;

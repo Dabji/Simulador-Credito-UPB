@@ -787,7 +787,7 @@ router.get('/users/export/csv', async (req: AuthenticatedRequest, res: Response,
     const headers = ['N° Documento', 'Tipo Doc.', 'Nombre Completo', 'Correo Electrónico', 'Número Celular', 'Fecha Registro'];
     const csvRows = result.items.map(u => [
       u.identificationNumber,
-      u.documentType ?? '',
+      u.documentType,
       u.fullName,
       u.email,
       u.phone ?? '',
@@ -1115,7 +1115,7 @@ router.get('/simulations', async (req: AuthenticatedRequest, res: Response, next
         initialPaymentValue: Number(sim.initial_payment_value),
         firstPaymentDate: sim.first_payment_date,
         numberOfPayments: sim.total_payments,
-        academicPeriod: sim.academic_period ?? '',
+        academicPeriod: sim.academic_period,
       };
     });
 
@@ -1142,7 +1142,10 @@ router.get('/simulations/:id', async (req: AuthenticatedRequest, res: Response, 
   try {
     const simId = req.params['id'] as string;
     const simulation = await getSimByIdAdminUseCase.execute(simId);
-    res.json({ success: true, data: simulation });
+    res.json({
+      success: true,
+      data: simulation,
+    });
   } catch (error) {
     next(error);
   }

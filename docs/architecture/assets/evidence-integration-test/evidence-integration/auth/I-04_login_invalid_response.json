@@ -1,0 +1,13 @@
+{
+  "email": "juantest57@upb.edu.co",
+  "password": "Test999x",
+  "role": "STUDENT",
+
+
+    "success": false,
+    "error": {
+        "message": "El correo electrónico o la contraseña son incorrectos.",
+        "statusCode": 401,
+        "errorCode": "INVALID_CREDENTIALS"
+    }
+}

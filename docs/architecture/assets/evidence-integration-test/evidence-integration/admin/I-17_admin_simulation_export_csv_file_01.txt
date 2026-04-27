@@ -1,0 +1,44 @@
+Campo,Valor
+Simulador,Crédito Educativo UPB
+Fecha de generación,24 de abril de 2026
+
+Nombre completo,Juan Test
+Correo electrónico,juantest57@upb.edu.co
+Tipo de documento,CC
+Número de identificación,1099001234
+Número de celular,3007654321
+Nivel educativo,Pregrado
+Tipo de estudiante,Nuevo
+Modalidad,Con Intereses
+Fecha de creación,24/4/2026
+Período académico,2026-01
+
+Resumen financiero,
+Valor matrícula (bruto),10000000
+Beca / descuento (%),0
+Matrícula neta,10000000
+Cuota inicial,2000000
+Cuota inicial (%),20
+Valor a financiar,8000000
+Tasa de interés mensual (%),1
+Número de cuotas,4
+Cuota fija mensual estimada,2720177
+Total a pagar,10160531
+Total intereses,160530
+Observaciones,Caso guardado I-09
+
+Cronograma de amortización,,,,,,
+Cuota inicial (no genera intereses),2000000,20%,,,,
+
+N° Cuota,Fecha,Saldo Inicial (COP),Capital (COP),Interés (COP),Valor Cuota (COP),Saldo Final (COP)
+2,Febrero de 2026,8000000,2640177,80000,2720177,5359823
+3,Marzo de 2026,5359823,2666579,53598,2720177,2693244
+4,Abril de 2026,2693245,2693245,26932,2720177,0
+
+Evolución del saldo,,
+N° Cuota,Fecha,Saldo Final (COP)
+2,Febrero de 2026,5359823
+3,Marzo de 2026,2693244
+4,Abril de 2026,0
+
+Nota,Los valores son referenciales y pueden variar según políticas institucionales vigentes.

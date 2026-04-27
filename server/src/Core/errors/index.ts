@@ -6,4 +6,5 @@ export {
   BadRequestError,
   ConflictError,
   ValidationError,
+  ServiceUnavailableError,
 } from './AppError';

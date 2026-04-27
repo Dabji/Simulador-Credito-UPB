@@ -17,7 +17,7 @@ export interface UserProps {
   email: string;
   firstName: string;
   lastName: string;
-  documentType?: DocumentType;
+  documentType: DocumentType;
   identificationNumber: string;
   password?: string;
   phone?: string;
@@ -71,7 +71,7 @@ export class User {
     return `${this.props.firstName} ${this.props.lastName}`;
   }
 
-  get documentType(): DocumentType | undefined {
+  get documentType(): DocumentType {
     return this.props.documentType;
   }
 
