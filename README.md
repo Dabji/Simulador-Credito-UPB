@@ -376,6 +376,15 @@ npm run test --workspace=client
 
 ---
 
+## 🚀 Ambientes de Despliegue
+
+| Ambiente | Modelo | Documentación |
+|---|---|---|
+| 🟡 **Pre-Producción (Staging)** | Automatizado vía GitHub Actions + Aiven Cloud | [`docs/deployment/PRE-PROD-ENVIRONMENT.md`](./docs/deployment/PRE-PROD-ENVIRONMENT.md) |
+| 🟢 **Producción (CTIC)** | Despliegue manual/script on-premise + MariaDB CTIC | [`docs/deployment/CTIC-PROD-DEPLOYMENT.md`](./docs/deployment/CTIC-PROD-DEPLOYMENT.md) |
+
+---
+
 ## 🛠️ Stack Tecnológico
 
 ### Frontend
