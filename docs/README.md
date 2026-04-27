@@ -27,8 +27,11 @@ docs/
 ├── database/               # Modelo ER y diccionario de datos
 ├── financial-guidelines/   # Formatos oficiales del área financiera
 ├── meeting-minutes/        # Actas de reunión firmadas
-└── sprints/                # Artefactos por sprint
-    └── sprint-1/
+├── sprints/                # Artefactos por sprint
+│   └── sprint-1/
+└── track 2/                # 📡 Infraestructura de red (DHCP, FTP, Proxy)
+├── track 2/                # 📡 Infraestructura de red (DHCP, FTP, Proxy)
+│   ├── HU-65-proxy-client.md
 ```
 
 ---
@@ -128,6 +131,18 @@ Actas de reuniones firmadas con el área financiera de la UPB.
 |---|---|
 | [`sprint-1-backlog.xlsx`](./sprints/sprint-1/sprint-1-backlog.xlsx) | Sprint Backlog con tareas y estimaciones |
 | [`sprint-1-presentation.pptx`](./sprints/sprint-1/sprint-1-presentation.pptx) | Presentación de cierre del Sprint 1 |
+
+---
+
+## 📡 Infraestructura de Red (Track 2)
+
+Documentación correspondiente a la configuración de servicios de red e integración de topología.
+
+| Archivo | Descripción |
+|---|---|
+| [`HU-65-proxy-client.md`](./track%202/HU-65-proxy-client.md) | **HU-65** — Configuración y validación del cliente para el servicio Proxy (Evidencia funcional y logs). |
+| [`HU-65-proxy-client.docx`](./track%202/HU-65-proxy-client.docx) | **HU-65 (Word)** — Versión editable del informe de configuración y validación del cliente proxy. |
+| *Directorio de pruebas* | Ver [`track 2/`](./track%202/) para evidencias de DHCP y FTP. |
 
 ---
 
