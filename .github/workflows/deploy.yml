@@ -112,56 +112,66 @@ jobs:
           printf '%s\n' "$DB_CA_CERT" > server/certs/ca.pem
           chmod 600 server/certs/ca.pem
 
-      - name: 📦 Instalar dependencias del monorepo
+      - name: 📝 Generar archivo .env para el Backend
+        run: |
+          cd server
+          echo "NODE_ENV=production" > .env
+          echo "PORT=${{ vars.PORT }}" >> .env
+          echo "FRONTEND_URL=${{ vars.FRONTEND_URL }}" >> .env
+          echo "DB_HOST=${{ vars.DB_HOST }}" >> .env
+          echo "DB_PORT=${{ vars.DB_PORT }}" >> .env
+          echo "DB_NAME=${{ vars.DB_NAME }}" >> .env
+          echo "DB_USER=${{ vars.DB_USER }}" >> .env
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+          echo "DB_SSL=${{ vars.DB_SSL }}" >> .env
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+          echo "JWT_EXPIRES_IN=${{ vars.JWT_EXPIRES_IN }}" >> .env
+          echo "LDAP_URL=${{ vars.LDAP_URL }}" >> .env
+          echo "LDAP_DOMAIN=\"${{ vars.LDAP_DOMAIN }}\"" >> .env
+          echo "LDAP_BASE_DN=\"${{ vars.LDAP_BASE_DN }}\"" >> .env
+          echo "LDAP_TIMEOUT_MS=${{ vars.LDAP_TIMEOUT_MS }}" >> .env
+          echo "SMTP_HOST=${{ vars.SMTP_HOST }}" >> .env
+          echo "SMTP_PORT=${{ vars.SMTP_PORT }}" >> .env
+          echo "SMTP_USER=${{ vars.SMTP_USER }}" >> .env
+          echo "SMTP_PASS=${{ secrets.SMTP_PASS }}" >> .env
+          echo "SMTP_FROM_EMAIL=${{ vars.SMTP_FROM_EMAIL }}" >> .env
+          echo "VITE_API_URL=${{ vars.VITE_API_URL }}" >> .env
+          echo "RETENTION_DAYS=${{ vars.RETENTION_DAYS }}" >> .env
+          echo "PURGE_INTERVAL_HOURS=${{ vars.PURGE_INTERVAL_HOURS }}" >> .env
+          echo "PURGE_BATCH_SIZE=${{ vars.PURGE_BATCH_SIZE }}" >> .env
+          echo "TOKEN_PURGE_RETENTION_DAYS=${{ vars.TOKEN_PURGE_RETENTION_DAYS }}" >> .env
+          echo "TOKEN_PURGE_INTERVAL_HOURS=${{ vars.TOKEN_PURGE_INTERVAL_HOURS }}" >> .env
+          echo "TOKEN_PURGE_BATCH_SIZE=${{ vars.TOKEN_PURGE_BATCH_SIZE }}" >> .env
+
+      - name: 📦 Instalar dependencias (Monorepo)
         run: npm ci
 
-      - name: 🏗️ Construir frontend y backend
+      - name: 🏗️ Construir Frontend y Backend
         env:
           VITE_API_URL: ${{ vars.VITE_API_URL }}
         run: |
           npm run build --workspace=client
           npm run build --workspace=server
 
-      - name: 🌐 Desplegar frontend en Nginx
+      - name: 🚀 Desplegar Frontend (Nginx)
         run: |
           rm -rf /usr/share/nginx/html/*
           cp -r client/dist/* /usr/share/nginx/html/
 
-      - name: 🔄 Reiniciar backend con PM2
-        env:
-          NODE_ENV: production
-          PORT: ${{ vars.PORT }}
-          FRONTEND_URL: ${{ vars.FRONTEND_URL }}
-          DB_HOST: ${{ vars.DB_HOST }}
-          DB_PORT: ${{ vars.DB_PORT }}
-          DB_NAME: ${{ vars.DB_NAME }}
-          DB_USER: ${{ vars.DB_USER }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          DB_SSL: ${{ vars.DB_SSL }}
-          LDAP_URL: ${{ vars.LDAP_URL }}
-          LDAP_DOMAIN: ${{ vars.LDAP_DOMAIN }}
-          LDAP_BASE_DN: ${{ vars.LDAP_BASE_DN }}
-          LDAP_TIMEOUT_MS: ${{ vars.LDAP_TIMEOUT_MS }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          JWT_EXPIRES_IN: ${{ vars.JWT_EXPIRES_IN }}
-          SMTP_HOST: ${{ vars.SMTP_HOST }}
-          SMTP_PORT: ${{ vars.SMTP_PORT }}
-          SMTP_USER: ${{ vars.SMTP_USER }}
-          SMTP_PASS: ${{ secrets.SMTP_PASS }}
-          SMTP_FROM_EMAIL: ${{ vars.SMTP_FROM_EMAIL }}
-          RETENTION_DAYS: ${{ vars.RETENTION_DAYS }}
-          PURGE_INTERVAL_HOURS: ${{ vars.PURGE_INTERVAL_HOURS }}
-          PURGE_BATCH_SIZE: ${{ vars.PURGE_BATCH_SIZE }}
-          TOKEN_PURGE_RETENTION_DAYS: ${{ vars.TOKEN_PURGE_RETENTION_DAYS }}
-          TOKEN_PURGE_INTERVAL_HOURS: ${{ vars.TOKEN_PURGE_INTERVAL_HOURS }}
-          TOKEN_PURGE_BATCH_SIZE: ${{ vars.TOKEN_PURGE_BATCH_SIZE }}
+      - name: 🔄 Reiniciar Backend (PM2)
         run: |
           cd server
+          # 1. Cargamos las variables físicas a la memoria para evitar errores de herencia
+          set -a; source .env; set +a;
+          
+          # 2. Reiniciamos PM2 asegurando que tome el nuevo entorno
           pm2 reload ecosystem.config.js --env production --update-env \
             || pm2 start ecosystem.config.js --env production --update-env
+          
+          # 3. Guardamos para persistencia
           pm2 save
 
-      - name: ✅ Health check
+      - name: ✅ Health Check
         run: |
           sleep 15
           curl --fail --silent --max-time 10 http://localhost:3000/api/health \
