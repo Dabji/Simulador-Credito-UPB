@@ -1,4 +1,4 @@
-name: "Deploy to Production (Red Hat)"
+name: "🚀 Deploy to Production (Red Hat)"
 
 on:
   push:
@@ -10,15 +10,17 @@ concurrency:
 
 jobs:
   deploy:
-    name: "Desplegar a Produccion"
+    name: "🚀 Desplegar a Producción"
     runs-on: self-hosted
     environment: production
 
     steps:
-      - name: Descargar ultimo codigo
+      - name: 📥 Descargar último código
         uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Validar configuracion requerida
+      - name: 🛡️ Validar configuración requerida
         env:
           VITE_API_URL: ${{ vars.VITE_API_URL }}
           PORT: ${{ vars.PORT }}
@@ -82,27 +84,27 @@ jobs:
           done
 
           if [ "${#missing[@]}" -gt 0 ]; then
-            printf 'Faltan variables/secrets requeridos para produccion:\n'
+            printf '❌ Faltan variables/secrets requeridos para produccion:\n'
             printf ' - %s\n' "${missing[@]}"
             exit 1
           fi
 
           if [ "$DB_SSL" != "true" ]; then
-            echo "vars.DB_SSL debe ser true en produccion."
+            echo "⚠️ vars.DB_SSL debe ser true en produccion."
             exit 1
           fi
 
           if echo "$FRONTEND_URL" | grep -qi 'localhost'; then
-            echo "vars.FRONTEND_URL no debe apuntar a localhost en produccion."
+            echo "⚠️ vars.FRONTEND_URL no debe apuntar a localhost en produccion."
             exit 1
           fi
 
           if echo "$VITE_API_URL" | grep -qi 'localhost'; then
-            echo "vars.VITE_API_URL no debe apuntar a localhost en produccion."
+            echo "⚠️ vars.VITE_API_URL no debe apuntar a localhost en produccion."
             exit 1
           fi
 
-      - name: Instalar certificado CA de Aiven
+      - name: 🔐 Instalar certificado CA de Aiven
         env:
           DB_CA_CERT: ${{ secrets.DB_CA_CERT }}
         run: |
@@ -110,22 +112,22 @@ jobs:
           printf '%s\n' "$DB_CA_CERT" > server/certs/ca.pem
           chmod 600 server/certs/ca.pem
 
-      - name: Instalar dependencias del monorepo
+      - name: 📦 Instalar dependencias del monorepo
         run: npm ci
 
-      - name: Construir frontend y backend
+      - name: 🏗️ Construir frontend y backend
         env:
           VITE_API_URL: ${{ vars.VITE_API_URL }}
         run: |
           npm run build --workspace=client
           npm run build --workspace=server
 
-      - name: Desplegar frontend en Nginx
+      - name: 🌐 Desplegar frontend en Nginx
         run: |
           rm -rf /usr/share/nginx/html/*
           cp -r client/dist/* /usr/share/nginx/html/
 
-      - name: Reiniciar backend con PM2
+      - name: 🔄 Reiniciar backend con PM2
         env:
           NODE_ENV: production
           PORT: ${{ vars.PORT }}
@@ -159,8 +161,8 @@ jobs:
             || pm2 start ecosystem.config.js --env production --update-env
           pm2 save
 
-      - name: Health check
+      - name: ✅ Health check
         run: |
           sleep 15
           curl --fail --silent --max-time 10 http://localhost:3000/api/health \
-            || { echo "Health check fallo. Revisar logs con: pm2 logs simulador-backend"; exit 1; }
+            || { echo "⚠️ Health check falló. Revisar logs con: pm2 logs simulador-backend"; exit 1; }
