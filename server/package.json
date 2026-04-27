@@ -20,7 +20,7 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "ldapjs": "^3.0.7",
-    "mysql2": "^3.22.1",
+    "mysql2": "^3.22.3",
     "nodemailer": "^8.0.5",
     "pdfkit": "^0.18.0",
     "sequelize": "^6.37.8",
