@@ -7,7 +7,7 @@
 import { UpbHeader } from '@/shared/components/UpbHeader';
 import { UpbFooter } from '@/shared/components/UpbFooter';
 import { BackNavLink } from '@/shared/components/BackNavLink';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import {
   getActiveParameters,
   updateParameterVersion,
@@ -281,21 +281,53 @@ export function AdminParametersPage() {
 
   // ── Carga de datos ────────────────────────────────────────────────────
 
-  const loadParams = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  async function fetchActiveParams() {
     const activeRes = await getActiveParameters();
-    if (activeRes.error) { setError(activeRes.error); setLoading(false); return; }
+    if (activeRes.error) {
+      setError(activeRes.error);
+      setLoading(false);
+      return;
+    }
     const activeVersion = activeRes.data?.data ?? null;
-    if (!activeVersion) { setLoading(false); return; }
+    if (!activeVersion) {
+      setLoading(false);
+      return;
+    }
     setOriginal(activeVersion);
     setForm(buildFormFromVersion(activeVersion));
     setLoading(false);
-  }, []);
+  }
 
   useEffect(() => {
-    void loadParams();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    let cancelled = false;
+
+    (async () => {
+      setLoading(true);
+      setError(null);
+
+      const activeRes = await getActiveParameters();
+      if (cancelled) return;
+
+      if (activeRes.error) {
+        setError(activeRes.error);
+        setLoading(false);
+        return;
+      }
+
+      const activeVersion = activeRes.data?.data ?? null;
+      if (!activeVersion) {
+        setLoading(false);
+        return;
+      }
+
+      setOriginal(activeVersion);
+      setForm(buildFormFromVersion(activeVersion));
+      setLoading(false);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // ── Validación ────────────────────────────────────────────────────────
@@ -439,7 +471,7 @@ export function AdminParametersPage() {
     setSaving(false);
     setSuccessMsg('Parámetros actualizados correctamente.');
     setEditMode(false);
-    void loadParams();
+    void fetchActiveParams();
   }
 
   function handleCancelEdit() {
