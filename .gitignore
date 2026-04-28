@@ -45,3 +45,7 @@ coverage/
 
 # Misc
 *.tsbuildinfo
+
+# HU-66 database migration generated artifacts
+# Contains real backups/evidence from Aiven; keep out of Git.
+docs/database/hu-66/output/
