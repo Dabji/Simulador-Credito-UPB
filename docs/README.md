@@ -18,14 +18,20 @@ docs/
 │   ├── environments-and-secrets.md
 │   ├── environments-and-secrets.docx
 │   └── test-evidence.md
+├── deployment/             # 🚀 Ambientes, despliegue CTIC y evidencia operativa
+│   ├── PRE-PROD-ENVIRONMENT.md
+│   └── CTIC-PROD-DEPLOYMENT.md
 ├── requirements/           # Requisitos, charter, backlog y especificaciones
 ├── diagrams/               # Diagramas UML por módulo (StarUML)
 │   └── class-diagram/      # Diagrama de clases general
 ├── database/               # Modelo ER y diccionario de datos
 ├── financial-guidelines/   # Formatos oficiales del área financiera
 ├── meeting-minutes/        # Actas de reunión firmadas
-└── sprints/                # Artefactos por sprint
-    └── sprint-1/
+├── sprints/                # Artefactos por sprint
+│   └── sprint-1/
+└── track 2/                # 📡 Infraestructura de red (DHCP, FTP, Proxy)
+├── track 2/                # 📡 Infraestructura de red (DHCP, FTP, Proxy)
+│   ├── HU-65-proxy-client.md
 ```
 
 ---
@@ -41,6 +47,17 @@ Documentación técnica que fundamenta las decisiones de diseño y demuestra la 
 | [`environments-and-secrets.md`](./architecture/environments-and-secrets.md) | **HU-58** — Definición de ambientes Local, Testing/Staging y Producción WAN; matriz de variables; estrategia de secretos; guía de configuración local y evidencia documental. |
 | [`environments-and-secrets.docx`](./architecture/environments-and-secrets.docx) | **Versión Word** — Documento editable para entrega formal o revisión externa de la HU-58. |
 | [`test-evidence.md`](./architecture/test-evidence.md) | **Evidencias de testing** — Salida de Jest (4 suites, 50 tests) y Vitest (2 suites, 6 tests), reporte de cobertura de código, análisis de componentes con alta/baja cobertura y plan de mejora por sprint. |
+
+---
+
+## 🚀 Despliegue y Ambientes
+
+Documentación operativa de HU-59 para los ambientes de Pre-Producción y Producción CTIC.
+
+| Archivo | Descripción |
+|---|---|
+| [`PRE-PROD-ENVIRONMENT.md`](./deployment/PRE-PROD-ENVIRONMENT.md) | **Pre-Producción / Staging** — Entorno automatizado con GitHub Actions, runner self-hosted RHEL, Aiven Cloud MySQL, PM2 cluster y Nginx. |
+| [`CTIC-PROD-DEPLOYMENT.md`](./deployment/CTIC-PROD-DEPLOYMENT.md) | **Producción CTIC** — Guía formal para despliegue manual/script on-premise con RHEL, Nginx, PM2, systemd y MariaDB administrada por CTIC. |
 
 ---
 
@@ -114,6 +131,18 @@ Actas de reuniones firmadas con el área financiera de la UPB.
 |---|---|
 | [`sprint-1-backlog.xlsx`](./sprints/sprint-1/sprint-1-backlog.xlsx) | Sprint Backlog con tareas y estimaciones |
 | [`sprint-1-presentation.pptx`](./sprints/sprint-1/sprint-1-presentation.pptx) | Presentación de cierre del Sprint 1 |
+
+---
+
+## 📡 Infraestructura de Red (Track 2)
+
+Documentación correspondiente a la configuración de servicios de red e integración de topología.
+
+| Archivo | Descripción |
+|---|---|
+| [`HU-65-proxy-client.md`](./track%202/HU-65-proxy-client.md) | **HU-65** — Configuración y validación del cliente para el servicio Proxy (Evidencia funcional y logs). |
+| [`HU-65-proxy-client.docx`](./track%202/HU-65-proxy-client.docx) | **HU-65 (Word)** — Versión editable del informe de configuración y validación del cliente proxy. |
+| *Directorio de pruebas* | Ver [`track 2/`](./track%202/) para evidencias de DHCP y FTP. |
 
 ---
 
