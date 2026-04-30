@@ -3,10 +3,12 @@
 set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-SOURCE_CONF="${REPO_ROOT}/infrastructure/nginx/simulador-upb.conf"
 TARGET_CONF="/etc/nginx/conf.d/simulador-upb.conf"
 APP_DOMAIN="${APP_DOMAIN:-simuladorfinanciaciondirecta.bucaramanga.upb.edu.co}"
+PUBLIC_URL_SCHEME="${PUBLIC_URL_SCHEME:-http}"
+SSL_CERT_PATH="${SSL_CERT_PATH:-}"
+SSL_KEY_PATH="${SSL_KEY_PATH:-}"
+SSL_CA_BUNDLE_PATH="${SSL_CA_BUNDLE_PATH:-}"
 TMP_CONF_FILE=""
 
 log() {
@@ -34,13 +36,127 @@ run_privileged() {
   fi
 }
 
+render_http_config() {
+  cat > "${TMP_CONF_FILE}" <<EOF
+server {
+    listen 80;
+    server_name ${APP_DOMAIN};
+
+    root /usr/share/nginx/html/simulador;
+    index index.html;
+
+    access_log /var/log/nginx/simulador-upb.access.log;
+    error_log /var/log/nginx/simulador-upb.error.log warn;
+
+    location /api/ {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 60s;
+        proxy_connect_timeout 10s;
+    }
+
+    location / {
+        try_files \$uri \$uri/ /index.html;
+    }
+}
+EOF
+}
+
+render_https_config() {
+  [ -n "${SSL_CERT_PATH}" ] || fail "SSL_CERT_PATH es obligatorio cuando PUBLIC_URL_SCHEME=https."
+  [ -n "${SSL_KEY_PATH}" ] || fail "SSL_KEY_PATH es obligatorio cuando PUBLIC_URL_SCHEME=https."
+
+  run_privileged test -f "${SSL_CERT_PATH}" || fail "No existe el certificado ${SSL_CERT_PATH}."
+  run_privileged test -f "${SSL_KEY_PATH}" || fail "No existe la llave privada ${SSL_KEY_PATH}."
+
+  local ssl_certificate_effective="${SSL_CERT_PATH}"
+  local ssl_trusted_certificate_block=""
+
+  if [ -n "${SSL_CA_BUNDLE_PATH}" ]; then
+    run_privileged test -f "${SSL_CA_BUNDLE_PATH}" || fail "No existe el CA bundle ${SSL_CA_BUNDLE_PATH}."
+    local fullchain_tmp
+    local fullchain_target
+    fullchain_tmp="$(mktemp)"
+    fullchain_target="/etc/pki/tls/certs/${APP_DOMAIN}.fullchain.crt"
+
+    cat "${SSL_CERT_PATH}" > "${fullchain_tmp}"
+    printf '\n' >> "${fullchain_tmp}"
+    cat "${SSL_CA_BUNDLE_PATH}" >> "${fullchain_tmp}"
+
+    log "Generando fullchain en ${fullchain_target}"
+    run_privileged install -m 644 "${fullchain_tmp}" "${fullchain_target}"
+    rm -f "${fullchain_tmp}"
+
+    ssl_certificate_effective="${fullchain_target}"
+    ssl_trusted_certificate_block="    ssl_trusted_certificate ${SSL_CA_BUNDLE_PATH};"
+  fi
+
+  cat > "${TMP_CONF_FILE}" <<EOF
+server {
+    listen 80;
+    server_name ${APP_DOMAIN};
+    return 301 https://\$host\$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name ${APP_DOMAIN};
+
+    root /usr/share/nginx/html/simulador;
+    index index.html;
+
+    ssl_certificate ${ssl_certificate_effective};
+    ssl_certificate_key ${SSL_KEY_PATH};
+${ssl_trusted_certificate_block}
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+
+    access_log /var/log/nginx/simulador-upb.access.log;
+    error_log /var/log/nginx/simulador-upb.error.log warn;
+
+    location /api/ {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 60s;
+        proxy_connect_timeout 10s;
+    }
+
+    location / {
+        try_files \$uri \$uri/ /index.html;
+    }
+}
+EOF
+}
+
 command -v nginx >/dev/null 2>&1 || fail "nginx no esta instalado."
 
-[ -f "${SOURCE_CONF}" ] || fail "No existe el archivo fuente ${SOURCE_CONF}."
-
 TMP_CONF_FILE="$(mktemp)"
-sed "s/server_name simuladorfinanciaciondirecta.bucaramanga.upb.edu.co;/server_name ${APP_DOMAIN};/" \
-  "${SOURCE_CONF}" > "${TMP_CONF_FILE}"
+
+case "${PUBLIC_URL_SCHEME}" in
+  http)
+    render_http_config
+    ;;
+  https)
+    render_https_config
+    ;;
+  *)
+    fail "PUBLIC_URL_SCHEME debe ser http o https. Valor recibido: ${PUBLIC_URL_SCHEME}"
+    ;;
+esac
 
 if run_privileged test -f "${TARGET_CONF}"; then
   timestamp="$(date +%Y%m%d%H%M%S)"

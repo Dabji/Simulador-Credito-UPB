@@ -13,6 +13,13 @@ Guia operativa para desplegar el Simulador de Credito UPB en una VM RHEL con Mar
 - `SMTP_FROM_EMAIL`
 - Confirmacion de si TLS termina en la VM o en infraestructura CTIC.
 
+Si TLS termina en la VM, pedir tambien:
+
+- Certificado del dominio.
+- Llave privada del certificado.
+- Confirmacion de si el `.crt` ya incluye la cadena completa o si debes usar tambien el `ca-bundle`.
+- Confirmacion de apertura de puertos `80` y `443`.
+
 ## Flujo recomendado
 
 1. Copiar el script maestro y su archivo de variables a la VM.
@@ -75,6 +82,29 @@ chmod +x ctic-rhel10-bootstrap.sh
 
 5. Preparacion previa:
    Crea y llena `ctic-rhel10.deploy.env` con calma antes de conectarte al servidor.
+
+6. Certificados HTTPS:
+   Si CTIC te entrega rutas como:
+   - `/etc/pki/tls/certs/STAR_bucaramanga_upb_edu_co.crt`
+   - `/etc/pki/tls/private/web14.key`
+   - `/etc/pki/tls/certs/STAR_bucaramanga_upb_edu_co.ca-bundle`
+
+   entonces en `ctic-rhel10.deploy.env` define:
+
+   ```env
+   PUBLIC_URL_SCHEME=https
+   SSL_CERT_PATH=/etc/pki/tls/certs/STAR_bucaramanga_upb_edu_co.crt
+   SSL_KEY_PATH=/etc/pki/tls/private/web14.key
+   SSL_CA_BUNDLE_PATH=/etc/pki/tls/certs/STAR_bucaramanga_upb_edu_co.ca-bundle
+   ```
+
+   El script de Nginx generara automaticamente:
+   - redireccion `80 -> 443`
+   - servidor `443 ssl http2`
+   - proxy `/api` hacia `localhost:3000`
+   - un `fullchain` local a partir de `SSL_CERT_PATH + SSL_CA_BUNDLE_PATH` cuando entregues ambos archivos
+
+   Si CTIC termina TLS antes de llegar a la VM, deja `PUBLIC_URL_SCHEME=http`.
 
 ## Flujo manual
 
@@ -183,3 +213,15 @@ curl --fail "http://${APP_DOMAIN}/api/health"
 ```
 
 Si CTIC termina TLS en la VM o en un balanceador, repetir la validacion con `https://`.
+
+## Validacion especifica de HTTPS en CTIC
+
+Si `PUBLIC_URL_SCHEME=https` y TLS termina en la VM:
+
+```bash
+curl -vkI "https://${APP_DOMAIN}"
+curl -vk --fail "https://${APP_DOMAIN}/api/health"
+sudo nginx -t
+sudo systemctl status nginx --no-pager
+sudo ss -tlnp | grep -E ':80|:443'
+```
