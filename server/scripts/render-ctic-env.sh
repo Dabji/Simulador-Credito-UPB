@@ -35,6 +35,7 @@ replace_token() {
 
 required_vars=(
   APP_DOMAIN
+  PUBLIC_URL_SCHEME
   DB_HOST
   DB_PORT
   DB_NAME
@@ -67,6 +68,7 @@ done
 cp "${TEMPLATE_FILE}" "${OUTPUT_FILE}"
 
 replace_token "APP_DOMAIN" "${APP_DOMAIN}"
+replace_token "PUBLIC_URL_SCHEME" "${PUBLIC_URL_SCHEME}"
 replace_token "DB_HOST" "${DB_HOST}"
 replace_token "DB_PORT" "${DB_PORT}"
 replace_token "DB_NAME" "${DB_NAME}"
