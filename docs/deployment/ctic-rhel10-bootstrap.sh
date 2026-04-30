@@ -10,6 +10,7 @@ REPO_SLUG_DEFAULT="Dabji/Simulador-Credito-UPB"
 GIT_REF_DEFAULT="feat/ctic-rhel-deploy"
 APP_BASE_DIR_DEFAULT="/opt/simulador"
 PUBLIC_URL_SCHEME_DEFAULT="http"
+DNF_INSTALL_FLAGS_DEFAULT="-y"
 
 log() {
   printf '\n[ctic-bootstrap] %s\n' "$1"
@@ -42,6 +43,54 @@ require_var() {
   fi
 }
 
+validate_deploy_env_file() {
+  local suspicious_before_eq
+  local suspicious_after_eq
+
+  suspicious_before_eq="$(grep -nE '^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*[[:space:]]+=' "${SANITIZED_ENV_FILE}" || true)"
+  suspicious_after_eq="$(grep -nE '^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*=[[:space:]]+' "${SANITIZED_ENV_FILE}" || true)"
+
+  if [ -n "${suspicious_before_eq}" ] || [ -n "${suspicious_after_eq}" ]; then
+    printf '\n[ctic-bootstrap][error] El archivo %s tiene espacios invalidos alrededor de "=".\n' "${DEPLOY_ENV_FILE}" >&2
+    [ -z "${suspicious_before_eq}" ] || printf '%s\n' "${suspicious_before_eq}" >&2
+    [ -z "${suspicious_after_eq}" ] || printf '%s\n' "${suspicious_after_eq}" >&2
+    exit 1
+  fi
+}
+
+configure_firewall_if_available() {
+  if ! command -v firewall-cmd >/dev/null 2>&1; then
+    return
+  fi
+
+  if ! run_privileged systemctl is-active --quiet firewalld; then
+    return
+  fi
+
+  log "Abriendo servicio HTTP en firewalld"
+  run_privileged firewall-cmd --permanent --add-service=http >/dev/null
+
+  if [ "${PUBLIC_URL_SCHEME}" = "https" ]; then
+    log "Abriendo servicio HTTPS en firewalld"
+    run_privileged firewall-cmd --permanent --add-service=https >/dev/null
+  fi
+
+  run_privileged firewall-cmd --reload >/dev/null
+}
+
+configure_selinux_for_nginx_proxy() {
+  if ! command -v getenforce >/dev/null 2>&1 || ! command -v setsebool >/dev/null 2>&1; then
+    return
+  fi
+
+  if [ "$(getenforce)" = "Disabled" ]; then
+    return
+  fi
+
+  log "Habilitando SELinux para proxy Nginx -> backend"
+  run_privileged setsebool -P httpd_can_network_connect 1 >/dev/null
+}
+
 node_major() {
   node -p "Number(process.versions.node.split('.')[0])"
 }
@@ -54,7 +103,7 @@ install_nodejs_if_needed() {
 
   log "Instalando Node.js 20.x desde NodeSource"
   curl -fsSL https://rpm.nodesource.com/setup_20.x | run_privileged bash -
-  run_privileged dnf install -y nodejs
+  run_privileged dnf install "${DNF_INSTALL_FLAGS[@]}" nodejs
 
   command -v node >/dev/null 2>&1 || fail "Node.js no quedo instalado."
   [ "$(node_major)" -ge 20 ] || fail "Node.js sigue siendo menor a 20 despues de instalarlo."
@@ -94,9 +143,14 @@ fi
 
 [ -f "${DEPLOY_ENV_FILE}" ] || fail "No existe ${DEPLOY_ENV_FILE}. Crea ese archivo primero."
 
+SANITIZED_ENV_FILE="$(mktemp)"
+trap 'rm -f "${SANITIZED_ENV_FILE}"' EXIT
+sed 's/\r$//' "${DEPLOY_ENV_FILE}" > "${SANITIZED_ENV_FILE}"
+validate_deploy_env_file
+
 set -a
 # shellcheck disable=SC1090
-source "${DEPLOY_ENV_FILE}"
+source "${SANITIZED_ENV_FILE}"
 set +a
 
 GITHUB_USERNAME="${GITHUB_USERNAME:-${GITHUB_USERNAME_DEFAULT}}"
@@ -104,6 +158,8 @@ REPO_SLUG="${REPO_SLUG:-${REPO_SLUG_DEFAULT}}"
 GIT_REF="${GIT_REF:-${GIT_REF_DEFAULT}}"
 APP_BASE_DIR="${APP_BASE_DIR:-${APP_BASE_DIR_DEFAULT}}"
 PUBLIC_URL_SCHEME="${PUBLIC_URL_SCHEME:-${PUBLIC_URL_SCHEME_DEFAULT}}"
+DNF_INSTALL_FLAGS_STRING="${DNF_INSTALL_FLAGS:-${DNF_INSTALL_FLAGS_DEFAULT}}"
+read -r -a DNF_INSTALL_FLAGS <<< "${DNF_INSTALL_FLAGS_STRING}"
 APP_DIR="${APP_BASE_DIR}/app"
 DEPLOY_USER="$(id -un)"
 DEPLOY_GROUP="$(id -gn)"
@@ -141,7 +197,7 @@ for var_name in "${required_vars[@]}"; do
 done
 
 log "Instalando prerequisitos base de RHEL 10"
-run_privileged dnf install -y git nginx curl gcc-c++ make python3 ca-certificates
+run_privileged dnf install "${DNF_INSTALL_FLAGS[@]}" git nginx curl gcc-c++ make python3 ca-certificates
 
 install_nodejs_if_needed
 
@@ -155,6 +211,9 @@ require_command nginx
 require_command node
 require_command npm
 require_command pm2
+
+configure_firewall_if_available
+configure_selinux_for_nginx_proxy
 
 clone_or_update_repo
 

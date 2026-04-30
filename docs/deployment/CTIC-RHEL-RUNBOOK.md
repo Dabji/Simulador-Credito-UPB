@@ -39,6 +39,43 @@ chmod +x ctic-rhel10-bootstrap.sh
 ./ctic-rhel10-bootstrap.sh
 ```
 
+## Lecciones validadas en la prueba de VirtualBox
+
+1. Firewall:
+   El bootstrap intenta abrir `http` en `firewalld` y tambien `https` si `PUBLIC_URL_SCHEME=https`.
+
+2. Sintaxis del archivo de despliegue:
+   No dejes espacios alrededor de `=`.
+
+   Correcto:
+   ```env
+   APP_DOMAIN=simulador.upb.edu.co
+   ```
+
+   Incorrecto:
+   ```env
+   APP_DOMAIN = simulador.upb.edu.co
+   ```
+
+   El bootstrap ahora valida este error antes de hacer `source`.
+
+3. Repositorios con validacion GPG estricta:
+   Por defecto se usa:
+   ```env
+   DNF_INSTALL_FLAGS="-y"
+   ```
+
+   Si la VM de CTIC falla por firmas GPG y ellos autorizan continuar, puedes usar:
+   ```env
+   DNF_INSTALL_FLAGS="-y --nogpgcheck"
+   ```
+
+4. GitHub:
+   Verifica antes del despliegue que `GITHUB_TOKEN`, `REPO_SLUG` y `GIT_REF` apunten exactamente al repo y rama aprobados.
+
+5. Preparacion previa:
+   Crea y llena `ctic-rhel10.deploy.env` con calma antes de conectarte al servidor.
+
 ## Flujo manual
 
 ## 1. Instalar prerequisitos en la VM
