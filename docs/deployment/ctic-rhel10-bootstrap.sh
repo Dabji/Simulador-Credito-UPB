@@ -137,10 +137,6 @@ clone_or_update_repo() {
   fi
 }
 
-if [ "${EUID}" -eq 0 ]; then
-  fail "Ejecuta este script con un usuario normal que tenga sudo, no directamente como root."
-fi
-
 [ -f "${DEPLOY_ENV_FILE}" ] || fail "No existe ${DEPLOY_ENV_FILE}. Crea ese archivo primero."
 
 SANITIZED_ENV_FILE="$(mktemp)"
