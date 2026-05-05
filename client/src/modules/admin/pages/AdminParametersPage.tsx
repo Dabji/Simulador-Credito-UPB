@@ -404,7 +404,14 @@ export function AdminParametersPage() {
 
       let initialPctRequired = rule.initialPctRequired;
 
-      if (isTableEditable) {
+      if (
+        isTableEditable &&
+        Number.isFinite(newMinPct) &&
+        rule.extraInstallments >= (parseInt(form!.levelConfigs[rule.level].sinInteresMax, 10) || 0)
+      ) {
+        // El campo "Con intereses" controla el minimo real de las cuotas con interes.
+        initialPctRequired = newMinPct;
+      } else if (isTableEditable) {
         // Valor de la tabla (cuotas individuales)
         initialPctRequired = formInitPcts[rule.extraInstallments];
       } else if (Number.isFinite(newMinPct)) {
