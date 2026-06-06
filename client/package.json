@@ -16,7 +16,7 @@
     "lucide-react": "^1.14.0",
     "react": "19.2.5",
     "react-dom": "19.2.5",
-    "react-hook-form": "^7.74.0",
+    "react-hook-form": "^7.75.0",
     "react-router-dom": "^7.16.0",
     "zod": "^4.4.3",
     "zod-validation-error": "^5.0.0"
