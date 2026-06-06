@@ -27,7 +27,7 @@
     "swagger-ui-express": "^5.0.1",
     "winston": "^3.19.0",
     "xss": "^1.0.15",
-    "zod": "^4.3.6"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
