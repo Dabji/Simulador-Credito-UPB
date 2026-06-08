@@ -6,451 +6,269 @@
 
   **Plataforma integral de simulación de crédito educativo para la Universidad Pontificia Bolivariana**
 
+  [🌐 Producción](https://simuladorfinanciaciondirecta.bucaramanga.upb.edu.co/) ·
+  [📚 Documentación](./docs/README.md) ·
+  [🎓 LEARN.md](./LEARN.md) ·
+  [🚀 Manual CTIC](./docs/deployment/Manual%20de%20Despliegue%20Simulador%20-%20CTIC.pdf)
+
   [![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=white)](https://react.dev/)
-  [![Node.js](https://img.shields.io/badge/Node.js-Express_5-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
-  [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-  [![MySQL](https://img.shields.io/badge/MySQL-Aiven_Cloud-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://www.mysql.com/)
-  [![Vite](https://img.shields.io/badge/Vite-7-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vite.dev/)
-  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
+  [![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vite.dev/)
+  [![Node.js](https://img.shields.io/badge/Node.js-Express_5.2-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+  [![MySQL/MariaDB](https://img.shields.io/badge/MySQL%2FMariaDB-Aiven%20%2B%20CTIC-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://www.mysql.com/)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](./LICENSE)
 
 </div>
 
 ---
 
-## 📖 Acerca de
+## 🌎 Idioma / Language
 
-El **Simulador de Crédito UPB** permite a estudiantes, invitados y administradores de la Universidad Pontificia Bolivariana modelar, calcular y gestionar planes de financiamiento educativo de forma ágil y segura.
-
-- 🏗️ **Clean Architecture** — Capas `Core/` → `Application/` → `Infrastructure/` con inversión de dependencias estricta.
-- 🧮 **Motor Financiero (Strategy Pattern)** — `SimulationEngine` con estrategias intercambiables: amortización francesa (`FrenchAmortizationStrategy`) y sin interés (`NoInterestStrategy`).
-- 🔐 **Autenticación Dual** — Login local con bcrypt + JWT y federación LDAP/Active Directory institucional, con autorización por roles (`STUDENT` / `ADMIN`).
-- 📧 **Notificaciones Transaccionales** — Correos HTML responsive de recuperación de contraseña vía Brevo SMTP.
-- 📄 **Exportación PDF & CSV** — Generación de documentos de simulación con PDFKit y builder CSV.
-- 🗑️ **Purga Automática** — Scheduler que archiva simulaciones tras período de retención configurable (soft-delete + auditoría).
-- 👤 **Modo Invitado** — Simulaciones sin registro, con restricciones controladas (sin guardado ni historial).
+[🇪🇸 Español](#-español) | [🇺🇸 English](#-english)
 
 ---
 
-## 🖼️ Galería de la Aplicación
+## 🇪🇸 Español
 
-<details>
-<summary><strong>🔐 Login y Autenticación</strong></summary>
-<br/>
+### 📖 Acerca del proyecto
 
-|  |  |
-|:---:|:---:|
-| <img src="https://github.com/user-attachments/assets/04bcc531-9b30-4972-8e3d-d7b0516c62b0" width="480" alt="Login" /> | <img src="https://github.com/user-attachments/assets/6c4075d5-c690-4eeb-bc1f-db442783a1cb" width="480" alt="Student redirect" /> |
-| **Formulario de Login** | **Redirección STUDENT → `/student/main`** |
-| <img src="https://github.com/user-attachments/assets/588f6061-851a-49c7-8810-a89d59298b7d" width="480" alt="Password validation" /> | <img src="https://github.com/user-attachments/assets/9a76d731-de3f-4eef-a8eb-7762d41098a8" width="480" alt="Field errors" /> |
-| **Validación visual de contraseña en tiempo real** | **Retroalimentación de errores por campo** |
-
-</details>
-
-<details>
-<summary><strong>👤 Modo Invitado</strong></summary>
-<br/>
-
-|  |  |
-|:---:|:---:|
-| <img src="https://github.com/user-attachments/assets/40ea854a-02b2-49a7-a7d3-8bfe328df40d" width="480" alt="Guest main" /> | <img src="https://github.com/user-attachments/assets/91d1ff52-9c86-4b1a-a116-4343927465dd" width="480" alt="Guest simulation" /> |
-| **Página principal modo invitado** | **Formulario de simulación (guest)** |
-| <img src="https://github.com/user-attachments/assets/edea8693-cd6e-41ba-a666-87985c495062" width="480" alt="Guest CTA" /> | <img src="https://github.com/user-attachments/assets/5719bb52-769d-4914-9427-23cc3a43e3be" width="480" alt="Guest results" /> |
-| **CTA "Crear Nueva Simulación"** | **Resultados invitado (sin botón Guardar)** |
-
-</details>
-
-<details>
-<summary><strong>🧮 Simulador y Resultados</strong></summary>
-<br/>
-
-|  |  |
-|:---:|:---:|
-| <img src="https://github.com/user-attachments/assets/64bba96f-5df4-4293-8692-57492f1b90c6" width="480" alt="Encabezado y datos" /> | <img src="https://github.com/user-attachments/assets/6bf44496-fcfd-42cb-bb0b-acac2e783e5d" width="480" alt="Resumen y gráficas" /> |
-| **Encabezado y datos del estudiante** | **Resumen financiero y gráficas** |
-| <img src="https://github.com/user-attachments/assets/b02a766e-339d-4e1c-a93d-ec85d980316a" width="480" alt="Donut chart" /> | <img src="https://github.com/user-attachments/assets/afdd6c3d-5321-473d-8fa5-5cb752782188" width="480" alt="Tabla amortización" /> |
-| **Gráficas de distribución** | **Tabla de amortización + Exportar** |
-
-</details>
-
-<details>
-<summary><strong>📜 Historial de Simulaciones (Estudiante)</strong></summary>
-<br/>
-
-|  |  |
-|:---:|:---:|
-| <img src="https://github.com/user-attachments/assets/2f37e5f7-da21-4a5a-aad8-4ff65c8b415c" width="480" alt="Student history" /> | <img src="https://github.com/user-attachments/assets/51cd6f7b-be44-46b1-baee-83497126e1b9" width="480" alt="Filters dropdown" /> |
-| **Vista completa con tabla + aviso 90 días** | **Filtros: Modalidad / Período / Fecha** |
-| <img src="https://github.com/user-attachments/assets/62c2e05b-9587-414d-a258-06c0edaa9fef" width="480" alt="Row selected" /> | <img src="https://github.com/user-attachments/assets/c2e4ded3-5618-4886-8144-2d95f5556f96" width="480" alt="History flow" /> |
-| **Fila seleccionada + acciones habilitadas** | **Flujo historial de simulación** |
-
-</details>
-
-<details>
-<summary><strong>📄 Exportación PDF</strong></summary>
-<br/>
-
-|  |  |
-|:---:|:---:|
-| <img src="https://github.com/user-attachments/assets/90c3fdc3-0f0c-44f8-b2cf-0ad376ee79b8" width="480" alt="PDF preview 1" /> | <img src="https://github.com/user-attachments/assets/375f1d96-ee7a-450b-a206-9ad5595e8dc0" width="480" alt="PDF preview 2" /> |
-| **Documento PDF generado (página 1)** | **Tabla de amortización en PDF** |
-
-</details>
-
-<details>
-<summary><strong>🛡️ Panel de Administración</strong></summary>
-<br/>
-
-|  |  |
-|:---:|:---:|
-| <img src="https://github.com/user-attachments/assets/af791a4e-e106-496d-92ab-96a3a662cfa7" width="480" alt="Admin main" /> | <img src="https://github.com/user-attachments/assets/33009ce6-3ed8-4f3e-bcc0-4705b0f28d71" width="480" alt="Admin simulations" /> |
-| **Panel principal Admin (3 módulos)** | **Gestión de Simulaciones + paginación** |
-| <img src="https://github.com/user-attachments/assets/2a41f9d7-6c01-426e-ad5b-9d3055b08bdb" width="480" alt="Admin filters" /> | <img src="https://github.com/user-attachments/assets/51f36e99-d303-436a-a73f-8dcca10c6a52" width="480" alt="Delete modal" /> |
-| **Filtros y búsqueda** | **Modal de confirmación "Eliminar"** |
-| <img src="https://github.com/user-attachments/assets/9ea294b1-6af8-4561-99e5-c2fd62a1cfe1" width="480" alt="Admin parameters" /> | <img src="https://github.com/user-attachments/assets/3a6a096d-ad90-4786-b5b3-cc30e420de22" width="480" alt="Admin parameters toggle" /> |
-| **Parametrización financiera** | **Intercambio de versiones activas** |
-
-</details>
-
-<details>
-<summary><strong>🧭 Navegación y UX</strong></summary>
-<br/>
-
-|  |  |
-|:---:|:---:|
-| <img src="https://github.com/user-attachments/assets/06a76285-c0e0-4aed-85a0-79c295cb8702" width="480" alt="BackNavLink hover" /> | <img src="https://github.com/user-attachments/assets/9ab6c103-0606-446f-8f8e-a02fc02570c6" width="480" alt="BackNavLink 2" /> |
-| **Hover en BackNavLink (AdminStudents)** | **BackNavLink (AdminSimulations)** |
-| <img src="https://github.com/user-attachments/assets/da4709ea-50f9-48d1-9ece-b5db9612663e" width="120" alt="Logo gray" /> | <img src="https://github.com/user-attachments/assets/4c259a4d-8f1a-4d2b-876d-4ab65dafd702" width="120" alt="Logo color" /> |
-| **Logo UPB (gris)** | **Logo UPB hover (color) + focus ring** |
-
-</details>
-
-<details>
-<summary><strong>📧 Correo de Recuperación</strong></summary>
-<br/>
+El **Simulador de Crédito UPB** es una plataforma web institucional para modelar, calcular y gestionar planes de financiación educativa. Fue desarrollada para la Universidad Pontificia Bolivariana Seccional Bucaramanga y actualmente cuenta con una versión publicada en producción:
 
 <div align="center">
-  <img src="https://github.com/user-attachments/assets/291ae998-3e77-4bb5-8c45-c5b7803b8912" width="600" alt="Password reset email" />
-  <br/><em>Correo HTML responsive de recuperación de contraseña</em>
+
+### 🌐 [simuladorfinanciaciondirecta.bucaramanga.upb.edu.co](https://simuladorfinanciaciondirecta.bucaramanga.upb.edu.co/)
+
 </div>
+
+El sistema permite que invitados, estudiantes y administradores trabajen con escenarios de crédito académico, tablas de amortización, historial de simulaciones, exportaciones PDF/CSV y parametrización financiera.
+
+- 🏗️ **Clean Architecture**: separación entre `Core`, `Application` e `Infrastructure`.
+- 🧮 **Motor financiero con Strategy Pattern**: amortización francesa y modalidad sin interés.
+- 🔐 **Autenticación dual**: login local con bcrypt/JWT e integración LDAP/Active Directory para administración institucional.
+- 📧 **Notificaciones transaccionales**: recuperación de contraseña por SMTP.
+- 📄 **Exportaciones PDF/CSV**: generación de documentos para revisión y trazabilidad.
+- 🗃️ **Persistencia relacional**: MySQL 8/Aiven y MariaDB/MySQL para CTIC.
+- 🚀 **Despliegue institucional**: Nginx, PM2, RHEL y documentación operativa para CTIC.
+
+### 🎯 Valor educativo
+
+Este repositorio está preparado para **GitHub Education Community Exchange / Learn & Collaborate**. Puede usarse como caso de estudio para aprender arquitectura de software, frontend moderno, backend TypeScript, validación con Zod, modelado relacional, seguridad, pruebas y despliegue institucional.
+
+**Descripción sugerida para GitHub:**
+`Educational credit simulator for UPB Bucaramanga. React, Node.js, TypeScript, Clean Architecture, Strategy Pattern, MySQL/MariaDB, Nginx and PM2 deployment.`
+
+**Topics sugeridos:**
+`react`, `vite`, `typescript`, `nodejs`, `express`, `clean-architecture`, `strategy-pattern`, `mysql`, `mariadb`, `sequelize`, `zod`, `education`, `upb`, `github-education`
+
+### 🖼️ Galería de la aplicación
+
+Las capturas documentan el comportamiento funcional del simulador. La URL oficial de producción debe usarse para generar nuevas capturas finales cuando se publique la ficha en GitHub Education.
+
+<details open>
+<summary><strong>🔐 Login y autenticación</strong></summary>
+<br/>
+
+| Login | Redirección por rol |
+|:---:|:---:|
+| <img src="https://github.com/user-attachments/assets/04bcc531-9b30-4972-8e3d-d7b0516c62b0" width="480" alt="Formulario de login" /> | <img src="https://github.com/user-attachments/assets/6c4075d5-c690-4eeb-bc1f-db442783a1cb" width="480" alt="Redirección de estudiante" /> |
+| **Formulario de acceso** | **Redirección `STUDENT` hacia `/student/main`** |
+| <img src="https://github.com/user-attachments/assets/588f6061-851a-49c7-8810-a89d59298b7d" width="480" alt="Validación de contraseña" /> | <img src="https://github.com/user-attachments/assets/9a76d731-de3f-4eef-a8eb-7762d41098a8" width="480" alt="Errores por campo" /> |
+| **Validación visual de contraseña** | **Retroalimentación de errores por campo** |
 
 </details>
 
 <details>
-<summary><strong>🧪 Testing</strong></summary>
+<summary><strong>👤 Modo invitado</strong></summary>
 <br/>
 
-|  |  |
+| Inicio invitado | Formulario de simulación |
 |:---:|:---:|
-| <img src="https://github.com/user-attachments/assets/0a9ca5d4-269d-4ab9-8978-e3919043b542" width="480" alt="Tests 1" /> | <img src="https://github.com/user-attachments/assets/3846c775-206c-41f4-92fe-7dc33336b3bc" width="480" alt="Tests 2" /> |
-| **Suite de tests backend** | **Tests pasando correctamente** |
-| <img src="https://github.com/user-attachments/assets/88a9018e-5856-41b6-871a-53387bfd3a00" width="480" alt="API validation" /> | <img src="https://github.com/user-attachments/assets/146a8a88-ec4e-4372-a137-e7f0fca19dbb" width="480" alt="Header tests" /> |
-| **Validación de seguridad en API (400 + fieldErrors)** | **Tests de componentes** |
+| <img src="https://github.com/user-attachments/assets/40ea854a-02b2-49a7-a7d3-8bfe328df40d" width="480" alt="Página principal modo invitado" /> | <img src="https://github.com/user-attachments/assets/91d1ff52-9c86-4b1a-a116-4343927465dd" width="480" alt="Formulario de simulación invitado" /> |
+| **Página principal modo invitado** | **Formulario de simulación sin registro** |
+| <img src="https://github.com/user-attachments/assets/edea8693-cd6e-41ba-a666-87985c495062" width="480" alt="CTA crear simulación" /> | <img src="https://github.com/user-attachments/assets/5719bb52-769d-4914-9427-23cc3a43e3be" width="480" alt="Resultados invitado" /> |
+| **CTA “Crear nueva simulación”** | **Resultados sin opción de guardado** |
 
 </details>
 
----
+<details>
+<summary><strong>🧮 Simulación y resultados</strong></summary>
+<br/>
 
-## 🏛️ Arquitectura del Sistema
+| Datos y resumen | Gráficas y amortización |
+|:---:|:---:|
+| <img src="https://github.com/user-attachments/assets/64bba96f-5df4-4293-8692-57492f1b90c6" width="480" alt="Encabezado y datos del estudiante" /> | <img src="https://github.com/user-attachments/assets/6bf44496-fcfd-42cb-bb0b-acac2e783e5d" width="480" alt="Resumen financiero y gráficas" /> |
+| **Encabezado y datos del estudiante** | **Resumen financiero y visualización** |
+| <img src="https://github.com/user-attachments/assets/b02a766e-339d-4e1c-a93d-ec85d980316a" width="480" alt="Gráfica de distribución" /> | <img src="https://github.com/user-attachments/assets/afdd6c3d-5321-473d-8fa5-5cb752782188" width="480" alt="Tabla de amortización" /> |
+| **Distribución de valores** | **Tabla de amortización y exportación** |
 
-```mermaid
-graph TD
-    A["👤 Usuario<br/>(Estudiante / Admin / Invitado)"] -->|HTTP| B["⚛️ Frontend<br/>React 19 + Vite 7<br/>:5173"]
-    B -->|fetch /api/*| C["🟢 Backend<br/>Express 5 + TypeScript<br/>:3000"]
-    C -->|Sequelize ORM<br/>SSL| D["🗄️ MySQL 8<br/>Aiven Cloud"]
-    C -->|SMTP| E["📧 Brevo<br/>Email"]
-    C -->|LDAP| F["🔑 Active Directory<br/>UPB"]
+</details>
 
-    style A fill:#f9f,stroke:#333,stroke-width:2px,color:#000
-    style B fill:#61DAFB,stroke:#333,stroke-width:2px,color:#000
-    style C fill:#339933,stroke:#333,stroke-width:2px,color:#fff
-    style D fill:#4479A1,stroke:#333,stroke-width:2px,color:#fff
-    style E fill:#0B5394,stroke:#333,stroke-width:2px,color:#fff
-    style F fill:#FF6F00,stroke:#333,stroke-width:2px,color:#fff
-```
+<details>
+<summary><strong>🛡️ Panel de administración</strong></summary>
+<br/>
 
-### Clean Architecture (Backend)
+| Panel principal | Gestión de simulaciones |
+|:---:|:---:|
+| <img src="https://github.com/user-attachments/assets/af791a4e-e106-496d-92ab-96a3a662cfa7" width="480" alt="Panel principal de administración" /> | <img src="https://github.com/user-attachments/assets/33009ce6-3ed8-4f3e-bcc0-4705b0f28d71" width="480" alt="Gestión de simulaciones" /> |
+| **Panel principal Admin** | **Simulaciones con tabla y paginación** |
+| <img src="https://github.com/user-attachments/assets/9ea294b1-6af8-4561-99e5-c2fd62a1cfe1" width="480" alt="Parametrización financiera" /> | <img src="https://github.com/user-attachments/assets/3a6a096d-ad90-4786-b5b3-cc30e420de22" width="480" alt="Cambio de versión activa" /> |
+| **Parametrización financiera** | **Activación de versiones** |
 
-```mermaid
-graph LR
-    subgraph Core["🔵 Core (Dominio)"]
-        E1["Entities<br/>User · Simulation · Money<br/>ParameterVersion · SimulationRow"]
-        E2["Repository Interfaces<br/>IUserRepo · ISimulationRepo<br/>IParameterVersionRepo"]
-        E3["Errors<br/>AppError"]
-    end
+</details>
 
-    subgraph App["🟢 Application"]
-        S1["Use Cases<br/>AuthenticateUser · SaveSimulation<br/>PreviewSimulation · RegisterUser<br/>ResetPassword · ListSimulations..."]
-        S2["Services<br/>SimulationEngine<br/>SimulationService · AuditService"]
-        S3["Strategies<br/>FrenchAmortization<br/>NoInterest"]
-        S4["DTOs<br/>SimulationInput · LoginInput<br/>SimulationSummary..."]
-    end
+<details>
+<summary><strong>📄 Exportación, correo y pruebas</strong></summary>
+<br/>
 
-    subgraph Infra["🟠 Infrastructure"]
-        I1["HTTP<br/>Express Routes · Middlewares<br/>Swagger · Error Handler"]
-        I2["Persistence<br/>Sequelize Models<br/>Repository Implementations"]
-        I3["Auth<br/>JWT · LDAP"]
-        I4["Email · Logger · Scheduler"]
-    end
+| PDF | Correo |
+|:---:|:---:|
+| <img src="https://github.com/user-attachments/assets/90c3fdc3-0f0c-44f8-b2cf-0ad376ee79b8" width="480" alt="Documento PDF generado" /> | <img src="https://github.com/user-attachments/assets/291ae998-3e77-4bb5-8c45-c5b7803b8912" width="480" alt="Correo de recuperación de contraseña" /> |
+| **Documento PDF generado** | **Correo HTML responsive** |
+| <img src="https://github.com/user-attachments/assets/0a9ca5d4-269d-4ab9-8978-e3919043b542" width="480" alt="Suite de pruebas backend" /> | <img src="https://github.com/user-attachments/assets/88a9018e-5856-41b6-871a-53387bfd3a00" width="480" alt="Validación de API" /> |
+| **Suite de pruebas backend** | **Validación de seguridad en API** |
 
-    Infra -->|depends on| App
-    App -->|depends on| Core
-    Core -.->|no dependencies| Core
+</details>
 
-    style Core fill:#dbeafe,stroke:#3b82f6,stroke-width:2px,color:#000
-    style App fill:#dcfce7,stroke:#22c55e,stroke-width:2px,color:#000
-    style Infra fill:#ffedd5,stroke:#f97316,stroke-width:2px,color:#000
-```
+### 🏛️ Arquitectura visual
 
-### Strategy Pattern — Motor Financiero
+<div align="center">
+  <img src="./docs/architecture/assets/diagrams/system-context.png" alt="Vista de contexto del sistema" width="900" />
+  <br />
+  <em>Vista de contexto: SPA React, API Node.js/Express, base de datos, LDAP y SMTP.</em>
+</div>
 
-```mermaid
-classDiagram
-    class InterestStrategy {
-        <<interface>>
-        +resolveMonthlyRate(input, params) number
-        +computePeriodicPayment(principal, rate, n) number
-    }
+<br />
 
-    class FrenchAmortizationStrategy {
-        +resolveMonthlyRate() number
-        +computePeriodicPayment() number
-    }
+<div align="center">
+  <img src="./docs/architecture/assets/diagrams/component-diagram.png" alt="Diagrama de componentes del sistema" width="900" />
+  <br />
+  <em>Componentes principales del backend, servicios de dominio, repositorios e integraciones.</em>
+</div>
 
-    class NoInterestStrategy {
-        +resolveMonthlyRate() number
-        +computePeriodicPayment() number
-    }
+### 📚 Documentación principal
 
-    class SimulationEngine {
-        -strategies: Record~string, InterestStrategy~
-        +computeSummary(input, params) SimulationSummary
-        +buildAmortizationSchedule() AmortizationRowDTO[]
-    }
-
-    InterestStrategy <|.. FrenchAmortizationStrategy : con_interes
-    InterestStrategy <|.. NoInterestStrategy : sin_interes
-    SimulationEngine --> InterestStrategy : usa
-```
-
----
-
-## 📚 Índice Documental
-
-> Toda la documentación del proyecto se encuentra organizada en la carpeta [`docs/`](./docs/). Consulta el [índice detallado](./docs/README.md) para ver cada archivo.
-
-| Categoría | Descripción | Ubicación |
-|---|---|---|
-| 📋 **Requisitos** | Project Charter, Product Backlog, especificaciones del proyecto integrador y plan de requisitos de software. | [`docs/requirements/`](./docs/requirements/) |
-| 📐 **Diagramas** | Diagramas UML por módulo (StarUML `.mdj`) y diagrama de clases general. | [`docs/diagrams/`](./docs/diagrams/) |
-| 🗄️ **Base de Datos** | Diagrama entidad-relación y diccionario de datos. | [`docs/database/`](./docs/database/) |
-| 💰 **Lineamientos Financieros** | Formatos oficiales de solicitud de crédito del área financiera UPB. | [`docs/financial-guidelines/`](./docs/financial-guidelines/) |
-| 🤝 **Actas de Reunión** | Actas firmadas de reuniones con el área financiera (7 sesiones). | [`docs/meeting-minutes/`](./docs/meeting-minutes/) |
-| 🏃 **Sprints** | Backlogs y presentaciones de cada Sprint. | [`docs/sprints/`](./docs/sprints/) |
-| 🏗️ **Sustento Técnico** | Decisiones arquitectónicas, flujos de datos, ambientes, secretos y evidencias de testing. | [`docs/architecture/`](./docs/architecture/) |
-
-### 🛡️ Sustento Técnico — Arquitectura y Evidencias
-
-Documentación técnica que fundamenta las decisiones de diseño y demuestra la calidad del sistema:
-
-| Documento | Descripción |
+| Entregable | Enlace |
 |---|---|
-| 📝 [**Decisiones Técnicas (ADR)**](./docs/architecture/technical-decisions.md) | 9 Architecture Decision Records: Clean Architecture, Strategy Pattern, Zod validation, autenticación dual JWT+LDAP, monorepo, stack frontend, MySQL Aiven, soft-delete + purga automática y manejo seguro de ambientes/secretos. |
-| ⚙️ [**Diseño del Sistema**](./docs/architecture/system-design.md) | Flujos de datos completos con diagramas Mermaid: pipeline de simulación (SimulationForm → Engine → AmortizationTable), modelo de seguridad Defense in Depth (7 capas), flujo de autenticación, exportación PDF, ciclo de vida de simulaciones y modelo ER detallado. |
-| 🔐 [**Ambientes y Secretos (HU-58)**](./docs/architecture/environments-and-secrets.md) | Estrategia oficial de configuración para Local, Testing/Staging y Producción WAN; matriz de variables; exclusión de secretos y guía rápida de `.env`. |
-| 📄 [**Ambientes y Secretos — DOCX**](./docs/architecture/environments-and-secrets.docx) | Versión editable Word para entrega formal o revisión externa. |
-| 🧪 [**Evidencias de Testing**](./docs/architecture/test-evidence.md) | Resultados de ejecución de Jest (50 tests backend) y Vitest (6 tests frontend), reporte de cobertura de código, análisis de priorización y estrategia de testing por sprint. |
+| 📘 Manual de usuario | [docs/manuals/Manual_Usuario_Simulador_Credito_UPB.pdf](./docs/manuals/Manual_Usuario_Simulador_Credito_UPB.pdf) |
+| 🛠️ Manual técnico | [docs/manuals/Manual de Técnico Simulador.pdf](./docs/manuals/Manual%20de%20T%C3%A9cnico%20Simulador.pdf) |
+| 🚀 Manual de despliegue CTIC | [docs/deployment/Manual de Despliegue Simulador - CTIC.pdf](./docs/deployment/Manual%20de%20Despliegue%20Simulador%20-%20CTIC.pdf) |
+| 🎓 Artículo IEEE | [docs/academic/Articulo IEEE Simulador de Credito UPB.pdf](./docs/academic/Articulo%20IEEE%20Simulador%20de%20Credito%20UPB.pdf) |
+| 🧭 Guía educativa | [LEARN.md](./LEARN.md) |
+| 🗂️ Índice documental | [docs/README.md](./docs/README.md) |
 
----
+### 🧰 Stack tecnológico
 
-## 🗂️ Estructura del Proyecto
+| Capa | Tecnologías |
+|---|---|
+| ⚛️ Frontend | React 19, Vite 8, TypeScript 6, Tailwind CSS, React Router, React Hook Form, Zod |
+| 🟢 Backend | Node.js, Express 5.2, TypeScript 6, JWT, bcrypt, LDAP, Nodemailer |
+| 🧮 Dominio | `SimulationEngine`, Strategy Pattern, amortización francesa, modalidad sin interés |
+| 🗄️ Datos | MySQL 8/Aiven, MariaDB/MySQL CTIC, Sequelize, scripts SQL versionados |
+| 🚀 Operación | Nginx, PM2, systemd, RHEL, GitHub Actions para preproducción |
+| 🧪 Calidad | Jest, Supertest, Vitest, evidencias funcionales/manuales e integración |
 
-```
-simulador-credito-upb/
-├── client/                          # ⚛️ Frontend — React 19 + Vite + TypeScript
-│   ├── src/
-│   │   ├── modules/
-│   │   │   ├── auth/                # Login, Register, ForgotPassword, ResetPassword
-│   │   │   ├── admin/               # Panel admin (Students, Parameters, Simulations)
-│   │   │   ├── simulator/           # Simulador (user + guest)
-│   │   │   └── landing/             # Landing page pública
-│   │   ├── shared/
-│   │   │   ├── components/          # Layout, Header, Footer, SimulationForm, Charts...
-│   │   │   ├── services/            # API client
-│   │   │   └── utils/               # Helpers
-│   │   └── App.tsx                  # Router principal + rutas protegidas
-│   ├── nginx.conf                   # Nginx config (producción)
-│   ├── tailwind.config.js
-│   └── package.json
-│
-├── server/                          # 🟢 Backend — Node.js + Express 5 + TypeScript
-│   ├── src/
-│   │   ├── Core/                    # 🔵 Dominio (entities, repos interfaces, errors)
-│   │   ├── Application/             # 🟢 Casos de uso, servicios, strategies, DTOs
-│   │   │   ├── use-cases/           # AuthenticateUser, SaveSimulation, etc.
-│   │   │   ├── services/            # SimulationEngine, AuditService, PDF/CSV builders
-│   │   │   └── strategies/          # FrenchAmortization, NoInterest
-│   │   ├── Infrastructure/          # 🟠 Frameworks y drivers
-│   │   │   ├── http/                # Express app, routes, middlewares, Swagger
-│   │   │   ├── persistence/         # Sequelize models + repository implementations
-│   │   │   ├── auth/                # JWT + LDAP services
-│   │   │   ├── email/               # Nodemailer + Brevo SMTP
-│   │   │   ├── scheduler/           # Purga automática de simulaciones
-│   │   │   └── config/              # env, database singleton
-│   │   └── index.ts                 # Bootstrap del servidor
-│   ├── jest.config.ts
-│   └── package.json
-│
-├── docs/                            # 📖 Documentación del proyecto
-│   ├── architecture/               # 🏗️ ADRs, flujos técnicos, ambientes, secretos y testing
-│   ├── requirements/                # Charter, backlog, especificaciones
-│   ├── diagrams/                    # Diagramas UML por módulo
-│   ├── database/                    # ER diagram + diccionario de datos
-│   ├── financial-guidelines/        # Formatos de crédito financiero
-│   ├── meeting-minutes/             # Actas de reunión firmadas
-│   └── sprints/                     # Artefactos por sprint
-│
-├── .github/                         # CI/CD workflows, templates, Dependabot
-├── .env.example                     # Variables de entorno de referencia
-├── package.json                     # Monorepo workspaces (npm)
-├── LICENSE                          # Licencia MIT
-├── SECURITY.md                      # Política de reporte de vulnerabilidades
-├── CONTRIBUTING.md                  # Guía de contribución
-├── CODE_OF_CONDUCT.md               # Código de conducta
-└── README.md
-```
-
----
-
-## 🚀 Guía de Inicio Rápido
-
-### Prerrequisitos
-
-- **Node.js** ≥ 18
-- **npm** ≥ 9
-
-### Instalación
+### 🚀 Inicio rápido
 
 ```bash
-# 1. Clonar el repositorio
-git clone https://github.com/tu-org/simulador-credito-upb.git
-cd simulador-credito-upb
-
-# 2. Instalar dependencias (monorepo — instala client + server)
 npm install
-
-# 3. Configurar variables de entorno
-cp .env.example .env
-# Edita .env con tus credenciales de BD (Aiven), LDAP, SMTP y JWT
-```
-
-> 🔐 Consulta la guía completa de ambientes y secretos en
-> [`docs/architecture/environments-and-secrets.md`](./docs/architecture/environments-and-secrets.md).
-
-### Desarrollo
-
-```bash
-# Levantar backend + frontend simultáneamente
 npm run dev
-
-# O por separado:
-npm run dev:server    # Backend  → http://localhost:3000
-npm run dev:client    # Frontend → http://localhost:5173
 ```
 
-| Servicio | URL | Descripción |
-|---|---|---|
-| Frontend | `http://localhost:5173` | Aplicación React (Vite HMR) |
-| Backend API | `http://localhost:3000/api` | REST API Express |
-| Swagger Docs | `http://localhost:3000/api/docs` | Documentación interactiva de la API |
-| Health Check | `http://localhost:3000/api/health` | Estado del servidor |
+| Servicio | URL |
+|---|---|
+| Frontend | `http://localhost:5173` |
+| API | `http://localhost:3000/api` |
+| Swagger | `http://localhost:3000/api/docs` |
+| Health check | `http://localhost:3000/api/health` |
 
-### Testing
+### 🧪 Pruebas
 
 ```bash
-# Tests del backend (Jest)
 npm run test --workspace=server
-
-# Tests del frontend (Vitest)
 npm run test --workspace=client
 ```
 
+### 🚀 Despliegue CTIC
+
+El despliegue institucional está documentado para una VM RHEL administrada por CTIC:
+
+- Nginx publica la SPA y enruta `/api` al backend.
+- PM2 mantiene vivo el proceso Node.js en `localhost:3000`.
+- MariaDB/MySQL opera en el puerto `3306`.
+- LDAP usa `389` y SMTP usa `587`.
+- HTTP `80` y HTTPS `443` son los puertos públicos esperados.
+
+Ver [docs/deployment/README.md](./docs/deployment/README.md).
+
 ---
 
-## 🚀 Ambientes de Despliegue
+## 🇺🇸 English
 
-| Ambiente | Modelo | Documentación |
+### 📖 Overview
+
+**Simulador de Crédito UPB** is an institutional web application for educational credit simulation at Universidad Pontificia Bolivariana Bucaramanga. It supports guest, student and administrator workflows for financial scenarios, amortization tables, saved history, exports and financial parameter management.
+
+The project is ready to be shared as a **GitHub Education Community Exchange / Learn & Collaborate** case study. It includes source code, MIT license, technical documentation, deployment manuals, an IEEE-style academic article and a dedicated learning guide.
+
+### 🎓 What students can learn
+
+- Clean Architecture in a TypeScript/Express backend.
+- React SPA design with role-based routing.
+- Zod validation in client and server flows.
+- Strategy Pattern applied to a real financial simulation engine.
+- MySQL/MariaDB modeling with Sequelize repositories.
+- Deployment on RHEL using Nginx, PM2 and environment-based configuration.
+- Technical writing for institutional software handoff.
+
+### 📌 Main resources
+
+| Resource | Link |
+|---|---|
+| 🌐 Production site | [Official UPB deployment](https://simuladorfinanciaciondirecta.bucaramanga.upb.edu.co/) |
+| 🎓 Learning guide | [LEARN.md](./LEARN.md) |
+| 📚 Documentation index | [docs/README.md](./docs/README.md) |
+| 🚀 CTIC deployment manual | [Manual de Despliegue Simulador - CTIC.pdf](./docs/deployment/Manual%20de%20Despliegue%20Simulador%20-%20CTIC.pdf) |
+| 📄 IEEE paper | [Articulo IEEE Simulador de Credito UPB.pdf](./docs/academic/Articulo%20IEEE%20Simulador%20de%20Credito%20UPB.pdf) |
+
+### 🗂️ Repository map
+
+```text
+client/                 React 19 + Vite 8 + TypeScript frontend
+server/                 Node.js + Express 5 backend
+docs/                   Technical, academic, deployment and user documentation
+infrastructure/nginx/   Nginx configuration templates
+.github/                Pull request and automation files
+```
+
+### ✅ Open Source readiness
+
+- `README.md` with bilingual project presentation.
+- `LEARN.md` for GitHub Education.
+- `LICENSE` with MIT terms.
+- `CONTRIBUTING.md` for contribution rules.
+- `SECURITY.md` for responsible disclosure.
+- `CODE_OF_CONDUCT.md` for community participation.
+
+## 🤝 Colaboradores / Contributors
+
+Colaboradores identificados a partir del historial de Git y la autoría del artículo IEEE. Las cuentas automatizadas se excluyen de esta tabla.
+
+| Colaborador | Rol / contribución | Evidencia |
 |---|---|---|
-| 🟡 **Pre-Producción (Staging)** | Automatizado vía GitHub Actions + Aiven Cloud | [`docs/deployment/PRE-PROD-ENVIRONMENT.md`](./docs/deployment/PRE-PROD-ENVIRONMENT.md) |
-| 🟢 **Producción (CTIC)** | Despliegue manual/script on-premise + MariaDB CTIC | [`docs/deployment/CTIC-PROD-DEPLOYMENT.md`](./docs/deployment/CTIC-PROD-DEPLOYMENT.md) |
-
----
-
-## 🛠️ Stack Tecnológico
-
-### Frontend
-
-| Herramienta | Propósito |
-|---|---|
-| ⚛️ **React 19** | Librería de UI con componentes funcionales |
-| ⚡ **Vite 7** | Bundler ultrarrápido con HMR |
-| 🎨 **Tailwind CSS v4** | Utility-first CSS framework |
-| 🔷 **TypeScript 5.9** | Tipado estático |
-| ✅ **Zod 4** | Validación de esquemas en cliente y servidor |
-| 📝 **React Hook Form 7** | Gestión de formularios performante |
-| 🧭 **React Router 7** | Enrutamiento SPA con rutas protegidas |
-| 💎 **Lucide React** | Iconografía SVG moderna |
-| 🧪 **Vitest + Testing Library** | Testing unitario y de integración |
-
-### Backend
-
-| Herramienta | Propósito |
-|---|---|
-| 🟢 **Node.js + Express 5** | Runtime y framework HTTP |
-| 🔷 **TypeScript 5.9** | Tipado estático |
-| 🗄️ **Sequelize 6 + MySQL 8** | ORM con conexión SSL a Aiven Cloud |
-| 🔑 **JWT (jsonwebtoken)** | Autenticación stateless |
-| 🔐 **bcrypt** | Hashing seguro de contraseñas |
-| 🏛️ **passport-ldapauth** | Autenticación federada LDAP/AD |
-| 📧 **Nodemailer + Brevo SMTP** | Correos transaccionales (reset password) |
-| 🛡️ **Helmet + CORS + XSS** | Seguridad HTTP y sanitización |
-| ⏱️ **express-rate-limit** | Rate limiting por endpoint |
-| 📄 **PDFKit** | Generación de documentos PDF |
-| 📊 **Swagger UI Express** | Documentación interactiva de la API |
-| 📝 **Winston** | Logging estructurado |
-| 🧪 **Jest + Supertest** | Testing del API |
-
----
-
-## 🤝 Contribución
-
-1. Crea un **fork** del repositorio.
-2. Crea una rama para tu feature: `git checkout -b feature/mi-feature`.
-3. Haz commit de tus cambios: `git commit -m "feat: descripción del cambio"`.
-4. Sube tu rama: `git push origin feature/mi-feature`.
-5. Abre un **Pull Request** describiendo tus cambios.
-
-> 📖 Consulta la [Guía de Contribución](./CONTRIBUTING.md) para convenciones de código, commits y flujo de trabajo.
-> 📝 Usa la [plantilla de Pull Request](./.github/PULL_REQUEST_TEMPLATE.md) para la estructura esperada.
-> 🤝 Lee nuestro [Código de Conducta](./CODE_OF_CONDUCT.md) antes de participar.
-
----
-
-## 🔒 Seguridad
-
-Si descubres una vulnerabilidad de seguridad, **NO** abras un issue público. Consulta nuestra [Política de Seguridad](./SECURITY.md) para el proceso de reporte responsable.
-
----
+| <img src="https://github.com/Dabji.png?size=80" alt="Dabji avatar" width="42" /> Juan David Ordoñez Ferreira | Desarrollo full-stack, documentación y soporte de despliegue | Git + artículo IEEE |
+| <img src="https://github.com/josemora09052025.png?size=80" alt="josemora09052025 avatar" width="42" /> José David Mora Patiño | Desarrollo full-stack y artefactos de despliegue | Git + artículo IEEE |
+| <img src="https://github.com/Richard117297.png?size=80" alt="Richard117297 avatar" width="42" /> David Ricardo Carvajal Barragán | Desarrollo full-stack y evidencias de pruebas | Git + artículo IEEE |
+| <img src="https://github.com/davideduardoflorez10-beep.png?size=80" alt="davideduardoflorez10-beep avatar" width="42" /> David Eduardo Flórez Durán | Desarrollo full-stack y artefactos de proyecto | Git + artículo IEEE |
+| <img src="https://github.com/GabrielSastoque.png?size=80" alt="GabrielSastoque avatar" width="42" /> Gabriel Arturo Sastoque Cadena | Desarrollo, soporte académico y documentación | Git + artículo IEEE |
+| <img src="https://github.com/juanpa-arenas-upb.png?size=80" alt="juanpa-arenas-upb avatar" width="42" /> Juan Pablo Arenas Avendaño | Contribución académica y técnica | Git + artículo IEEE |
+| <img src="https://github.com/SimonP0607.png?size=80" alt="SimonP0607 avatar" width="42" /> Simón Pérez Gómez | Contribución académica y técnica | Git + artículo IEEE |
+| Gabriel Miguel Rodríguez Castro | Contribución académica y técnica | Git + artículo IEEE |
+| S. Cifuentes Cárdenas | Acompañamiento académico y autoría documental | Artículo IEEE |
 
 ## 📄 Licencia
 
-Este proyecto está licenciado bajo la [Licencia MIT](LICENSE) — libre para uso, modificación y distribución.
-
----
+Este proyecto está distribuido bajo la [Licencia MIT](./LICENSE).
 
 <div align="center">
-
-  Hecho con ❤️ por el equipo de desarrollo — **Universidad Pontificia Bolivariana**
-
-  <sub>Proyecto Integrador · Ingeniería de Sistemas e Informática · 2026-2027</sub>
-
+  <sub>Proyecto Integrador · Ingeniería de Sistemas e Informática · Universidad Pontificia Bolivariana Seccional Bucaramanga</sub>
 </div>

@@ -2,10 +2,10 @@
 
 # 🟢 Server — Simulador de Crédito UPB
 
-Backend API REST construido con **Express 5**, **TypeScript 5.9** y **Clean Architecture**
+Backend API REST construido con **Express 5.2**, **TypeScript 6** y **Clean Architecture**
 
-[![Node.js](https://img.shields.io/badge/Node.js-Express_5-339933?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-Express_5.2-339933?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![MySQL](https://img.shields.io/badge/MySQL-Aiven_Cloud-4479A1?style=flat-square&logo=mysql&logoColor=white)](https://www.mysql.com/)
 [![Swagger](https://img.shields.io/badge/Swagger-OpenAPI-85EA2D?style=flat-square&logo=swagger&logoColor=black)](https://swagger.io/)
 

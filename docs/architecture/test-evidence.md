@@ -204,31 +204,11 @@ Estos son los componentes críticos del dominio financiero, testeados exhaustiva
 
 ### Priorización de Testing
 
-```mermaid
-graph LR
-    subgraph ALTA["✅ Cobertura Alta (Sprint 2)"]
-        A["SimulationEngine<br/>92%"]
-        B["InterestStrategies<br/>81-94%"]
-        C["AuditService<br/>93%"]
-        D["PurgeJob<br/>tested"]
-    end
-
-    subgraph MEDIA["🟡 Próximo Sprint"]
-        E["Use Cases<br/>(con mocks BD)"]
-        F["Export Services<br/>(snapshot tests)"]
-    end
-
-    subgraph FUTURA["🔴 Backlog"]
-        G["Integration Tests<br/>(endpoint a endpoint)"]
-        H["E2E Tests<br/>(Playwright)"]
-    end
-
-    ALTA --> MEDIA --> FUTURA
-
-    style ALTA fill:#D1FAE5,stroke:#065F46,color:#000
-    style MEDIA fill:#FEF3C7,stroke:#92400E,color:#000
-    style FUTURA fill:#FEE2E2,stroke:#991B1B,color:#000
-```
+| Prioridad | Alcance | Estado |
+|---|---|---|
+| Alta | `SimulationEngine`, estrategias de interes, `AuditService`, `PurgeJob` | Cubierto en Sprint 2. |
+| Media | Use cases con mocks de base de datos, export services con snapshot tests | Recomendado como siguiente incremento. |
+| Futura | Pruebas endpoint a endpoint y E2E Playwright | Backlog de mejora. |
 
 ---
 
@@ -236,19 +216,11 @@ graph LR
 
 ### Pirámide de Testing del Proyecto
 
-```mermaid
-graph TD
-    E2E["🔺 E2E Tests<br/>(Playwright — futuro)<br/>Flujos completos usuario"]
-    INT["🔶 Integration Tests<br/>(Supertest — parcial)<br/>Endpoints HTTP + BD"]
-    UNIT["🟩 Unit Tests<br/>(Jest + Vitest — activo)<br/>Engine, Strategies, Services, Components"]
-
-    E2E --- INT
-    INT --- UNIT
-
-    style E2E fill:#FEE2E2,stroke:#991B1B,color:#000
-    style INT fill:#FEF3C7,stroke:#92400E,color:#000
-    style UNIT fill:#D1FAE5,stroke:#065F46,color:#000
-```
+| Capa | Herramienta | Enfoque |
+|---|---|---|
+| E2E | Playwright | Futuro: flujos completos de usuario. |
+| Integracion | Supertest | Endpoints HTTP y persistencia controlada. |
+| Unitarias | Jest + Vitest | Motor, estrategias, servicios y componentes. |
 
 ### Herramientas por Capa
 
