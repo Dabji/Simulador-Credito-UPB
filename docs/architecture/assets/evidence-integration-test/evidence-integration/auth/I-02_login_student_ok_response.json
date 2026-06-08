@@ -1,11 +1,11 @@
 {
-  "email": "juantest57@upb.edu.co",
+  "email": "evidence.user@example.test",
   "password": "Test123a",
   "role": "STUDENT",
 
     "user": {
         "id": "934d23b0-10ca-4f12-9932-41e4d4fc971f",
-        "email": "juantest57@upb.edu.co",
+        "email": "evidence.user@example.test",
         "firstName": "Juan",
         "lastName": "Test",
         "documentType": "CC",
@@ -18,7 +18,6 @@
         "createdAt": "2026-04-24T12:33:36.000Z",
         "updatedAt": "2026-04-24T12:33:36.000Z"
     },
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI5MzRkMjNiMC0xMGNhLTRmMTItOTkzMi00MWU0ZDRmYzk3MWYiLCJlbWFpbCI6Imp1YW50ZXN0NTdAdXBiLmVkdS5jbyIsInJvbGUiOiJTVFVERU5UIiwiaWF0IjoxNzc3MDM0ODkwLCJleHAiOjE3NzcwNjM2OTB9.JILFO-XSTu0_CNm-dkwFdDII44llLrEjpp36qIIryWM"
+    "token": "[REDACTED_JWT_TOKEN]"
 
 }
-

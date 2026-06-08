@@ -273,7 +273,7 @@ graph TD
 | Fecha de ejecucion | Ventana consolidada entre `23/04/2026` y `25/04/2026` |
 | Ambiente validado | Frontend `http://localhost:5173`, backend `http://localhost:3000/api`, MySQL local, navegador + DevTools, Postman, terminal y soporte de BD/logs |
 | Resultado global | ✅ `47/47 PASS` en el plan HU-57 (`24` integracion API + `16` funcional/manual + `7` regresion), con `0 FAIL` y `0 BLOCKED` |
-| Observaciones generales | Cierre documental completo, sin hallazgos funcionales criticos. Se documento como observacion de ambiente la ausencia del seed `juantest@upb.edu.co`, resuelta con uso de estudiante alternativo activo. La version de parametros operativa validada fue `52fe8170-293f-4c43-9660-f045de2daf7f` |
+| Observaciones generales | Cierre documental completo, sin hallazgos funcionales criticos. Se documento como observacion de ambiente la ausencia del seed `student.expected@example.test`, resuelta con uso de estudiante alternativo activo. La version de parametros operativa validada fue `52fe8170-293f-4c43-9660-f045de2daf7f` |
 
 ### 7.2 Cobertura por Bloque
 
@@ -303,7 +303,7 @@ graph TD
 
 | Item | Detalle |
 |---|---|
-| Hallazgo controlado 1 | El usuario esperado `juantest@upb.edu.co` no estaba sembrado en BD; se uso `richardcarvajalb@gmail.com` como estudiante alternativo activo sin bloquear HU-57 |
+| Hallazgo controlado 1 | El usuario esperado `student.expected@example.test` no estaba sembrado en BD; se uso `student.demo04@example.test` como estudiante alternativo activo sin bloquear HU-57 |
 | Hallazgo controlado 2 | La gestion de parametros admin se recondujo sobre la version activa existente para evitar solapamiento de vigencias durante la evidencia de `I-16` |
 | Estado final | HU-57 quedo documentado de forma completa en `integration-test.md`, con trazabilidad de ambiente, integracion API, funcional/manual y regresion |
 | Resultado documental | Base documental cerrada, consistente con evidencias reales y lista para revision academica o de QA |
@@ -600,4 +600,3 @@ La HU-56 queda respaldada por una base de pruebas unitarias repetible, aislada d
 <sub>🔙 <a href="../../README.md">Volver al README principal</a> · <a href="./technical-decisions.md">Decisiones Técnicas</a> · <a href="./system-design.md">Diseño del Sistema</a> · <a href="../README.md">Índice de Documentación</a></sub>
 
 </div>
-

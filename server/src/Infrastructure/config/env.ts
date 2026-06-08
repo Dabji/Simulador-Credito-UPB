@@ -108,7 +108,7 @@ const baseEnvSchema = z.object({
     z.enum(['development', 'production', 'test']).default('development'),
   ),
 
-  // Base de Datos MySQL (Aiven)
+  // Base de Datos MySQL / MariaDB
   DB_HOST: requiredString('DB_HOST'),
   DB_PORT: portString('DB_PORT'),
   DB_NAME: requiredString('DB_NAME'),
@@ -208,13 +208,6 @@ const envSchema = baseEnvSchema.superRefine((data, ctx) => {
     });
   }
 
-  if (data.DB_SSL !== 'true') {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['DB_SSL'],
-      message: 'DB_SSL debe ser true en produccion para MySQL Aiven',
-    });
-  }
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

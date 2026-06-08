@@ -238,20 +238,23 @@ CREATE TABLE `password_reset_tokens` (
 );
 
 -- ------------------------------------------------------------
--- Datos iniciales y datos de prueba HU-66
+-- Datos iniciales anonimizados y datos de prueba HU-66
 -- ------------------------------------------------------------
 
 -- users: 8 rows
+-- Nota de seguridad: este script no debe incluir PII, correos reales, telefonos
+-- reales ni hashes usados por personas del equipo. Los valores siguientes son
+-- datos ficticios para pruebas y arranque tecnico.
 INSERT INTO `users` (`id`, `email`, `first_name`, `last_name`, `document_type`, `document_number`, `password`, `phone`, `role`, `is_active`, `terms_accepted_at`, `created_at`, `updated_at`, `last_login_at`)
 VALUES
-('2a87cabe-dcfd-4327-825e-8647a5cd7fb5', 'davideduardoflorez10@gmail.com', 'David Eduardo', 'Florez Duran', 'TI', '1097783551', '$2b$10$S.vxG.EDp7bCysCenA3de.k3UoZ/S50WNIlirNgwO.ioKaAqYOeqW', '3158780557', 'STUDENT', 1, '2026-03-03 13:52:56', '2026-03-03 13:52:56', '2026-04-27 10:14:26', '2026-04-27 10:14:26'),
-('4ccf1906-b931-4be9-b88a-88c584e0f278', 'josedavid.morap@gmail.com', 'Jose David', 'Mora Patino', 'CC', '1093592883', '$2b$10$RzkyuM83KOfe./Ws7Hq8tO1umPZ5XuY0yfNzBR7cTuYxM8gmRQowK', '3152730901', 'STUDENT', 1, '2026-03-01 20:59:16', '2026-03-01 20:59:16', '2026-04-27 11:03:04', '2026-04-27 11:03:04'),
-('95108f1c-b989-4d69-b1b4-1e3e1aeb9aca', 'juanordo1403@gmail.com', 'Juan', 'Ferreira', 'CC', '10952222222', '$2b$10$QTpdkuQC2us2Xqle34q9KelVWuf934az.bth7pyJm.bpYfs9uuqUS', '3023963758', 'STUDENT', 1, '2026-02-28 05:46:59', '2026-02-28 05:46:59', '2026-04-27 08:02:24', '2026-04-27 08:02:24'),
-('9af8885c-8e94-4635-9007-f12f121d6356', 'richardcarvajalb@gmail.com', 'David Ricardo', 'Carvajal Barragan', 'CC', '1097494121', '$2b$10$geucM7nFXDdb4HcpjwhzVuMlUNOxpp8slZFcAR44qTxCINLCTnNpq', '3175436114', 'STUDENT', 1, '2026-02-28 20:13:22', '2026-02-28 20:13:22', '2026-04-27 09:28:56', '2026-04-27 09:28:56'),
-('4a0fa171-6a9a-4531-aceb-9e184f9f76e9', 'admin@upb.edu.co', 'Admin', 'Sistema', 'CC', '0000000000', '$2b$10$LpG2uXQ1GXrIetbCqPLmke10keuOC/AJ7GAEQSu0x8OXeR2quBOvm', NULL, 'ADMIN', 1, NULL, '2026-03-02 03:43:02', '2026-04-27 03:04:04', '2026-04-27 03:04:04'),
-('1689a470-3f98-11f1-8a72-1e6c74d81551', 'analistaliquidacion@bga.upb', 'MAICOL MURILLO', 'MARTÃNEZ', 'CC', '00000001', NULL, NULL, 'ADMIN', 1, NULL, '2026-04-24 04:43:07', '2026-04-24 04:43:07', NULL),
-('0f6dc033-3f26-11f1-8a72-1e6c74d81551', 'direccion.docencia@bga.upb', 'Direccion', 'Docencia', 'CC', '9000000001', NULL, NULL, 'ADMIN', 1, NULL, '2026-04-23 15:06:52', '2026-04-27 12:42:44', '2026-04-27 12:42:44'),
-('168b5041-3f98-11f1-8a72-1e6c74d81551', 'yudy.ballesteros@bga.upb', 'YUDY CRISTINA', 'BALLESTEROS OLARTE', 'CC', '00000002', NULL, NULL, 'ADMIN', 1, NULL, '2026-04-24 04:43:07', '2026-04-24 04:43:07', NULL)
+('2a87cabe-dcfd-4327-825e-8647a5cd7fb5', 'student.demo01@example.test', 'Student', 'Demo Uno', 'TI', '9000000001', '$2b$10$wKx.7K8wU2Zcw3sKL10LH.KIPRjWgh9op7h1.8IYNwXO0Ia2HmGOu', '3000000001', 'STUDENT', 1, '2026-03-03 13:52:56', '2026-03-03 13:52:56', '2026-04-27 10:14:26', '2026-04-27 10:14:26'),
+('4ccf1906-b931-4be9-b88a-88c584e0f278', 'student.demo02@example.test', 'Student', 'Demo Dos', 'CC', '9000000002', '$2b$10$wKx.7K8wU2Zcw3sKL10LH.KIPRjWgh9op7h1.8IYNwXO0Ia2HmGOu', '3000000002', 'STUDENT', 1, '2026-03-01 20:59:16', '2026-03-01 20:59:16', '2026-04-27 11:03:04', '2026-04-27 11:03:04'),
+('95108f1c-b989-4d69-b1b4-1e3e1aeb9aca', 'student.demo03@example.test', 'Student', 'Demo Tres', 'CC', '9000000003', '$2b$10$wKx.7K8wU2Zcw3sKL10LH.KIPRjWgh9op7h1.8IYNwXO0Ia2HmGOu', '3000000003', 'STUDENT', 1, '2026-02-28 05:46:59', '2026-02-28 05:46:59', '2026-04-27 08:02:24', '2026-04-27 08:02:24'),
+('9af8885c-8e94-4635-9007-f12f121d6356', 'student.demo04@example.test', 'Student', 'Demo Cuatro', 'CC', '9000000004', '$2b$10$wKx.7K8wU2Zcw3sKL10LH.KIPRjWgh9op7h1.8IYNwXO0Ia2HmGOu', '3000000004', 'STUDENT', 1, '2026-02-28 20:13:22', '2026-02-28 20:13:22', '2026-04-27 09:28:56', '2026-04-27 09:28:56'),
+('4a0fa171-6a9a-4531-aceb-9e184f9f76e9', 'admin.demo@example.test', 'Admin', 'Sistema', 'CC', '9000000005', NULL, NULL, 'ADMIN', 1, NULL, '2026-03-02 03:43:02', '2026-04-27 03:04:04', '2026-04-27 03:04:04'),
+('1689a470-3f98-11f1-8a72-1e6c74d81551', 'admin.demo01@example.test', 'Admin', 'Demo Uno', 'CC', '9000000006', NULL, NULL, 'ADMIN', 1, NULL, '2026-04-24 04:43:07', '2026-04-24 04:43:07', NULL),
+('0f6dc033-3f26-11f1-8a72-1e6c74d81551', 'admin.demo02@example.test', 'Admin', 'Demo Dos', 'CC', '9000000007', NULL, NULL, 'ADMIN', 1, NULL, '2026-04-23 15:06:52', '2026-04-27 12:42:44', '2026-04-27 12:42:44'),
+('168b5041-3f98-11f1-8a72-1e6c74d81551', 'admin.demo03@example.test', 'Admin', 'Demo Tres', 'CC', '9000000008', NULL, NULL, 'ADMIN', 1, NULL, '2026-04-24 04:43:07', '2026-04-24 04:43:07', NULL)
 ON DUPLICATE KEY UPDATE
   `email` = VALUES(`email`),
   `first_name` = VALUES(`first_name`),
@@ -406,7 +409,7 @@ VALUES
 ('edd29c1a-e5ca-4f90-a213-c327074144bf', '2026-03-20 16:05:06', NULL, NULL, NULL, 'NUEVO', 'PREGRADO', 'CON_INTERES', 7429000, '0.2500', 5571750, '0.3000', 1671525, 6, '2026-06-01', 3900225, 803602, 117782, 5689535, '0.010000', '2026-02', NULL, '95108f1c-b989-4d69-b1b4-1e3e1aeb9aca', '3c2b0497-3888-44ef-a874-5be8f5ace16c'),
 ('5a86bb55-7650-403e-805b-9e77b83cbfa1', '2026-04-24 22:29:25', NULL, NULL, NULL, 'CONTINUO', 'PREGRADO', 'CON_INTERES', 6700000, '0.2000', 5360000, '0.2500', 1340000, 6, '2026-06-01', 4020000, 828280, 121400, 5481400, '0.010000', '2026-02', 'prueba R-03', '9af8885c-8e94-4635-9007-f12f121d6356', '52fe8170-293f-4c43-9660-f045de2daf7f'),
 ('16bf37ba-2f67-4ecf-8dc6-5ee86062e2a8', '2026-04-24 23:27:26', NULL, NULL, NULL, 'CONTINUO', 'POSGRADO', 'CON_INTERES', 7000000, '0.2500', 5250000, '0.2500', 1312500, 4, '2026-07-01', 3937500, 1338837, 79011, 5329011, '0.010000', '2026-02', NULL, '9af8885c-8e94-4635-9007-f12f121d6356', '52fe8170-293f-4c43-9660-f045de2daf7f'),
-('3dd91917-fd99-4ee8-925b-356ece98cd11', '2026-04-27 09:30:41', NULL, NULL, NULL, 'NUEVO', 'PREGRADO', 'CON_INTERES', 7000000, '0.2500', 5250000, '0.2500', 1312500, 6, '2026-06-01', 3937500, 811282, 118908, 5368910, '0.010000', '2026-02', 'Me agrada esta simulaciÃ³n', '9af8885c-8e94-4635-9007-f12f121d6356', '52fe8170-293f-4c43-9660-f045de2daf7f')
+('3dd91917-fd99-4ee8-925b-356ece98cd11', '2026-04-27 09:30:41', NULL, NULL, NULL, 'NUEVO', 'PREGRADO', 'CON_INTERES', 7000000, '0.2500', 5250000, '0.2500', 1312500, 6, '2026-06-01', 3937500, 811282, 118908, 5368910, '0.010000', '2026-02', 'Me agrada esta simulación', '9af8885c-8e94-4635-9007-f12f121d6356', '52fe8170-293f-4c43-9660-f045de2daf7f')
 ON DUPLICATE KEY UPDATE
   `created_at` = VALUES(`created_at`),
   `deleted_at` = VALUES(`deleted_at`),
@@ -475,11 +478,11 @@ ON DUPLICATE KEY UPDATE
 -- Password local para todos: UPB2027a
 INSERT INTO `users` (`id`, `email`, `password`, `first_name`, `last_name`, `document_type`, `document_number`, `role`, `is_active`, `terms_accepted_at`, `last_login_at`, `created_at`, `updated_at`)
 VALUES
-(UUID(), 'juan.pablo.arenas.avendano@hu66.test', '$2b$10$wKx.7K8wU2Zcw3sKL10LH.KIPRjWgh9op7h1.8IYNwXO0Ia2HmGOu', 'Juan Pablo', 'Arenas Avendano', 'CC', '9200000003', 'STUDENT', 1, NOW(), NULL, NOW(), NOW()),
-(UUID(), 'simon.perez.gomez@hu66.test', '$2b$10$wKx.7K8wU2Zcw3sKL10LH.KIPRjWgh9op7h1.8IYNwXO0Ia2HmGOu', 'Simon', 'Perez Gomez', 'CC', '9200000004', 'STUDENT', 1, NOW(), NULL, NOW(), NOW()),
-(UUID(), 'gabriel.matias.rodriguez.castro@hu66.test', '$2b$10$wKx.7K8wU2Zcw3sKL10LH.KIPRjWgh9op7h1.8IYNwXO0Ia2HmGOu', 'Gabriel Matias', 'Rodriguez Castro', 'CC', '9200000001', 'STUDENT', 1, NOW(), NULL, NOW(), NOW()),
-(UUID(), 'gabriel.arturo.sastoque.cadena@hu66.test', '$2b$10$wKx.7K8wU2Zcw3sKL10LH.KIPRjWgh9op7h1.8IYNwXO0Ia2HmGOu', 'Gabriel Arturo', 'Sastoque Cadena', 'CC', '9200000002', 'STUDENT', 1, NOW(), NULL, NOW(), NOW()),
-(UUID(), 'santiago.cifuentes.cadernas@hu66.test', '$2b$10$wKx.7K8wU2Zcw3sKL10LH.KIPRjWgh9op7h1.8IYNwXO0Ia2HmGOu', 'Santiago', 'Cifuentes Cadernas', 'CC', '9200000005', 'STUDENT', 1, NOW(), NULL, NOW(), NOW())
+(UUID(), 'student.hu66.01@example.test', '$2b$10$wKx.7K8wU2Zcw3sKL10LH.KIPRjWgh9op7h1.8IYNwXO0Ia2HmGOu', 'Student', 'HU66 Uno', 'CC', '9200000001', 'STUDENT', 1, NOW(), NULL, NOW(), NOW()),
+(UUID(), 'student.hu66.02@example.test', '$2b$10$wKx.7K8wU2Zcw3sKL10LH.KIPRjWgh9op7h1.8IYNwXO0Ia2HmGOu', 'Student', 'HU66 Dos', 'CC', '9200000002', 'STUDENT', 1, NOW(), NULL, NOW(), NOW()),
+(UUID(), 'student.hu66.03@example.test', '$2b$10$wKx.7K8wU2Zcw3sKL10LH.KIPRjWgh9op7h1.8IYNwXO0Ia2HmGOu', 'Student', 'HU66 Tres', 'CC', '9200000003', 'STUDENT', 1, NOW(), NULL, NOW(), NOW()),
+(UUID(), 'student.hu66.04@example.test', '$2b$10$wKx.7K8wU2Zcw3sKL10LH.KIPRjWgh9op7h1.8IYNwXO0Ia2HmGOu', 'Student', 'HU66 Cuatro', 'CC', '9200000004', 'STUDENT', 1, NOW(), NULL, NOW(), NOW()),
+(UUID(), 'student.hu66.05@example.test', '$2b$10$wKx.7K8wU2Zcw3sKL10LH.KIPRjWgh9op7h1.8IYNwXO0Ia2HmGOu', 'Student', 'HU66 Cinco', 'CC', '9200000005', 'STUDENT', 1, NOW(), NULL, NOW(), NOW())
 ON DUPLICATE KEY UPDATE
   `password` = VALUES(`password`),
   `first_name` = VALUES(`first_name`),
@@ -699,7 +702,7 @@ CHECKSUM TABLE simulations, audit_logs, parameter_versions EXTENDED;
 
 -- Consultas utiles para confirmar datos de prueba:
 SELECT role, COUNT(*) AS total FROM users GROUP BY role ORDER BY role;
-SELECT email, role, is_active FROM users WHERE email IN ('direccion.docencia@bga.upb', 'analistaliquidacion@bga.upb', 'yudy.ballesteros@bga.upb', 'admin@upb.edu.co', 'josedavid.morap@gmail.com', 'davideduardoflorez10@gmail.com', 'juanordo1403@gmail.com', 'richardcarvajalb@gmail.com', 'juan.pablo.arenas.avendano@hu66.test', 'simon.perez.gomez@hu66.test', 'gabriel.matias.rodriguez.castro@hu66.test', 'gabriel.arturo.sastoque.cadena@hu66.test', 'santiago.cifuentes.cadernas@hu66.test') ORDER BY role, email;
+SELECT email, role, is_active FROM users WHERE email LIKE '%.demo%@example.test' OR email LIKE 'student.hu66.%@example.test' ORDER BY role, email;
 SELECT u.email, COUNT(s.id) AS simulations FROM users u LEFT JOIN simulations s ON s.user_id = u.id AND s.deleted_at IS NULL GROUP BY u.email HAVING simulations > 0 ORDER BY u.email;
 
 SELECT COUNT(*) AS total_simulations FROM simulations;

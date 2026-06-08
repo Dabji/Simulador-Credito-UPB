@@ -3,7 +3,7 @@ Simulador,Crédito Educativo UPB
 Fecha de generación,24 de abril de 2026
 
 Nombre completo,Juan Test
-Correo electrónico,juantest57@upb.edu.co
+Correo electrónico,evidence.user@example.test
 Tipo de documento,CC
 Número de identificación,1099001234
 Número de celular,3007654321
