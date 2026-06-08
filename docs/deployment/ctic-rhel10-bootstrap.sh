@@ -106,7 +106,11 @@ install_nodejs_if_needed() {
   fi
 
   log "Instalando Node.js 20.x desde NodeSource"
-  curl -fsSL https://rpm.nodesource.com/setup_20.x | run_privileged bash -
+  local nodesource_setup_script
+  nodesource_setup_script="$(mktemp)"
+  curl -fsSL https://rpm.nodesource.com/setup_20.x -o "${nodesource_setup_script}"
+  run_privileged bash "${nodesource_setup_script}"
+  rm -f "${nodesource_setup_script}"
   run_privileged dnf install "${DNF_INSTALL_FLAGS[@]}" nodejs
 
   command -v node >/dev/null 2>&1 || fail "Node.js no quedo instalado."
@@ -120,20 +124,32 @@ build_auth_header() {
 clone_or_update_repo() {
   local repo_url="https://github.com/${REPO_SLUG}.git"
   local auth_header
+  local git_ref_kind
   auth_header="$(build_auth_header)"
+  git_ref_kind=""
 
-  if ! git -c "http.extraHeader=Authorization: Basic ${auth_header}" \
+  if git -c "http.extraHeader=Authorization: Basic ${auth_header}" \
     ls-remote --exit-code --heads "${repo_url}" "${GIT_REF}" >/dev/null 2>&1; then
-    fail "La rama ${GIT_REF} no existe en GitHub. Debes hacer push de la rama antes de usar este script."
+    git_ref_kind="branch"
+  elif git -c "http.extraHeader=Authorization: Basic ${auth_header}" \
+    ls-remote --exit-code --tags "${repo_url}" "refs/tags/${GIT_REF}" >/dev/null 2>&1; then
+    git_ref_kind="tag"
+  else
+    fail "La referencia ${GIT_REF} no existe en GitHub como rama ni tag."
   fi
 
   run_privileged mkdir -p "${APP_BASE_DIR}"
   run_privileged chown -R "${DEPLOY_USER}:${DEPLOY_GROUP}" "${APP_BASE_DIR}"
 
   if [ -d "${APP_DIR}/.git" ]; then
-    log "Repositorio ya existe en ${APP_DIR}; actualizando rama ${GIT_REF}"
-    git -C "${APP_DIR}" -c "http.extraHeader=Authorization: Basic ${auth_header}" fetch --prune origin
-    git -C "${APP_DIR}" checkout -B "${GIT_REF}" "origin/${GIT_REF}"
+    log "Repositorio ya existe en ${APP_DIR}; actualizando referencia ${GIT_REF}"
+    git -C "${APP_DIR}" -c "http.extraHeader=Authorization: Basic ${auth_header}" fetch --prune --tags origin
+
+    if [ "${git_ref_kind}" = "branch" ]; then
+      git -C "${APP_DIR}" checkout -B "${GIT_REF}" "origin/${GIT_REF}"
+    else
+      git -C "${APP_DIR}" checkout --detach "tags/${GIT_REF}"
+    fi
   else
     log "Clonando repositorio ${REPO_SLUG} en ${APP_DIR}"
     git -c "http.extraHeader=Authorization: Basic ${auth_header}" \
