@@ -1,70 +1,51 @@
-# Base de Datos
+# Base de Datos / Database
 
-La persistencia del Simulador de Credito UPB se modela sobre MySQL 8 en Aiven para preproduccion y MariaDB/MySQL administrado por CTIC para el entorno objetivo. El backend usa Sequelize y debe operar con permisos funcionales; la estructura se entrega mediante scripts SQL versionados.
+La persistencia del Simulador de Credito UPB se modela sobre MySQL 8 en Aiven para preproduccion y MariaDB/MySQL administrado por CTIC para el entorno objetivo.
 
-## Modelo relacional
+The persistence layer uses MySQL 8 on Aiven for pre-production and CTIC-managed MariaDB/MySQL for the target institutional environment.
 
-![Modelo relacional](./relational-model.png)
+## Modelo relacional / Relational Model
 
-El archivo legacy [`er-diagram.png`](./er-diagram.png) y la imagen historica [`diagrama simulador.png`](./diagrama%20simulador.png) fueron actualizados con el mismo modelo relacional para mantener compatibilidad con enlaces existentes.
+<div align="center">
+  <img src="./relational-model.png" alt="Modelo relacional del Simulador de Credito UPB" width="920" />
+</div>
 
-## Modelo conceptual
+El archivo legacy [`er-diagram.png`](./er-diagram.png) y la imagen historica [`diagrama simulador.png`](./diagrama%20simulador.png) apuntan al mismo modelo actualizado para mantener compatibilidad con enlaces previos.
 
-![Modelo conceptual](./conceptual-model.png)
+## Modelo conceptual / Conceptual Model
 
-## Entidades principales
+<div align="center">
+  <img src="./conceptual-model.png" alt="Modelo conceptual del Simulador de Credito UPB" width="920" />
+</div>
 
-```mermaid
-erDiagram
-    USERS ||--o{ SIMULATIONS : creates
-    USERS ||--o{ AUDIT_LOGS : produces
-    USERS ||--o{ EXPORT_LOGS : generates
-    USERS ||--o{ PASSWORD_RESET_TOKENS : requests
-    PARAMETER_VERSIONS ||--o{ SIMULATIONS : configures
-    PARAMETER_VERSIONS ||--o{ LEVEL_CONFIGS : defines
-    PARAMETER_VERSIONS ||--o{ INITIAL_PAYMENT_RULES : defines
-    LEVEL_CONFIGS ||--o{ LEVEL_RATE_RULES : includes
-    SIMULATIONS ||--o{ AMORTIZATION_ROWS : contains
-    SIMULATIONS ||--o{ EXPORT_LOGS : exports
+## Tablas principales / Main Tables
 
-    USERS {
-      char id PK
-      varchar email
-      varchar document_number
-      enum role
-      tinyint is_active
-    }
-    SIMULATIONS {
-      char id PK
-      enum student_type
-      enum level
-      bigint tuition_gross
-      bigint financed_value
-      varchar academic_period
-      int user_id FK
-      char parameter_version_id FK
-    }
-    PARAMETER_VERSIONS {
-      char id PK
-      date valid_from
-      date valid_to
-      varchar notes
-    }
-```
+| Tabla | Proposito |
+|---|---|
+| `users` | Usuarios estudiantes, administradores e invitados persistidos. |
+| `simulations` | Cabecera de simulaciones guardadas. |
+| `amortization_rows` | Detalle de cuotas y saldos por simulacion. |
+| `parameter_versions` | Versiones de reglas financieras. |
+| `level_configs` | Configuracion por nivel educativo. |
+| `level_rate_rules` | Tasas por numero de pagos. |
+| `initial_payment_rules` | Reglas de cuota inicial por nivel y modalidad. |
+| `audit_logs` | Auditoria de acciones relevantes. |
+| `export_logs` | Trazabilidad de exportaciones PDF/CSV. |
+| `password_reset_tokens` | Tokens temporales de recuperacion de contrasena. |
 
-## Archivos
+## Archivos / Files
 
 | Archivo | Proposito |
 |---|---|
 | [`data-dictionary.html`](./data-dictionary.html) | Diccionario de tablas, columnas, tipos y restricciones. |
 | [`hu-66/backup-migration.md`](./hu-66/backup-migration.md) | Procedimiento de preparacion, backup y migracion CTIC. |
-| [`hu-66/scripts/00_ctic_full_deploy_mariadb_10_11.sql`](./hu-66/scripts/00_ctic_full_deploy_mariadb_10_11.sql) | Script consolidado para crear estructura, datos tecnicos y permisos. |
-| [`hu-66/scripts/01_pre_migration_validation.sql`](./hu-66/scripts/01_pre_migration_validation.sql) | Consultas de inventario e integridad antes de migrar. |
-| [`hu-66/scripts/02_post_restore_validation.sql`](./hu-66/scripts/02_post_restore_validation.sql) | Consultas de validacion posterior a restauracion. |
+| [`hu-66/scripts/00_ctic_full_deploy_mariadb_10_11.sql`](./hu-66/scripts/00_ctic_full_deploy_mariadb_10_11.sql) | Script consolidado de despliegue de base de datos. |
+| [`hu-66/scripts/01_pre_migration_validation.sql`](./hu-66/scripts/01_pre_migration_validation.sql) | Consultas de integridad antes de migrar. |
+| [`hu-66/scripts/02_post_restore_validation.sql`](./hu-66/scripts/02_post_restore_validation.sql) | Validacion posterior a restauracion. |
 
-## Consideraciones para CTIC
+## Consideraciones CTIC / CTIC Notes
 
 - Puerto por defecto de MariaDB/MySQL: `3306`.
-- La base de datos no debe exponerse publicamente; el acceso debe limitarse por firewall, ACL o allowlist de la VM.
-- El usuario tecnico del backend no debe requerir permisos estructurales como `ALTER` o `DROP` en operacion normal.
-- Los dumps reales y resultados con datos sensibles deben mantenerse fuera de Git.
+- La base de datos no debe exponerse publicamente.
+- El usuario tecnico del backend no debe requerir permisos estructurales en operacion normal.
+- Dumps reales, certificados y resultados sensibles deben mantenerse fuera de Git.

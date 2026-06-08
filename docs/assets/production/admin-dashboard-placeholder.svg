@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-labelledby="title desc">
+  <title id="title">Admin dashboard screenshot placeholder</title>
+  <desc id="desc">Replace this placeholder with a live production screenshot.</desc>
+  <rect width="1280" height="720" fill="#f8fafc"/>
+  <rect x="80" y="80" width="1120" height="560" rx="24" fill="#ffffff" stroke="#dc2626" stroke-width="4"/>
+  <text x="640" y="310" text-anchor="middle" font-family="Arial, sans-serif" font-size="46" font-weight="700" fill="#0f172a">Panel administrador</text>
+  <text x="640" y="370" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#334155">Reemplazar por captura real de produccion</text>
+  <text x="640" y="420" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#475569">Parametros, estudiantes y simulaciones</text>
+</svg>

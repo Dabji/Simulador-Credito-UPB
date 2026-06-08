@@ -41,16 +41,11 @@ backend Node.js/Express ejecutándose como servicio persistente mediante systemd
 
 ## 2. Arquitectura Productiva
 
-```mermaid
-flowchart LR
-    U["Usuario institucional"] -->|"HTTPS 443 / HTTP 80"| NG["Nginx<br/>Reverse Proxy"]
-    NG -->|"Archivos estáticos"| FE["React + Vite<br/>/usr/share/nginx/html/simulador"]
-    NG -->|"/api/*"| BE["Node.js + Express<br/>localhost:3000"]
-    BE -->|"Sequelize + mysql2"| DB["MariaDB 10.6+<br/>CTIC"]
-    BE -->|"SMTP 587"| SMTP["Servicio SMTP"]
-    BE -->|"LDAP / AD"| LDAP["Directorio institucional"]
-    PM2["PM2 + systemd"] -->|"mantiene vivo"| BE
-```
+<div align="center">
+  <img src="./assets/ctic-deployment.png" alt="Diagrama de despliegue productivo CTIC" width="920" />
+  <br />
+  <em>Topologia productiva CTIC: Nginx, PM2, Node.js, MariaDB, LDAP y SMTP.</em>
+</div>
 
 ### Componentes
 
