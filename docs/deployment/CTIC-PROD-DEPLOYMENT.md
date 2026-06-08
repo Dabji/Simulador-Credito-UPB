@@ -226,7 +226,7 @@ después de un reinicio de la VM.
 
 | Archivo | Uso |
 |---|---|
-| [`../Manual de Despliegue Simulador - CTIC.pdf`](../Manual%20de%20Despliegue%20Simulador%20-%20CTIC.pdf) | Manual formal final para CTIC |
+| [`Manual de Despliegue Simulador - CTIC.pdf`](./Manual%20de%20Despliegue%20Simulador%20-%20CTIC.pdf) | Manual formal final para CTIC |
 | [`HU-91-DEPLOYMENT-CLOSURE.md`](./HU-91-DEPLOYMENT-CLOSURE.md) | Cierre documental de HU-91 con evidencias, validaciones y control de seguridad |
 | [`server/scripts/deploy-rhel.sh`](../../server/scripts/deploy-rhel.sh) | Script Bash de despliegue en RHEL |
 | [`infrastructure/nginx/simulador-upb.conf`](../../infrastructure/nginx/simulador-upb.conf) | Virtual host Nginx para frontend + reverse proxy |

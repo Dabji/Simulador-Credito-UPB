@@ -7,10 +7,10 @@
   **Plataforma integral de simulación de crédito educativo para la Universidad Pontificia Bolivariana**
 
   [![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=white)](https://react.dev/)
-  [![Node.js](https://img.shields.io/badge/Node.js-Express_5-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
-  [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+  [![Node.js](https://img.shields.io/badge/Node.js-Express_5.2-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
   [![MySQL](https://img.shields.io/badge/MySQL-Aiven_Cloud-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://www.mysql.com/)
-  [![Vite](https://img.shields.io/badge/Vite-7-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vite.dev/)
+  [![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vite.dev/)
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
 
 </div>
@@ -154,7 +154,7 @@ El **Simulador de Crédito UPB** permite a estudiantes, invitados y administrado
 
 ```mermaid
 graph TD
-    A["👤 Usuario<br/>(Estudiante / Admin / Invitado)"] -->|HTTP| B["⚛️ Frontend<br/>React 19 + Vite 7<br/>:5173"]
+    A["👤 Usuario<br/>(Estudiante / Admin / Invitado)"] -->|HTTP| B["⚛️ Frontend<br/>React 19 + Vite 8<br/>:5173"]
     B -->|fetch /api/*| C["🟢 Backend<br/>Express 5 + TypeScript<br/>:3000"]
     C -->|Sequelize ORM<br/>SSL| D["🗄️ MySQL 8<br/>Aiven Cloud"]
     C -->|SMTP| E["📧 Brevo<br/>Email"]
@@ -238,11 +238,23 @@ classDiagram
 
 > Toda la documentación del proyecto se encuentra organizada en la carpeta [`docs/`](./docs/). Consulta el [índice detallado](./docs/README.md) para ver cada archivo.
 
+### Entregables principales
+
+| Entregable | Enlace directo |
+|---|---|
+| Manual de usuario | [`docs/manuals/Manual_Usuario_Simulador_Credito_UPB.pdf`](./docs/manuals/Manual_Usuario_Simulador_Credito_UPB.pdf) |
+| Manual tecnico | [`docs/manuals/Manual de Técnico Simulador.pdf`](./docs/manuals/Manual%20de%20T%C3%A9cnico%20Simulador.pdf) |
+| Manual de despliegue CTIC | [`docs/deployment/Manual de Despliegue Simulador - CTIC.pdf`](./docs/deployment/Manual%20de%20Despliegue%20Simulador%20-%20CTIC.pdf) |
+| Articulo IEEE | [`docs/academic/Articulo IEEE Simulador de Credito UPB.pdf`](./docs/academic/Articulo%20IEEE%20Simulador%20de%20Credito%20UPB.pdf) |
+
 | Categoría | Descripción | Ubicación |
 |---|---|---|
+| 🎓 **Entregables académicos** | Artículo IEEE y sustentación final. | [`docs/academic/`](./docs/academic/) |
+| 📘 **Manuales** | Manual de usuario y manual técnico. | [`docs/manuals/`](./docs/manuals/) |
 | 📋 **Requisitos** | Project Charter, Product Backlog, especificaciones del proyecto integrador y plan de requisitos de software. | [`docs/requirements/`](./docs/requirements/) |
 | 📐 **Diagramas** | Diagramas UML por módulo (StarUML `.mdj`) y diagrama de clases general. | [`docs/diagrams/`](./docs/diagrams/) |
 | 🗄️ **Base de Datos** | Diagrama entidad-relación y diccionario de datos. | [`docs/database/`](./docs/database/) |
+| 🚀 **Despliegue CTIC** | Manual formal, runbooks, bootstrap, variables ejemplo y evidencias operativas. | [`docs/deployment/`](./docs/deployment/) |
 | 💰 **Lineamientos Financieros** | Formatos oficiales de solicitud de crédito del área financiera UPB. | [`docs/financial-guidelines/`](./docs/financial-guidelines/) |
 | 🤝 **Actas de Reunión** | Actas firmadas de reuniones con el área financiera (7 sesiones). | [`docs/meeting-minutes/`](./docs/meeting-minutes/) |
 | 🏃 **Sprints** | Backlogs y presentaciones de cada Sprint. | [`docs/sprints/`](./docs/sprints/) |
@@ -301,12 +313,15 @@ simulador-credito-upb/
 │   └── package.json
 │
 ├── docs/                            # 📖 Documentación del proyecto
+│   ├── academic/                    # Artículo IEEE y sustentación final
 │   ├── architecture/               # 🏗️ ADRs, flujos técnicos, ambientes, secretos y testing
-│   ├── requirements/                # Charter, backlog, especificaciones
-│   ├── diagrams/                    # Diagramas UML por módulo
 │   ├── database/                    # ER diagram + diccionario de datos
+│   ├── deployment/                  # Manual CTIC, runbooks y evidencias operativas
+│   ├── diagrams/                    # Diagramas UML por módulo
 │   ├── financial-guidelines/        # Formatos de crédito financiero
+│   ├── manuals/                     # Manual de usuario y manual técnico
 │   ├── meeting-minutes/             # Actas de reunión firmadas
+│   ├── requirements/                # Charter, backlog, especificaciones
 │   └── sprints/                     # Artefactos por sprint
 │
 ├── .github/                         # CI/CD workflows, templates, Dependabot
@@ -392,9 +407,9 @@ npm run test --workspace=client
 | Herramienta | Propósito |
 |---|---|
 | ⚛️ **React 19** | Librería de UI con componentes funcionales |
-| ⚡ **Vite 7** | Bundler ultrarrápido con HMR |
+| ⚡ **Vite 8** | Bundler ultrarrápido con HMR |
 | 🎨 **Tailwind CSS v4** | Utility-first CSS framework |
-| 🔷 **TypeScript 5.9** | Tipado estático |
+| 🔷 **TypeScript 6** | Tipado estático |
 | ✅ **Zod 4** | Validación de esquemas en cliente y servidor |
 | 📝 **React Hook Form 7** | Gestión de formularios performante |
 | 🧭 **React Router 7** | Enrutamiento SPA con rutas protegidas |
@@ -406,7 +421,7 @@ npm run test --workspace=client
 | Herramienta | Propósito |
 |---|---|
 | 🟢 **Node.js + Express 5** | Runtime y framework HTTP |
-| 🔷 **TypeScript 5.9** | Tipado estático |
+| 🔷 **TypeScript 6** | Tipado estático |
 | 🗄️ **Sequelize 6 + MySQL 8** | ORM con conexión SSL a Aiven Cloud |
 | 🔑 **JWT (jsonwebtoken)** | Autenticación stateless |
 | 🔐 **bcrypt** | Hashing seguro de contraseñas |

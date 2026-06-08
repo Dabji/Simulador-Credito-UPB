@@ -25,6 +25,15 @@ implementado en la plataforma.
 
 ## 1. Arquitectura General del Sistema
 
+Diagramas graficos complementarios extraidos de la sustentacion final:
+
+| Vista | Imagen |
+|---|---|
+| Contexto del sistema | [`assets/diagrams/system-context.png`](./assets/diagrams/system-context.png) |
+| Componentes principales | [`assets/diagrams/component-diagram.png`](./assets/diagrams/component-diagram.png) |
+| Application Server | [`assets/diagrams/application-server.png`](./assets/diagrams/application-server.png) |
+| React Web Client | [`assets/diagrams/react-web-client.png`](./assets/diagrams/react-web-client.png) |
+
 ```mermaid
 graph TD
     subgraph CLIENTE["🖥️ Cliente (Browser)"]
@@ -69,7 +78,7 @@ graph TD
 
 | Componente | Tecnología | Responsabilidad |
 |---|---|---|
-| **Frontend SPA** | React 19, Vite 7, TypeScript 5.9 | UI, formularios, gráficas, navegación por roles |
+| **Frontend SPA** | React 19, Vite 8, TypeScript 6 | UI, formularios, gráficas, navegación por roles |
 | **Middleware Pipeline** | Helmet, CORS, XSS, Rate Limit | Seguridad perimetral antes de cualquier lógica |
 | **Auth Layer** | JWT (jsonwebtoken), bcrypt, LDAP | Autenticación dual + verificación de tokens |
 | **Use Cases** | Clases TypeScript puras | Orquestación de lógica de negocio |
