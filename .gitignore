@@ -11,6 +11,9 @@ build/
 .env.*.local
 .env.*
 !.env.example
+*.deploy.env
+*.deploy.env.local
+docs/deployment/ctic-rhel10.deploy.env
 
 # Certificados SSL / TLS (NUNCA subir a GitHub)
 *.pem
@@ -45,3 +48,8 @@ coverage/
 
 # Misc
 *.tsbuildinfo
+.codex/
+
+# HU-66 database migration generated artifacts
+# Contains real backups/evidence from Aiven; keep out of Git.
+docs/database/hu-66/output/

@@ -222,7 +222,7 @@ construir y desplegar.
 | Servicio | Configuración | Uso |
 |---|---|---|
 | Brevo / Sendinblue | `smtp-relay.sendinblue.com:587` | Correos transaccionales |
-| LDAP UPB | `ldap://10.146.36.100:389` | Autenticación institucional |
+| LDAP UPB | `ldap://<LDAP_HOST_CTIC>:389` | Autenticación institucional |
 | Aiven Cloud | MySQL SSL `:13557` | Persistencia relacional |
 
 Los logs del backend registran uso de SMTP configurado:
@@ -257,15 +257,15 @@ EmailService: usando SMTP configurado {"host":"smtp-relay.sendinblue.com"}
 | `DB_NAME` | `simulador_upb` |
 | `DB_USER` | `avnadmin` |
 | `DB_SSL` | `true` |
-| `LDAP_URL` | `ldap://10.146.36.100:389` |
+| `LDAP_URL` | `ldap://<LDAP_HOST_CTIC>:389` |
 | `LDAP_DOMAIN` | `bga.upb` |
 | `LDAP_BASE_DN` | `OU=OU Empleados,DC=bga,DC=upb` |
 | `LDAP_TIMEOUT_MS` | `5000` |
 | `JWT_EXPIRES_IN` | `8h` |
 | `SMTP_HOST` | `smtp-relay.sendinblue.com` |
 | `SMTP_PORT` | `587` |
-| `SMTP_USER` | `a3a6ad001@smtp-brevo.com` |
-| `SMTP_FROM_EMAIL` | `no-reply@simuladorupbbga.app` |
+| `SMTP_USER` | `<SMTP_USER_STAGING>` |
+| `SMTP_FROM_EMAIL` | `<SMTP_FROM_EMAIL_STAGING>` |
 | `RETENTION_DAYS` | `90` |
 | `PURGE_INTERVAL_HOURS` | `24` |
 | `PURGE_BATCH_SIZE` | `500` |
@@ -315,7 +315,7 @@ tokens expirados.
 
 | Observación | Impacto | Recomendación |
 |---|---|---|
-| LDAP registró `ConnectionError: connection timeout` | Autenticación institucional puede fallar si AD no responde | Validar alcance de red hacia `10.146.36.100:389` |
+| LDAP registró `ConnectionError: connection timeout` | Autenticación institucional puede fallar si AD no responde | Validar alcance de red hacia `<LDAP_HOST_CTIC>:389` |
 | Se observaron slow queries entre ~150 ms y ~787 ms | Útil para monitoreo, no necesariamente incidente | Revisar índices si el volumen crece |
 | Hubo timeouts históricos hacia Aiven | Riesgo intermitente de conectividad externa | Monitorear red/DNS y disponibilidad de Aiven |
 | Se observó un error histórico `Unknown column 'saved_at'` en historial | Indica desalineación temporal entre código y esquema durante pruebas | Verificar después de cada deploy que migraciones y smoke test queden en verde |

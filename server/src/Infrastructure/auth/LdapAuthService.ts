@@ -1,8 +1,12 @@
 // ============================================================
 // LDAP Authentication Service
 // Implementa IAuthService para autenticar contra LDAP/AD.
+// Política final:
+// - LDAP autentica credenciales
+// - La BD local autoriza el rol ADMIN
+// No se hace search LDAP posterior al bind.
 // ============================================================
-
+ 
 import * as ldap from 'ldapjs';
 import type {
   IAuthService,
@@ -11,10 +15,9 @@ import type {
 import { env } from '../config/env';
 import { logger } from '../logger';
 import { ServiceUnavailableError } from '../../Core/errors';
-
+ 
 /**
  * Error sentinel para señalizar credenciales LDAP inválidas internamente.
- * Se usa en lugar de un Error genérico con string mágico.
  */
 class LdapInvalidCredentialsError extends Error {
   constructor() {
@@ -22,172 +25,88 @@ class LdapInvalidCredentialsError extends Error {
     this.name = 'LdapInvalidCredentialsError';
   }
 }
-
-/**
- * Escapa caracteres especiales en valores usados dentro de filtros LDAP
- * para prevenir LDAP injection (RFC 4515).
- */
-function escapeLdapFilter(value: string): string {
-  return value
-    .replace(/\\/g, '\\5c')
-    .replace(/\*/g, '\\2a')
-    .replace(/\(/g, '\\28')
-    .replace(/\)/g, '\\29')
-    .replace(/\0/g, '\\00');
-}
-
+ 
 export class LdapAuthService implements IAuthService {
   async authenticate(
     username: string,
     password: string,
   ): Promise<LdapUserData | null> {
-    // Validar configuración LDAP
-    if (!env.LDAP_URL || !env.LDAP_DOMAIN || !env.LDAP_BASE_DN) {
+    if (!env.LDAP_URL || !env.LDAP_DOMAIN) {
       logger.warn('LDAP no configurado: faltan variables de entorno');
       throw new ServiceUnavailableError(
         'Servicio de autenticación no disponible',
         'LDAP_NOT_CONFIGURED',
       );
     }
-
-    // Constantes locales seguras para TypeScript
+ 
     const ldapUrl = env.LDAP_URL!;
-    const ldapDomain = env.LDAP_DOMAIN!;
-    const ldapBaseDn = env.LDAP_BASE_DN!;
+    const ldapDomain = env.LDAP_DOMAIN!.trim().replace(/^"(.*)"$/, '$1');
     const ldapTimeoutMs = env.LDAP_TIMEOUT_MS ?? 5000;
-
-    // Construir UPN si el username no contiene @
+ 
     const upn = username.includes('@') ? username : `${username}@${ldapDomain}`;
-    const usernameSinDominio = username.includes('@') ? username.split('@')[0] : username;
-
+ 
     logger.info(`[LDAP] Intentando autenticar: ${upn} contra ${ldapUrl}`);
-
+ 
     const client = ldap.createClient({
       url: ldapUrl,
       timeout: ldapTimeoutMs,
       connectTimeout: ldapTimeoutMs,
     });
-
+ 
     try {
-      // Intentar bind directo con las credenciales del usuario
       await new Promise<void>((resolve, reject) => {
         client.bind(upn, password, (err) => {
           if (err) {
             if (err.name === 'InvalidCredentialsError') {
               logger.warn(`[LDAP] Credenciales inválidas para: ${upn}`);
-              reject(new LdapInvalidCredentialsError()); // Rechazar inmediatamente
-            } else {
-              logger.error(`[LDAP] Error de bind para ${upn}:`, err);
-              reject(new ServiceUnavailableError(
+              reject(new LdapInvalidCredentialsError());
+              return;
+            }
+ 
+            logger.error(`[LDAP] Error de bind para ${upn}:`, err);
+            reject(
+              new ServiceUnavailableError(
                 'Servicio de autenticación no disponible',
                 'LDAP_BIND_ERROR',
-              ));
-            }
+              ),
+            );
           } else {
             logger.info(`[LDAP] Bind exitoso para: ${upn}`);
             resolve();
           }
         });
       });
-
-      // Solo si el bind fue exitoso, buscamos el usuario en el árbol configurado
-      const searchResult = await new Promise<ldap.SearchEntry[]>((resolve, reject) => {
-        const safeUpn = escapeLdapFilter(upn);
-        const safeUsername = escapeLdapFilter(usernameSinDominio);
-        const searchFilter = `(|(userPrincipalName=${safeUpn})(mail=${safeUpn})(sAMAccountName=${safeUsername}))`;
-        
-        client.search(
-          ldapBaseDn,
-          {
-            scope: 'sub',
-            filter: searchFilter,
-            attributes: ['userPrincipalName', 'mail', 'givenName', 'sn', 'employeeID'],
-            sizeLimit: 1,
-          },
-          (err, res) => {
-            if (err) {
-              logger.error(`[LDAP] Error de búsqueda para ${upn}:`, err);
-              reject(new ServiceUnavailableError(
-                'Servicio de autenticación no disponible',
-                'LDAP_SEARCH_ERROR',
-              ));
-              return;
-            }
-
-            const entries: ldap.SearchEntry[] = [];
-            
-            res.on('searchEntry', (entry) => {
-              entries.push(entry);
-            });
-
-            res.on('error', (err) => {
-              logger.error(`[LDAP] Error en búsqueda para ${upn}:`, err);
-              reject(new ServiceUnavailableError(
-                'Servicio de autenticación no disponible',
-                'LDAP_SEARCH_ERROR',
-              ));
-            });
-
-            res.on('end', () => {
-              resolve(entries);
-            });
-          },
-        );
-      });
-
-      // Si no encontramos el usuario en el árbol configurado, rechazamos
-      if (searchResult.length === 0) {
-        logger.warn(`[LDAP] Usuario ${upn} no encontrado en ${ldapBaseDn}`);
-        return null;
-      }
-
-      const entry = searchResult[0];
-      
-      // Extraer atributos de forma segura con tipos ldapjs
-      const attrs: Record<string, string> = {};
-      if (entry.attributes) {
-        for (const attr of entry.attributes) {
-          if (attr.type && attr.vals && attr.vals.length > 0) {
-            attrs[attr.type] = attr.vals[0] as string;
-          }
-        }
-      }
-
-      // Construir respuesta con datos disponibles del directorio
+ 
       const ldapUserData: LdapUserData = {
-        email: attrs.mail || upn, // Usar UPN como fallback si no hay mail
-        firstName: attrs.givenName || '',
-        lastName: attrs.sn || '',
-        identificationNumber: attrs.employeeID || '',
+        email: upn,
+        firstName: '',
+        lastName: '',
+        identificationNumber: '',
       };
-
-      logger.info(`[LDAP] Usuario ${upn} autenticado en LDAP; autorización pendiente en la aplicación`);
+ 
+      logger.info(`[LDAP] Usuario ${upn} autenticado correctamente por bind LDAP`);
       return ldapUserData;
-
     } catch (error) {
-      // Si es credenciales inválidas, retornar null
       if (error instanceof LdapInvalidCredentialsError) {
         return null;
       }
-
-      // Si ya es un ServiceUnavailableError, lo propagamos
+ 
       if (error instanceof ServiceUnavailableError) {
         throw error;
       }
-
-      // Otros errores inesperados
+ 
       logger.error(`[LDAP] Error inesperado autenticando ${upn}:`, error);
       throw new ServiceUnavailableError(
         'Servicio de autenticación no disponible',
         'LDAP_UNKNOWN_ERROR',
       );
     } finally {
-      // Asegurarnos de cerrar la conexión
       try {
         client.unbind();
       } catch (err) {
-        logger.warn(`[LDAP] Error haciendo unbind:`, err);
+        logger.warn('[LDAP] Error haciendo unbind:', err);
       }
     }
   }
 }
+ 
