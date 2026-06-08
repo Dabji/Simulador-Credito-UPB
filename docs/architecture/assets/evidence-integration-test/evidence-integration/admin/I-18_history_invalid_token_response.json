@@ -1,7 +1,7 @@
-﻿{
+{
     "success": false,
     "error": {
-        "message": "Token invÃ¡lido o expirado",
+        "message": "Token inválido o expirado",
         "statusCode": 401
     }
 }

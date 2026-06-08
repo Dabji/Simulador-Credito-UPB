@@ -20,6 +20,10 @@ fail() {
   exit 1
 }
 
+if [[ ! "${APP_DOMAIN}" =~ ^[A-Za-z0-9.-]+$ ]]; then
+  fail "APP_DOMAIN invalido: ${APP_DOMAIN}. Use solo letras, numeros, puntos y guiones."
+fi
+
 cleanup() {
   if [ -n "${TMP_CONF_FILE}" ] && [ -f "${TMP_CONF_FILE}" ]; then
     rm -f "${TMP_CONF_FILE}"

@@ -5,9 +5,9 @@ set -Eeuo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEPLOY_ENV_FILE="${DEPLOY_ENV_FILE:-${SCRIPT_DIR}/ctic-rhel10.deploy.env}"
 
-GITHUB_USERNAME_DEFAULT="josemora090525"
-REPO_SLUG_DEFAULT="Dabji/Simulador-Credito-UPB"
-GIT_REF_DEFAULT="feat/ctic-rhel-deploy"
+GITHUB_USERNAME_DEFAULT="x-access-token"
+REPO_SLUG_DEFAULT=""
+GIT_REF_DEFAULT="main"
 APP_BASE_DIR_DEFAULT="/opt/simulador"
 PUBLIC_URL_SCHEME_DEFAULT="http"
 DNF_INSTALL_FLAGS_DEFAULT="-y"
@@ -166,6 +166,9 @@ DEPLOY_GROUP="$(id -gn)"
 
 required_vars=(
   GITHUB_TOKEN
+  GITHUB_USERNAME
+  REPO_SLUG
+  GIT_REF
   APP_DOMAIN
   DB_HOST
   DB_PORT
@@ -235,7 +238,7 @@ log "Validando servicios locales"
 pm2 status
 curl --fail --silent --max-time 10 "http://localhost:3000/api/health" >/dev/null
 curl --fail --silent --max-time 10 "http://localhost/api/health" >/dev/null
-sudo nginx -t >/dev/null
+run_privileged nginx -t >/dev/null
 
 log "Validando URL publica con esquema ${PUBLIC_URL_SCHEME}"
 curl -I "${PUBLIC_URL_SCHEME}://${APP_DOMAIN}" || true

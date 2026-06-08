@@ -1,4 +1,4 @@
-﻿{
+{
   "notes": "Version de prueba I-16 actualizada desde Postman",
   "initialPaymentRules": [
     {
@@ -41,7 +41,7 @@
 
 
     ,"success": true,
-    "message": "ParÃ¡metros actualizados correctamente. El cambio ha quedado registrado y aplicarÃ¡ a simulaciones futuras.",
+    "message": "Parámetros actualizados correctamente. El cambio ha quedado registrado y aplicará a simulaciones futuras.",
     "data": {
         "id": "52fe8170-293f-4c43-9660-f045de2daf7f",
         "validFrom": "2026-03-24",

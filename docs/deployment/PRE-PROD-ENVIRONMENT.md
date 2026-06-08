@@ -1,22 +1,22 @@
-﻿<div align="center">
+<div align="center">
 
-# ðŸŸ¡ Entorno de Pre-ProducciÃ³n â€” HU-59
+# 🟡 Entorno de Pre-Producción — HU-59
 
-**Simulador de CrÃ©dito UPB**
+**Simulador de Crédito UPB**
 
-DocumentaciÃ³n tÃ©cnica del ambiente Staging actualmente operativo, desplegado de
+Documentación técnica del ambiente Staging actualmente operativo, desplegado de
 forma automatizada con GitHub Actions sobre Red Hat Enterprise Linux.
 
 </div>
 
 ---
 
-## Ãndice
+## Índice
 
 1. [Resumen Ejecutivo](#1-resumen-ejecutivo)
 2. [Arquitectura Actual](#2-arquitectura-actual)
 3. [Flujo CI/CD](#3-flujo-cicd)
-4. [GeneraciÃ³n de Entorno](#4-generaciÃ³n-de-entorno)
+4. [Generación de Entorno](#4-generación-de-entorno)
 5. [Stack y Versiones Observadas](#5-stack-y-versiones-observadas)
 6. [Backend PM2 Cluster](#6-backend-pm2-cluster)
 7. [Frontend y Nginx](#7-frontend-y-nginx)
@@ -32,8 +32,8 @@ forma automatizada con GitHub Actions sobre Red Hat Enterprise Linux.
 
 | Atributo | Estado actual |
 |---|---|
-| Ambiente | ðŸŸ¡ Pre-ProducciÃ³n / Staging |
-| Despliegue | Automatizado vÃ­a GitHub Actions |
+| Ambiente | 🟡 Pre-Producción / Staging |
+| Despliegue | Automatizado vía GitHub Actions |
 | Trigger | `push` a la rama `main` |
 | Runner | Self-hosted runner en Red Hat Enterprise Linux |
 | Frontend | React/Vite compilado y servido por Nginx |
@@ -63,11 +63,11 @@ flowchart LR
 
 ### Componentes
 
-| Componente | ImplementaciÃ³n | Detalle |
+| Componente | Implementación | Detalle |
 |---|---|---|
 | CI/CD | `.github/workflows/deploy.yml` | Pipeline automatizado por push a `main` |
 | Runner | Self-hosted | Ejecuta el despliegue en servidor RHEL |
-| Frontend | React + Vite | Build en `client/dist` y publicaciÃ³n con Nginx |
+| Frontend | React + Vite | Build en `client/dist` y publicación con Nginx |
 | Backend | Node.js + Express | API en puerto `3000` |
 | Proceso | PM2 cluster | 4 workers observados online |
 | Base de datos | Aiven Cloud MySQL (MariaDB-compatible) | Puerto `13557`, SSL forzado |
@@ -77,15 +77,15 @@ flowchart LR
 
 ## 3. Flujo CI/CD
 
-El flujo de despliegue estÃ¡ completamente automatizado por GitHub Actions.
+El flujo de despliegue está completamente automatizado por GitHub Actions.
 
-| Etapa | AcciÃ³n del workflow |
+| Etapa | Acción del workflow |
 |---|---|
 | 1. Trigger | Se ejecuta al hacer `push` sobre `main` |
-| 2. Checkout | Descarga el Ãºltimo cÃ³digo con `actions/checkout@v6` |
-| 3. ValidaciÃ³n | Verifica variables y secretos obligatorios |
+| 2. Checkout | Descarga el último código con `actions/checkout@v6` |
+| 3. Validación | Verifica variables y secretos obligatorios |
 | 4. Certificado | Escribe `server/certs/ca.pem` desde `DB_CA_CERT` |
-| 5. `.env` fÃ­sico | Genera `server/.env` dentro del backend |
+| 5. `.env` físico | Genera `server/.env` dentro del backend |
 | 6. Dependencias | Ejecuta `npm ci` en el monorepo |
 | 7. Build | Compila `client` y `server` por workspace |
 | 8. Frontend | Copia `client/dist/*` hacia `/usr/share/nginx/html/` |
@@ -104,18 +104,18 @@ pm2 reload ecosystem.config.js --env production --update-env \
 pm2 save
 ```
 
-Este patrÃ³n permite reinicio sin caÃ­da perceptible mediante `pm2 reload` y fuerza
-la inyecciÃ³n del entorno actualizado en cada worker.
+Este patrón permite reinicio sin caída perceptible mediante `pm2 reload` y fuerza
+la inyección del entorno actualizado en cada worker.
 
 ---
 
-## 4. GeneraciÃ³n de Entorno
+## 4. Generación de Entorno
 
 El workflow no depende de un `.env` versionado. En cada despliegue:
 
 1. Lee **GitHub Repository Variables** para valores no secretos.
 2. Lee **GitHub Repository Secrets** para credenciales y certificados.
-3. Crea fÃ­sicamente `server/.env`.
+3. Crea físicamente `server/.env`.
 4. Protege valores con espacios usando comillas, especialmente LDAP.
 
 Ejemplo del manejo de LDAP:
@@ -135,9 +135,9 @@ LDAP_BASE_DN="OU=OU Empleados,DC=bga,DC=upb"
 
 ## 5. Stack y Versiones Observadas
 
-Evidencia tomada del servidor de Pre-ProducciÃ³n.
+Evidencia tomada del servidor de Pre-Producción.
 
-| Componente | VersiÃ³n observada |
+| Componente | Versión observada |
 |---|---|
 | Sistema operativo | Red Hat Enterprise Linux 10.1 (Coughlan) |
 | Node.js | `v24.14.0` |
@@ -178,13 +178,13 @@ se materializa como 4 workers.
 ## 7. Frontend y Nginx
 
 El frontend React/Vite se compila durante el workflow y se publica como archivos
-estÃ¡ticos:
+estáticos:
 
 ```text
 /usr/share/nginx/html/*
 ```
 
-El servicio Nginx estÃ¡ activo y escuchando en HTTP/HTTPS:
+El servicio Nginx está activo y escuchando en HTTP/HTTPS:
 
 | Puerto | Servicio | Estado observado |
 |---:|---|---|
@@ -212,17 +212,17 @@ systemctl status nginx --no-pager
 | `DB_SSL` | `true` |
 | Certificado CA | Inyectado desde `DB_CA_CERT` hacia `server/certs/ca.pem` |
 
-La conexiÃ³n SSL es obligatoria. El workflow valida que `DB_SSL=true` antes de
+La conexión SSL es obligatoria. El workflow valida que `DB_SSL=true` antes de
 construir y desplegar.
 
 ---
 
 ## 9. Servicios Externos
 
-| Servicio | ConfiguraciÃ³n | Uso |
+| Servicio | Configuración | Uso |
 |---|---|---|
 | Brevo / Sendinblue | `smtp-relay.sendinblue.com:587` | Correos transaccionales |
-| LDAP UPB | `ldap://<LDAP_HOST_CTIC>:389` | AutenticaciÃ³n institucional |
+| LDAP UPB | `ldap://<LDAP_HOST_CTIC>:389` | Autenticación institucional |
 | Aiven Cloud | MySQL SSL `:13557` | Persistencia relacional |
 
 Los logs del backend registran uso de SMTP configurado:
@@ -239,7 +239,7 @@ EmailService: usando SMTP configurado {"host":"smtp-relay.sendinblue.com"}
 
 | Secret | Uso |
 |---|---|
-| `DB_CA_CERT` | Certificado CA para conexiÃ³n SSL a Aiven |
+| `DB_CA_CERT` | Certificado CA para conexión SSL a Aiven |
 | `DB_PASSWORD` | Password de base de datos |
 | `JWT_SECRET` | Firma de tokens JWT |
 | `LDAP_BIND_PASSWORD` | Password de cuenta LDAP si aplica |
@@ -285,8 +285,8 @@ Los logs del 26 de abril de 2026 registran:
 |---|---|
 | Migraciones | `Migraciones ejecutadas correctamente` |
 | Documentos soportados | `CC, CE, DE, PA, PE, PT, RC, TI, VI` |
-| Scheduler de simulaciones | RetenciÃ³n `90` dÃ­as, ciclo `24h`, batch `500` |
-| Scheduler de tokens | RetenciÃ³n `30` dÃ­as, ciclo `24h`, batch `1000` |
+| Scheduler de simulaciones | Retención `90` días, ciclo `24h`, batch `500` |
+| Scheduler de tokens | Retención `30` días, ciclo `24h`, batch `1000` |
 | API | `Servidor corriendo en http://localhost:3000` |
 | Health check | `http://localhost:3000/api/health` |
 | Swagger | `http://localhost:3000/api/docs` |
@@ -296,37 +296,37 @@ Los logs del 26 de abril de 2026 registran:
 Los logs muestran conexiones exitosas recurrentes:
 
 ```text
-ConexiÃ³n a MySQL establecida correctamente
+Conexión a MySQL establecida correctamente
 ```
 
-TambiÃ©n existen eventos histÃ³ricos de timeout/host no encontrado durante pruebas
+También existen eventos históricos de timeout/host no encontrado durante pruebas
 de conectividad, por lo que la disponibilidad de red hacia Aiven debe seguirse
 monitoreando.
 
 ### 11.3. Actividad funcional
 
-La evidencia del backend incluye autenticaciÃ³n exitosa, cierre de sesiÃ³n,
-inserciones de auditorÃ­a, creaciÃ³n de simulaciones, exportaciones y purga de
+La evidencia del backend incluye autenticación exitosa, cierre de sesión,
+inserciones de auditoría, creación de simulaciones, exportaciones y purga de
 tokens expirados.
 
 ---
 
 ## 12. Observaciones
 
-| ObservaciÃ³n | Impacto | RecomendaciÃ³n |
+| Observación | Impacto | Recomendación |
 |---|---|---|
-| LDAP registrÃ³ `ConnectionError: connection timeout` | AutenticaciÃ³n institucional puede fallar si AD no responde | Validar alcance de red hacia `<LDAP_HOST_CTIC>:389` |
-| Se observaron slow queries entre ~150 ms y ~787 ms | Ãštil para monitoreo, no necesariamente incidente | Revisar Ã­ndices si el volumen crece |
-| Hubo timeouts histÃ³ricos hacia Aiven | Riesgo intermitente de conectividad externa | Monitorear red/DNS y disponibilidad de Aiven |
-| Se observÃ³ un error histÃ³rico `Unknown column 'saved_at'` en historial | Indica desalineaciÃ³n temporal entre cÃ³digo y esquema durante pruebas | Verificar despuÃ©s de cada deploy que migraciones y smoke test queden en verde |
-| Backend escucha en puerto `3000` | Debe consumirse por Nginx | Restringir exposiciÃ³n directa con firewall si aplica |
+| LDAP registró `ConnectionError: connection timeout` | Autenticación institucional puede fallar si AD no responde | Validar alcance de red hacia `<LDAP_HOST_CTIC>:389` |
+| Se observaron slow queries entre ~150 ms y ~787 ms | Útil para monitoreo, no necesariamente incidente | Revisar índices si el volumen crece |
+| Hubo timeouts históricos hacia Aiven | Riesgo intermitente de conectividad externa | Monitorear red/DNS y disponibilidad de Aiven |
+| Se observó un error histórico `Unknown column 'saved_at'` en historial | Indica desalineación temporal entre código y esquema durante pruebas | Verificar después de cada deploy que migraciones y smoke test queden en verde |
+| Backend escucha en puerto `3000` | Debe consumirse por Nginx | Restringir exposición directa con firewall si aplica |
 
 ---
 
 ## Referencias
 
-| Archivo | DescripciÃ³n |
+| Archivo | Descripción |
 |---|---|
-| [`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml) | Pipeline automatizado de Pre-ProducciÃ³n |
-| [`server/ecosystem.config.js`](../../server/ecosystem.config.js) | ConfiguraciÃ³n PM2 cluster |
-| [`docs/deployment/CTIC-PROD-DEPLOYMENT.md`](./CTIC-PROD-DEPLOYMENT.md) | GuÃ­a de ProducciÃ³n CTIC |
+| [`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml) | Pipeline automatizado de Pre-Producción |
+| [`server/ecosystem.config.js`](../../server/ecosystem.config.js) | Configuración PM2 cluster |
+| [`docs/deployment/CTIC-PROD-DEPLOYMENT.md`](./CTIC-PROD-DEPLOYMENT.md) | Guía de Producción CTIC |

@@ -1,44 +1,44 @@
-﻿Campo,Valor
-Simulador,CrÃ©dito Educativo UPB
-Fecha de generaciÃ³n,24 de abril de 2026
+Campo,Valor
+Simulador,Crédito Educativo UPB
+Fecha de generación,24 de abril de 2026
 
 Nombre completo,Juan Test
-Correo electrÃ³nico,evidence.user@example.test
+Correo electrónico,evidence.user@example.test
 Tipo de documento,CC
-NÃºmero de identificaciÃ³n,1099001234
-NÃºmero de celular,3007654321
+Número de identificación,1099001234
+Número de celular,3007654321
 Nivel educativo,Pregrado
 Tipo de estudiante,Nuevo
 Modalidad,Con Intereses
-Fecha de creaciÃ³n,24/4/2026
-PerÃ­odo acadÃ©mico,2026-01
+Fecha de creación,24/4/2026
+Período académico,2026-01
 
 Resumen financiero,
-Valor matrÃ­cula (bruto),10000000
+Valor matrícula (bruto),10000000
 Beca / descuento (%),0
-MatrÃ­cula neta,10000000
+Matrícula neta,10000000
 Cuota inicial,2000000
 Cuota inicial (%),20
 Valor a financiar,8000000
-Tasa de interÃ©s mensual (%),1
-NÃºmero de cuotas,4
+Tasa de interés mensual (%),1
+Número de cuotas,4
 Cuota fija mensual estimada,2720177
 Total a pagar,10160531
 Total intereses,160530
 Observaciones,Caso guardado I-09
 
-Cronograma de amortizaciÃ³n,,,,,,
+Cronograma de amortización,,,,,,
 Cuota inicial (no genera intereses),2000000,20%,,,,
 
-NÂ° Cuota,Fecha,Saldo Inicial (COP),Capital (COP),InterÃ©s (COP),Valor Cuota (COP),Saldo Final (COP)
+N° Cuota,Fecha,Saldo Inicial (COP),Capital (COP),Interés (COP),Valor Cuota (COP),Saldo Final (COP)
 2,Febrero de 2026,8000000,2640177,80000,2720177,5359823
 3,Marzo de 2026,5359823,2666579,53598,2720177,2693244
 4,Abril de 2026,2693245,2693245,26932,2720177,0
 
-EvoluciÃ³n del saldo,,
-NÂ° Cuota,Fecha,Saldo Final (COP)
+Evolución del saldo,,
+N° Cuota,Fecha,Saldo Final (COP)
 2,Febrero de 2026,5359823
 3,Marzo de 2026,2693244
 4,Abril de 2026,0
 
-Nota,Los valores son referenciales y pueden variar segÃºn polÃ­ticas institucionales vigentes.
+Nota,Los valores son referenciales y pueden variar según políticas institucionales vigentes.
