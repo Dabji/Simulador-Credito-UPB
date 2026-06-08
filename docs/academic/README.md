@@ -1,12 +1,18 @@
-# Entregables Academicos
+<div align="center">
 
-Esta carpeta conserva los artefactos academicos finales del proyecto.
+# 🎓 Entregables Académicos
 
-| Artefacto | Archivo | Proposito |
+**Artefactos académicos finales del Simulador de Crédito UPB.**
+
+</div>
+
+---
+
+| Artefacto | Archivo | Propósito |
 |---|---|---|
-| Articulo IEEE | [`Articulo IEEE Simulador de Credito UPB.pdf`](./Articulo%20IEEE%20Simulador%20de%20Credito%20UPB.pdf) | Documento academico de soporte metodologico y tecnico. |
-| Diagramas exportados | [`../architecture/assets/diagrams/`](../architecture/assets/diagrams/) | Imagenes versionadas que provienen de la sustentacion final y se usan en arquitectura, base de datos y despliegue. |
+| 📄 Artículo IEEE | [`Articulo IEEE Simulador de Credito UPB.pdf`](./Articulo%20IEEE%20Simulador%20de%20Credito%20UPB.pdf) | Documento académico de soporte metodológico y técnico. |
+| 🖼️ Diagramas exportados | [`../architecture/assets/diagrams/`](../architecture/assets/diagrams/) | Imágenes versionadas que provienen de la sustentación final y se usan en arquitectura, base de datos y despliegue. |
 
-## Nota de mantenimiento
+## 🛠️ Nota de mantenimiento
 
-Si se actualiza la presentacion original, revisar si los diagramas extraidos en las carpetas tecnicas deben regenerarse para mantener consistencia documental.
+Si se actualiza la presentación original, revisar si los diagramas extraídos en las carpetas técnicas deben regenerarse para mantener consistencia documental.

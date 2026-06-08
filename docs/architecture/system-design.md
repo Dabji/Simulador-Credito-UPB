@@ -1,49 +1,49 @@
 <div align="center">
 
-# Diseno del Sistema / System Design
+# ⚙️ Diseño del Sistema / System Design
 
-**Simulador de Credito UPB**
+**Simulador de Crédito UPB**
 
-Documentacion tecnica de arquitectura, componentes, flujos y modelo de datos del sistema.
+Documentación técnica de arquitectura, componentes, flujos, seguridad, datos y despliegue.
 
 </div>
 
 ---
 
-## Indice
+## 📌 Índice
 
-1. [Vista de contexto](#1-vista-de-contexto)
-2. [Componentes de aplicacion](#2-componentes-de-aplicacion)
-3. [Cliente React](#3-cliente-react)
-4. [Servidor de aplicacion](#4-servidor-de-aplicacion)
-5. [Flujos principales](#5-flujos-principales)
-6. [Seguridad](#6-seguridad)
-7. [Modelo de datos](#7-modelo-de-datos)
-8. [Despliegue](#8-despliegue)
+1. [🌐 Vista de contexto](#1--vista-de-contexto)
+2. [🧩 Componentes de aplicación](#2--componentes-de-aplicación)
+3. [⚛️ Cliente React](#3-️-cliente-react)
+4. [🟢 Servidor de aplicación](#4--servidor-de-aplicación)
+5. [🔄 Flujos principales](#5--flujos-principales)
+6. [🔐 Seguridad](#6--seguridad)
+7. [🗄️ Modelo de datos](#7-️-modelo-de-datos)
+8. [🚀 Despliegue](#8--despliegue)
 
 ---
 
-## 1. Vista de contexto
+## 1. 🌐 Vista de contexto
 
 <div align="center">
-  <img src="./assets/diagrams/system-context.png" alt="Vista de contexto del Simulador de Credito UPB" width="940" />
+  <img src="./assets/diagrams/system-context.png" alt="Vista de contexto del Simulador de Crédito UPB" width="940" />
   <br />
   <em>Usuarios, SPA React, API Node.js, base de datos, LDAP y SMTP.</em>
 </div>
 
-### Responsabilidades por capa
+### 🧱 Responsabilidades por capa
 
 | Capa | Componentes | Responsabilidad |
 |---|---|---|
-| Presentacion | React 19, Vite 8, TypeScript, Tailwind | Captura de datos, rutas por rol, formularios, resultados, historial y administracion. |
-| Aplicacion | Express 5, use cases, servicios, DTO | Exponer API REST, validar entradas, ejecutar reglas y responder en JSON/PDF/CSV. |
-| Dominio | `SimulationEngine`, estrategias financieras | Calcular cuotas, intereses, amortizacion y resumen financiero. |
-| Datos | MySQL 8 Aiven, MariaDB/MySQL CTIC, Sequelize | Persistir usuarios, simulaciones, parametros, auditoria y exportaciones. |
-| Integracion | LDAP/AD, SMTP/Brevo o servicio institucional | Autenticar administradores y enviar correos transaccionales. |
+| 🎨 Presentación | React 19, Vite 8, TypeScript, Tailwind | Captura de datos, rutas por rol, formularios, resultados, historial y administración. |
+| 🟢 Aplicación | Express 5, use cases, servicios, DTO | Exponer API REST, validar entradas, ejecutar reglas y responder en JSON/PDF/CSV. |
+| 🧮 Dominio | `SimulationEngine`, estrategias financieras | Calcular cuotas, intereses, amortización y resumen financiero. |
+| 🗄️ Datos | MySQL 8/Aiven, MariaDB/MySQL CTIC, Sequelize | Persistir usuarios, simulaciones, parámetros, auditoría y exportaciones. |
+| 🔌 Integración | LDAP/AD, SMTP/Brevo o servicio institucional | Autenticar administradores y enviar correos transaccionales. |
 
 ---
 
-## 2. Componentes de aplicacion
+## 2. 🧩 Componentes de aplicación
 
 <div align="center">
   <img src="./assets/diagrams/component-diagram.png" alt="Diagrama de componentes del backend y sus integraciones" width="940" />
@@ -51,140 +51,142 @@ Documentacion tecnica de arquitectura, componentes, flujos y modelo de datos del
   <em>Componentes internos del backend, servicios de dominio, repositorios e integraciones externas.</em>
 </div>
 
-### Componentes clave
+### 🧠 Componentes clave
 
-| Componente | Proposito |
+| Componente | Propósito |
 |---|---|
 | `BackendAPI` | Punto de entrada HTTP; agrupa rutas, middlewares y controladores. |
-| `SecurityMiddleware` | Helmet, CORS, rate limit, autenticacion y autorizacion por rol. |
-| `ValidationMiddleware` | Validacion de payloads con esquemas y reglas de negocio. |
-| `ApplicationUseCases` | Orquestacion de autenticacion, simulacion, perfil, administracion y exportaciones. |
+| `SecurityMiddleware` | Helmet, CORS, rate limit, autenticación y autorización por rol. |
+| `ValidationMiddleware` | Validación de payloads con esquemas y reglas de negocio. |
+| `ApplicationUseCases` | Orquestación de autenticación, simulación, perfil, administración y exportaciones. |
 | `SimulationEngine` | Motor financiero con estrategias intercambiables. |
-| `SequelizeRepositories` | Acceso relacional a usuarios, simulaciones, parametros y auditoria. |
-| `EmailService` | Correos transaccionales y recuperacion de contrasena. |
-| `LdapAuthService` | Autenticacion institucional de administradores. |
+| `SequelizeRepositories` | Acceso relacional a usuarios, simulaciones, parámetros y auditoría. |
+| `EmailService` | Correos transaccionales y recuperación de contraseña. |
+| `LdapAuthService` | Autenticación institucional de administradores. |
 
 ---
 
-## 3. Cliente React
+## 3. ⚛️ Cliente React
 
 <div align="center">
   <img src="./assets/diagrams/react-web-client.png" alt="Diagrama del cliente React" width="940" />
   <br />
-  <em>Rutas, proveedores, paginas y DTO usados por la SPA.</em>
+  <em>Rutas, proveedores, páginas y DTO usados por la SPA.</em>
 </div>
 
-### Flujos de interfaz
+### 🧭 Flujos de interfaz
 
 | Flujo | Pantallas / componentes |
 |---|---|
-| Invitado | Landing, acceso invitado, formulario de simulacion y resultados sin guardado. |
-| Estudiante | Login, panel principal, simulacion, historial, detalle, exportacion y perfil. |
-| Administrador | Login administrativo, estudiantes, parametros financieros y simulaciones. |
-| Compartido | `AuthProvider`, `ProtectedRoute`, `PublicRoute`, `ApiService`, validaciones y componentes UI. |
+| 👤 Invitado | Landing, acceso invitado, formulario de simulación y resultados sin guardado. |
+| 🎓 Estudiante | Login, panel principal, simulación, historial, detalle, exportación y perfil. |
+| 🛡️ Administrador | Login administrativo, estudiantes, parámetros financieros y simulaciones. |
+| ♻️ Compartido | `AuthProvider`, `ProtectedRoute`, `PublicRoute`, `ApiService`, validaciones y componentes UI. |
 
 ---
 
-## 4. Servidor de aplicacion
+## 4. 🟢 Servidor de aplicación
 
 <div align="center">
-  <img src="./assets/diagrams/application-server.png" alt="Diagrama del servidor de aplicacion" width="940" />
+  <img src="./assets/diagrams/application-server.png" alt="Diagrama del servidor de aplicación" width="940" />
   <br />
-  <em>Casos de uso, repositorios, servicios de aplicacion y entidades principales.</em>
+  <em>Casos de uso, repositorios, servicios de aplicación y entidades principales.</em>
 </div>
 
-### Capas backend
+### 🏗️ Capas backend
 
 | Capa | Ejemplos | Regla |
 |---|---|---|
 | `Core` | Entidades, interfaces de repositorio, errores | No depende de frameworks. |
 | `Application` | Casos de uso, servicios, DTO, estrategias | Coordina reglas de negocio. |
-| `Infrastructure` | Express, Sequelize, JWT, LDAP, SMTP, Swagger | Implementa detalles tecnicos. |
+| `Infrastructure` | Express, Sequelize, JWT, LDAP, SMTP, Swagger | Implementa detalles técnicos. |
 
 ---
 
-## 5. Flujos principales
+## 5. 🔄 Flujos principales
 
-### Simulacion de credito
+### 🧮 Simulación de crédito
 
 1. El usuario completa el formulario en la SPA.
-2. El cliente valida estructura basica y envia `POST /api/simulator/preview`.
-3. El backend aplica seguridad, sanitizacion y validacion.
-4. El caso de uso consulta la version activa de parametros.
+2. El cliente valida estructura básica y envía `POST /api/simulator/preview`.
+3. El backend aplica seguridad, sanitización y validación.
+4. El caso de uso consulta la versión activa de parámetros.
 5. `SimulationService` valida reglas de negocio.
-6. `SimulationEngine` selecciona estrategia financiera.
-7. La API devuelve resumen, tabla de amortizacion y datos para graficas.
-8. Si el usuario autenticado decide guardar, se persiste la simulacion y sus filas.
+6. `SimulationEngine` selecciona la estrategia financiera.
+7. La API devuelve resumen, tabla de amortización y datos para gráficas.
+8. Si el usuario autenticado decide guardar, se persiste la simulación y sus filas.
 
-### Exportacion
+### 📄 Exportación
 
 1. El usuario solicita PDF o CSV desde historial o detalle.
-2. La API valida propiedad de la simulacion o permiso administrador.
-3. El backend consulta simulacion, filas y parametros.
+2. La API valida propiedad de la simulación o permiso administrador.
+3. El backend consulta simulación, filas y parámetros.
 4. El builder genera el archivo.
-5. Se registra `export_logs` para auditoria.
+5. Se registra `export_logs` para auditoría.
 
-### Administracion de parametros
+### 🛠️ Administración de parámetros
 
 1. El administrador consulta versiones financieras.
-2. Modifica reglas de cuota inicial, tasas o configuracion por nivel.
-3. La API valida consistencia temporal y numerica.
-4. La nueva configuracion queda disponible para simulaciones posteriores.
+2. Modifica reglas de cuota inicial, tasas o configuración por nivel.
+3. La API valida consistencia temporal y numérica.
+4. La nueva configuración queda disponible para simulaciones posteriores.
 
 ---
 
-## 6. Seguridad
+## 6. 🔐 Seguridad
 
-| Control | Aplicacion |
+| Control | Aplicación |
 |---|---|
-| Autenticacion local | bcrypt + JWT para usuarios internos. |
-| Autenticacion institucional | LDAP/Active Directory para administradores cuando aplique. |
-| Autorizacion | Guards por rol `STUDENT` y `ADMIN`. |
-| Seguridad HTTP | Helmet, CORS y rate limiting. |
-| Sanitizacion | Limpieza de entradas para reducir riesgo XSS. |
-| Secretos | `.env` y `ctic-rhel10.deploy.env` fuera de Git; solo plantillas versionadas. |
-| Auditoria | `audit_logs` y `export_logs` para operaciones relevantes. |
+| 🔑 Autenticación local | bcrypt + JWT para usuarios internos. |
+| 🏛️ Autenticación institucional | LDAP/Active Directory para administradores cuando aplique. |
+| 🛡️ Autorización | Guards por rol `STUDENT` y `ADMIN`. |
+| 🌐 Seguridad HTTP | Helmet, CORS y rate limiting. |
+| 🧹 Sanitización | Limpieza de entradas para reducir riesgo XSS. |
+| 🔒 Secretos | `.env` y `ctic-rhel10.deploy.env` fuera de Git; solo plantillas versionadas. |
+| 🧾 Auditoría | `audit_logs` y `export_logs` para operaciones relevantes. |
 
 ---
 
-## 7. Modelo de datos
+## 7. 🗄️ Modelo de datos
 
 <div align="center">
-  <img src="../database/relational-model.png" alt="Modelo relacional del Simulador de Credito UPB" width="940" />
+  <img src="../database/relational-model.png" alt="Modelo relacional del Simulador de Crédito UPB" width="940" />
   <br />
-  <em>Modelo relacional final usado por la aplicacion.</em>
+  <em>Modelo relacional final usado por la aplicación.</em>
 </div>
 
-Tablas principales:
+### 📌 Tablas principales
 
-- `users`
-- `simulations`
-- `amortization_rows`
-- `parameter_versions`
-- `level_configs`
-- `level_rate_rules`
-- `initial_payment_rules`
-- `audit_logs`
-- `export_logs`
-- `password_reset_tokens`
+| Tabla | Función |
+|---|---|
+| `users` | Usuarios y roles del sistema. |
+| `simulations` | Simulaciones guardadas. |
+| `amortization_rows` | Filas de amortización por simulación. |
+| `parameter_versions` | Versiones de parámetros financieros. |
+| `level_configs` | Configuración por nivel educativo. |
+| `level_rate_rules` | Tasas por número de pagos. |
+| `initial_payment_rules` | Reglas de cuota inicial. |
+| `audit_logs` | Auditoría operativa. |
+| `export_logs` | Trazabilidad de exportaciones. |
+| `password_reset_tokens` | Recuperación de contraseña. |
 
 ---
 
-## 8. Despliegue
+## 8. 🚀 Despliegue
 
-### CTIC
+### 🟢 Producción CTIC
 
 <div align="center">
   <img src="../deployment/assets/ctic-deployment.png" alt="Diagrama de despliegue CTIC" width="940" />
 </div>
 
-### Preproduccion
+### 🟡 Preproducción
 
 <div align="center">
-  <img src="../deployment/assets/preprod-deployment.png" alt="Diagrama de preproduccion" width="940" />
+  <img src="../deployment/assets/preprod-deployment.png" alt="Diagrama de preproducción" width="940" />
 </div>
 
-Puertos relevantes:
+### 🔌 Puertos relevantes
 
 | Servicio | Puerto |
 |---|---:|

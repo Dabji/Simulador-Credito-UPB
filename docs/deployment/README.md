@@ -1,49 +1,53 @@
-# Despliegue CTIC / CTIC Deployment
+<div align="center">
 
-Esta carpeta contiene la documentacion operativa para instalar, validar, auditar y volver a desplegar el Simulador de Credito UPB en la VM administrada por CTIC.
+# 🚀 Despliegue CTIC / CTIC Deployment
 
-This folder contains the operational documentation for installing, validating, auditing and redeploying the simulator on the CTIC-managed VM.
+**Documentación operativa para instalar, validar, auditar y volver a desplegar el Simulador de Crédito UPB.**
 
-## Documentos principales / Main Documents
+</div>
 
-| Documento | Proposito |
+---
+
+## 📄 Documentos principales / Main Documents
+
+| Documento | Propósito |
 |---|---|
-| [`Manual de Despliegue Simulador - CTIC.pdf`](./Manual%20de%20Despliegue%20Simulador%20-%20CTIC.pdf) | Manual formal de despliegue y nuevo despliegue. |
-| [`CTIC-RHEL-RUNBOOK.md`](./CTIC-RHEL-RUNBOOK.md) | Runbook accionable para ejecucion en RHEL. |
-| [`CTIC-PROD-DEPLOYMENT.md`](./CTIC-PROD-DEPLOYMENT.md) | Arquitectura productiva, variables, puertos y operacion. |
-| [`PRE-PROD-ENVIRONMENT.md`](./PRE-PROD-ENVIRONMENT.md) | Ambiente de preproduccion con runner self-hosted y Aiven. |
-| [`HU-91-DEPLOYMENT-CLOSURE.md`](./HU-91-DEPLOYMENT-CLOSURE.md) | Cierre tecnico de despliegue y evidencias. |
+| 📘 [`Manual de Despliegue Simulador - CTIC.pdf`](./Manual%20de%20Despliegue%20Simulador%20-%20CTIC.pdf) | Manual formal de despliegue y nuevo despliegue. |
+| 🧭 [`CTIC-RHEL-RUNBOOK.md`](./CTIC-RHEL-RUNBOOK.md) | Runbook accionable para ejecución en RHEL. |
+| 🟢 [`CTIC-PROD-DEPLOYMENT.md`](./CTIC-PROD-DEPLOYMENT.md) | Arquitectura productiva, variables, puertos y operación. |
+| 🟡 [`PRE-PROD-ENVIRONMENT.md`](./PRE-PROD-ENVIRONMENT.md) | Ambiente de preproducción con runner self-hosted y Aiven. |
+| ✅ [`HU-91-DEPLOYMENT-CLOSURE.md`](./HU-91-DEPLOYMENT-CLOSURE.md) | Cierre técnico de despliegue y evidencias. |
 
-## Topologia CTIC / CTIC Topology
-
-<div align="center">
-  <img src="./assets/ctic-deployment.png" alt="Topologia de despliegue CTIC" width="920" />
-</div>
-
-## Preproduccion / Pre-production
+## 🟢 Topología CTIC / CTIC Topology
 
 <div align="center">
-  <img src="./assets/preprod-deployment.png" alt="Topologia de preproduccion" width="920" />
+  <img src="./assets/ctic-deployment.png" alt="Topología de despliegue CTIC" width="920" />
 </div>
 
-## Respaldo de base de datos / Database Backup
+## 🟡 Preproducción / Pre-production
 
 <div align="center">
-  <img src="./assets/backup-policy-ctic.png" alt="Politica de respaldo CTIC" width="920" />
+  <img src="./assets/preprod-deployment.png" alt="Topología de preproducción" width="920" />
 </div>
 
-## Puertos por defecto / Default Ports
+## 💾 Respaldo de base de datos / Database Backup
 
-| Servicio | Puerto | Exposicion esperada |
+<div align="center">
+  <img src="./assets/backup-policy-ctic.png" alt="Política de respaldo CTIC" width="920" />
+</div>
+
+## 🔌 Puertos por defecto / Default Ports
+
+| Servicio | Puerto | Exposición esperada |
 |---|---:|---|
-| HTTP | `80` | Publico, normalmente redirige a HTTPS. |
-| HTTPS | `443` | Publico si TLS termina en la VM. |
+| HTTP | `80` | Público; normalmente redirige a HTTPS. |
+| HTTPS | `443` | Público si TLS termina en la VM. |
 | Backend Express | `3000` | Solo local; Nginx enruta `/api` hacia este puerto. |
 | MariaDB/MySQL | `3306` | Privado entre VM y servidor de base de datos. |
 | LDAP/AD | `389` | Privado hacia directorio institucional. |
 | SMTP | `587` | Salida hacia servicio de correo transaccional. |
 
-## Flujo operativo / Operational Flow
+## 🧭 Flujo operativo / Operational Flow
 
 1. Copiar el proyecto o la rama aprobada a la VM.
 2. Crear `ctic-rhel10.deploy.env` fuera de Git con datos reales.
@@ -54,9 +58,9 @@ This folder contains the operational documentation for installing, validating, a
 7. Levantar el backend con PM2.
 8. Validar dominio oficial y `/api/health`.
 
-## Reglas de seguridad / Security Rules
+## 🔒 Reglas de seguridad / Security Rules
 
 - El archivo real `ctic-rhel10.deploy.env` no debe versionarse.
-- Certificados, llaves privadas y dumps de produccion se administran fuera de Git.
-- `APP_DOMAIN` debe usar solo letras, numeros, puntos y guiones.
+- Certificados, llaves privadas y dumps de producción se administran fuera de Git.
+- `APP_DOMAIN` debe usar solo letras, números, puntos y guiones.
 - Si cambia el dominio final, actualizar variables y Nginx en la VM; no hardcodear dominios institucionales en el repositorio.
