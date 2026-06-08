@@ -78,7 +78,7 @@ chmod +x ctic-rhel10-bootstrap.sh
    ```
 
 4. GitHub:
-   Verifica antes del despliegue que `GITHUB_TOKEN`, `REPO_SLUG` y `GIT_REF` apunten exactamente al repo y rama aprobados.
+   Verifica antes del despliegue que `GITHUB_TOKEN`, `REPO_SLUG` y `GIT_REF` apunten exactamente al repo y rama aprobados. No publiques el archivo `ctic-rhel10.deploy.env`: debe existir solo en la VM o en un canal seguro de entrega.
 
 5. Preparacion previa:
    Crea y llena `ctic-rhel10.deploy.env` con calma antes de conectarte al servidor.
@@ -139,7 +139,7 @@ Si no vas a usar Git en la VM, copia directamente esta carpeta del proyecto ya a
 ## 3. Exportar variables de despliegue
 
 ```bash
-export APP_DOMAIN="simuladorfinanciaciondirecta.bucaramanga.upb.edu.co"
+export APP_DOMAIN="<DOMINIO_PUBLICO_CTIC>"
 
 export DB_HOST="<DB_HOST_CTIC>"
 export DB_PORT="3306"
@@ -148,9 +148,9 @@ export DB_USER="<DB_USER_CTIC>"
 export DB_PASSWORD="<DB_PASSWORD_CTIC>"
 export DB_SSL="false"
 
-export LDAP_URL="ldap://10.146.36.100:389"
-export LDAP_DOMAIN="bga.upb"
-export LDAP_BASE_DN="OU=OU Empleados,DC=bga,DC=upb"
+export LDAP_URL="<LDAP_URL_CTIC>"
+export LDAP_DOMAIN="<LDAP_DOMAIN_CTIC>"
+export LDAP_BASE_DN="<LDAP_BASE_DN_CTIC>"
 export LDAP_TIMEOUT_MS="5000"
 
 export JWT_SECRET="<JWT_SECRET>"

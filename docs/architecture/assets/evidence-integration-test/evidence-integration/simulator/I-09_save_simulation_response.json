@@ -1,7 +1,7 @@
-{
+﻿{
     "id": "f182edd4-6058-4dc2-bccb-d7eee4ce329d",
     "createdAt": "2026-04-24T15:54:58.524Z",
-    "message": "Simulación guardada exitosamente.",
+    "message": "SimulaciÃ³n guardada exitosamente.",
     "summary": {
         "id": "f182edd4-6058-4dc2-bccb-d7eee4ce329d",
         "tuitionGross": 10000000,
@@ -48,5 +48,3 @@
         ]
     }
 }
-
-

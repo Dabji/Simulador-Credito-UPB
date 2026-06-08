@@ -1,10 +1,10 @@
-{
+﻿{
     "items": [
         {
             "id": "f182edd4-6058-4dc2-bccb-d7eee4ce329d",
             "createdAt": "2026-04-24T15:54:58.000Z",
             "studentName": "Juan Test",
-            "studentEmail": "juantest57@upb.edu.co",
+            "studentEmail": "evidence.user@example.test",
             "modality": "CON_INTERES",
             "financedValue": 8000000,
             "initialPaymentValue": 2000000,
@@ -18,4 +18,3 @@
     "total": 1,
     "totalPages": 1
 }
-

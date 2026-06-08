@@ -1,7 +1,7 @@
-{
+﻿{
     "success": false,
     "error": {
-        "message": "La sesión ha expirado",
+        "message": "La sesiÃ³n ha expirado",
         "statusCode": 401
     }
 }

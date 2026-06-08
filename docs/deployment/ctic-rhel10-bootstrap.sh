@@ -41,6 +41,10 @@ require_var() {
   if [ -z "${!var_name:-}" ]; then
     fail "La variable ${var_name} es obligatoria. Revisa ${DEPLOY_ENV_FILE}."
   fi
+
+  if [[ "${!var_name}" == __*__ ]]; then
+    fail "La variable ${var_name} conserva un placeholder. Reemplazala en ${DEPLOY_ENV_FILE}."
+  fi
 }
 
 validate_deploy_env_file() {

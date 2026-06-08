@@ -1,11 +1,11 @@
-{
-  "email": "admin@upb.edu.co",
+﻿{
+  "email": "evidence.user@example.test",
   "password": "admin/UPB27",
   "role": "ADMIN",
 
     "user": {
         "id": "4a0fa171-6a9a-4531-aceb-9e184f9f76e9",
-        "email": "admin@upb.edu.co",
+        "email": "evidence.user@example.test",
         "firstName": "Admin",
         "lastName": "Sistema",
         "documentType": "CC",
@@ -20,4 +20,3 @@
     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI0YTBmYTE3MS02YTlhLTQ1MzEtYWNlYi05ZTE4NGY5Zjc2ZTkiLCJlbWFpbCI6ImFkbWluQHVwYi5lZHUuY28iLCJyb2xlIjoiQURNSU4iLCJpYXQiOjE3NzcwMzU4ODksImV4cCI6MTc3NzA2NDY4OX0.jg8t68COddUXbJMyAbToQP8fZywnXGrzlnGLHJedJ7k"
 
 }
-

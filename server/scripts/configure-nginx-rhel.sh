@@ -4,7 +4,7 @@ set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET_CONF="/etc/nginx/conf.d/simulador-upb.conf"
-APP_DOMAIN="${APP_DOMAIN:-simuladorfinanciaciondirecta.bucaramanga.upb.edu.co}"
+APP_DOMAIN="${APP_DOMAIN:-simulador.example.edu.co}"
 PUBLIC_URL_SCHEME="${PUBLIC_URL_SCHEME:-http}"
 SSL_CERT_PATH="${SSL_CERT_PATH:-}"
 SSL_KEY_PATH="${SSL_KEY_PATH:-}"

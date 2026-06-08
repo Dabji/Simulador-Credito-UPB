@@ -58,6 +58,9 @@ Documentación operativa de HU-59 para los ambientes de Pre-Producción y Produc
 |---|---|
 | [`PRE-PROD-ENVIRONMENT.md`](./deployment/PRE-PROD-ENVIRONMENT.md) | **Pre-Producción / Staging** — Entorno automatizado con GitHub Actions, runner self-hosted RHEL, Aiven Cloud MySQL, PM2 cluster y Nginx. |
 | [`CTIC-PROD-DEPLOYMENT.md`](./deployment/CTIC-PROD-DEPLOYMENT.md) | **Producción CTIC** — Guía formal para despliegue manual/script on-premise con RHEL, Nginx, PM2, systemd y MariaDB administrada por CTIC. |
+| [`CTIC-RHEL-RUNBOOK.md`](./deployment/CTIC-RHEL-RUNBOOK.md) | **Runbook CTIC RHEL** — Pasos accionables para preparar variables, ejecutar bootstrap, validar Nginx, PM2, backend y dominio. |
+| [`HU-91-DEPLOYMENT-CLOSURE.md`](./deployment/HU-91-DEPLOYMENT-CLOSURE.md) | **HU-91** — Cierre técnico del despliegue: artefactos, evidencias, validaciones mínimas y control de seguridad para publicación. |
+| [`Manual de Despliegue Simulador - CTIC.pdf`](./Manual%20de%20Despliegue%20Simulador%20-%20CTIC.pdf) | **Manual formal CTIC** — Documento final en PDF para transferencia técnica y revisión externa. |
 
 ---
 

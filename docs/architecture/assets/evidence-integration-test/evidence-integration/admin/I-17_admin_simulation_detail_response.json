@@ -1,4 +1,4 @@
-{
+﻿{
     "success": true,
     "data": {
         "id": "f182edd4-6058-4dc2-bccb-d7eee4ce329d",
@@ -57,7 +57,7 @@
             "firstName": "Juan",
             "lastName": "Test",
             "identificationNumber": "1099001234",
-            "email": "juantest57@upb.edu.co",
+            "email": "evidence.user@example.test",
             "documentType": "CC",
             "phone": "3007654321"
         }
