@@ -262,8 +262,7 @@ Colaboradores identificados a partir del historial de Git y la autoría del art�
 | <img src="https://github.com/GabrielSastoque.png?size=80" alt="GabrielSastoque avatar" width="42" /> Gabriel Arturo Sastoque Cadena | Desarrollo, soporte académico y documentación | Git + artículo IEEE |
 | <img src="https://github.com/juanpa-arenas-upb.png?size=80" alt="juanpa-arenas-upb avatar" width="42" /> Juan Pablo Arenas Avendaño | Contribución académica y técnica | Git + artículo IEEE |
 | <img src="https://github.com/SimonP0607.png?size=80" alt="SimonP0607 avatar" width="42" /> Simón Pérez Gómez | Contribución académica y técnica | Git + artículo IEEE |
-| <a href="https://github.com/StonksUp"><img src="https://avatars.githubusercontent.com/u/184121459?v=4" alt="Matías avatar" width="42" /></a> Matías (StonksUp) | Contribución académica y técnica | GitHub / equipo del proyecto |
-| Gabriel Miguel Rodríguez Castro | Contribución académica y técnica | Git + artículo IEEE |
+| <a href="https://github.com/StonksUp"><img src="https://avatars.githubusercontent.com/u/184121459?v=4" alt="Matías avatar" width="42" /></a> Gabriel Miguel Rodríguez Castro | Contribución académica y técnica | GitHub / equipo del proyecto |
 | S. Cifuentes Cárdenas | Acompañamiento académico y autoría documental | Artículo IEEE |
 
 ## 📄 Licencia
