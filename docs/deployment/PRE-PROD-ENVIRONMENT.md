@@ -46,20 +46,11 @@ forma automatizada con GitHub Actions sobre Red Hat Enterprise Linux.
 
 ## 2. Arquitectura Actual
 
-```mermaid
-flowchart LR
-    GH["GitHub<br/>push main"] --> GA["GitHub Actions<br/>deploy.yml"]
-    GA --> RUN["Self-hosted runner<br/>RHEL 10.1"]
-    RUN --> ENV["server/.env<br/>generado por workflow"]
-    RUN --> BUILD["npm ci + build<br/>client/server"]
-    BUILD --> NG["Nginx<br/>/usr/share/nginx/html/*"]
-    RUN --> PM2["PM2 reload<br/>cluster 4 workers"]
-    PM2 --> BE["Express API<br/>:3000"]
-    NG -->|"/api/*"| BE
-    BE -->|"SSL DB_SSL=true"| DB["Aiven Cloud MySQL<br/>(MariaDB-compatible) :13557"]
-    BE -->|"SMTP 587"| SMTP["Brevo SMTP"]
-    BE -->|"LDAP"| LDAP["Active Directory UPB"]
-```
+<div align="center">
+  <img src="./assets/preprod-deployment.png" alt="Diagrama de preproduccion con GitHub Actions y runner RHEL" width="920" />
+  <br />
+  <em>Preproduccion: GitHub Actions, runner self-hosted, Nginx, PM2, Aiven, LDAP y SMTP.</em>
+</div>
 
 ### Componentes
 

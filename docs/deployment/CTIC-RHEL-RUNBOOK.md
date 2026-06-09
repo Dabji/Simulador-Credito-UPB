@@ -128,10 +128,10 @@ git clone <URL_DEL_REPOSITORIO> app
 cd app
 ```
 
-Si publicas esta rama en remoto, luego ejecuta:
+Si el despliegue se hara desde Git, cambia a la rama aprobada por el equipo o a la rama estable publicada:
 
 ```bash
-git checkout feat/ctic-rhel-deploy
+git checkout <RAMA_APROBADA>
 ```
 
 Si no vas a usar Git en la VM, copia directamente esta carpeta del proyecto ya ajustada a `/opt/simulador/app`.

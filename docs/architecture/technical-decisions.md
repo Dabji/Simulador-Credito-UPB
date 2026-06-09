@@ -48,15 +48,9 @@ server/src/
 
 ### Flujo de Dependencias
 
-```mermaid
-graph LR
-    INF["🟠 Infrastructure<br/>(Express, Sequelize, JWT)"] --> APP["🟢 Application<br/>(Use Cases, Services, DTOs)"]
-    APP --> CORE["🔵 Core<br/>(Entities, Repo Interfaces, Errors)"]
-
-    style CORE fill:#3B82F6,stroke:#1E40AF,stroke-width:2px,color:#fff
-    style APP fill:#22C55E,stroke:#15803D,stroke-width:2px,color:#fff
-    style INF fill:#F97316,stroke:#C2410C,stroke-width:2px,color:#fff
-```
+<div align="center">
+  <img src="./assets/diagrams/component-diagram.png" alt="Diagrama de componentes y dependencias del backend" width="900" />
+</div>
 
 > **Regla de oro:** Las dependencias siempre apuntan hacia adentro. `Core` no importa nada de `Application` ni `Infrastructure`.
 
@@ -103,39 +97,9 @@ Se implementa el **Strategy Pattern** mediante una interfaz `InterestStrategy` c
 
 ### Diagrama de Clases
 
-```mermaid
-classDiagram
-    class InterestStrategy {
-        <<interface>>
-        +resolveMonthlyRate(input, activeVersion?) number
-        +computePeriodicPayment(financed, rate, n) number
-    }
-
-    class FrenchAmortizationStrategy {
-        +resolveMonthlyRate(input, activeVersion?) number
-        +computePeriodicPayment(financed, rate, n) number
-    }
-
-    class NoInterestStrategy {
-        +resolveMonthlyRate(input, activeVersion?) number
-        +computePeriodicPayment(financed, rate, n) number
-    }
-
-    class SimulationEngine {
-        -strategies: Record~string, InterestStrategy~
-        +computeSummary(input, params, activeVersion?) SimulationSummary
-        +buildAmortizationSchedule(input, params, activeVersion?) AmortizationRowDTO[]
-        -getStrategy(mode) InterestStrategy
-        -normalizeInput(input) SimulationInput
-    }
-
-    InterestStrategy <|.. FrenchAmortizationStrategy
-    InterestStrategy <|.. NoInterestStrategy
-    SimulationEngine --> InterestStrategy : usa
-
-    style InterestStrategy fill:#3B82F6,stroke:#1E40AF,color:#fff
-    style SimulationEngine fill:#F97316,stroke:#C2410C,color:#fff
-```
+<div align="center">
+  <img src="./assets/diagrams/application-server.png" alt="Diagrama del servidor de aplicacion y motor financiero" width="900" />
+</div>
 
 ### Registro de Estrategias
 
@@ -189,18 +153,13 @@ Esta normalización ocurre en `SimulationEngine.normalizeInput()` y garantiza qu
 
 ### Pipeline de Validación
 
-```mermaid
-graph LR
-    A["📥 Request"] --> B["🛡️ xssMiddleware<br/>(sanitiza body/query/params)"]
-    B --> C["✅ validateRequest(ZodSchema)<br/>(parsea + transforma)"]
-    C --> D["⚙️ Handler / Use Case"]
-    C -->|❌ ZodError| E["🚨 errorHandler<br/>(400 + fieldErrors)"]
-
-    style B fill:#EF4444,stroke:#991B1B,color:#fff
-    style C fill:#3B82F6,stroke:#1E40AF,color:#fff
-    style D fill:#22C55E,stroke:#15803D,color:#fff
-    style E fill:#F59E0B,stroke:#92400E,color:#000
-```
+| Etapa | Responsabilidad |
+|---|---|
+| Request HTTP | Recibe body, query y params. |
+| `xssMiddleware` | Sanitiza entradas antes de llegar al caso de uso. |
+| `validateRequest(ZodSchema)` | Parsea, transforma y rechaza payloads invalidos. |
+| Handler / Use Case | Ejecuta la operacion con datos ya tipados. |
+| `errorHandler` | Devuelve `400` y `fieldErrors` cuando Zod rechaza la entrada. |
 
 ### Ejemplo Real: SimulationInputSchema
 
@@ -260,33 +219,11 @@ Ambos flujos convergen en un **JWT stateless** que se envía al frontend y se va
 
 ### Flujo de Autenticación
 
-```mermaid
-sequenceDiagram
-    actor U as Usuario
-    participant FE as React Frontend
-    participant BE as Express Backend
-    participant DB as MySQL
-    participant AD as Active Directory
-
-    U->>FE: Ingresa credenciales
-    FE->>BE: POST /api/auth/login {email, password, role}
-
-    alt role === STUDENT
-        BE->>DB: Buscar usuario por email
-        DB-->>BE: User record
-        BE->>BE: bcrypt.compare(password, hash)
-    else role === ADMIN
-        BE->>AD: LDAP bind (username, password)
-        AD-->>BE: Bind result + user data
-    end
-
-    BE->>BE: Generar JWT (userId, role, exp)
-    BE-->>FE: {user, token}
-    FE->>FE: Guardar token en memoria
-    FE->>BE: Requests subsiguientes con Authorization: Bearer <token>
-    BE->>BE: authGuard → verifyToken()
-    BE->>BE: roleGuard → verificar rol en BD
-```
+| Rol | Validacion primaria | Resultado |
+|---|---|---|
+| `STUDENT` | Usuario local en base de datos + `bcrypt.compare` | JWT con `userId`, rol y expiracion. |
+| `ADMIN` | LDAP/Active Directory institucional cuando aplica | JWT con rol administrativo. |
+| Requests posteriores | `Authorization: Bearer <token>` | `authGuard` y `roleGuard` validan token y rol. |
 
 ### Alternativas Evaluadas
 
@@ -452,19 +389,12 @@ Se adopta una estrategia centralizada de configuración por ambiente:
 
 ### Flujo de configuración
 
-```mermaid
-flowchart LR
-    EX[".env.example<br/>(dummy)"] --> DEV[".env local<br/>(gitignored)"]
-    DEV --> BE["Backend env.ts<br/>Zod fail-fast"]
-    DEV --> FE["Frontend Vite<br/>VITE_API_URL"]
-    PM2["PM2 / CI-CD"] --> PROD["Producción WAN<br/>secrets inyectados"]
-    PROD --> BE
-
-    style EX fill:#FEF3C7,stroke:#D97706,color:#000
-    style DEV fill:#FEE2E2,stroke:#DC2626,color:#000
-    style BE fill:#DCFCE7,stroke:#16A34A,color:#000
-    style FE fill:#DBEAFE,stroke:#2563EB,color:#000
-```
+| Ambiente | Fuente de configuracion |
+|---|---|
+| Desarrollo | `.env.example` como plantilla y `.env` local ignorado por Git. |
+| Frontend | Variables publicas `VITE_*` inyectadas durante build. |
+| Backend | `env.ts` valida con Zod y falla rapido si falta una variable critica. |
+| Produccion | PM2, sistema operativo o pipeline inyectan secretos reales fuera de Git. |
 
 ### Consecuencias
 

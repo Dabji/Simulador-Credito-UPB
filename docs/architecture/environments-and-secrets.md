@@ -43,27 +43,11 @@ La aplicación se configura desde la raíz del monorepo. El backend carga y vali
 variables al iniciar; el frontend solo consume variables públicas con prefijo
 `VITE_`.
 
-```mermaid
-flowchart TD
-    DEV["👤 Desarrollador"] -->|"copia"| TEMPLATE[".env.example<br/>(valores dummy)"]
-    TEMPLATE -->|"crea localmente"| LOCAL[".env<br/>(gitignored)"]
-
-    LOCAL -->|"dotenv + Zod"| BACK["🟢 Backend<br/>server/src/Infrastructure/config/env.ts"]
-    LOCAL -->|"envDir + VITE_*"| FRONT["⚛️ Frontend<br/>Vite"]
-
-    PM2["PM2 / Sistema Operativo"] -->|"inyecta secrets"| PROD_BACK["Backend Producción"]
-    CICD["Pipeline CI/CD"] -->|"inyecta variables públicas"| PROD_FRONT["Build Frontend"]
-    CERTS["server/certs/ca.pem<br/>(fuera de Git)"] -->|"SSL CA"| PROD_BACK
-
-    BACK -->|"fail-fast si falta secret"| DB["🗄️ MySQL Aiven"]
-    PROD_BACK -->|"DB_SSL=true"| DB
-
-    style TEMPLATE fill:#FEF3C7,stroke:#D97706,color:#000
-    style LOCAL fill:#FEE2E2,stroke:#DC2626,color:#000
-    style BACK fill:#DCFCE7,stroke:#16A34A,color:#000
-    style FRONT fill:#DBEAFE,stroke:#2563EB,color:#000
-    style PROD_BACK fill:#EDE9FE,stroke:#7C3AED,color:#000
-```
+<div align="center">
+  <img src="./assets/diagrams/system-context.png" alt="Contexto de ambiente, backend, base de datos e integraciones" width="900" />
+  <br />
+  <em>Vista de contexto usada para entender que variables y secretos necesita cada integracion.</em>
+</div>
 
 ### Responsabilidades por componente
 
@@ -184,25 +168,13 @@ configuración.
 
 ### Inyección en producción
 
-```mermaid
-sequenceDiagram
-    participant CI as Pipeline CI/CD
-    participant PM2 as PM2 / Gestor de procesos
-    participant APP as Backend Express
-    participant ENV as env.ts + Zod
-    participant DB as MySQL Aiven
-
-    CI->>PM2: Publica build sin secretos versionados
-    PM2->>APP: Inyecta variables reales del ambiente
-    APP->>ENV: Valida configuración al iniciar
-
-    alt Configuración inválida
-        ENV-->>APP: Error claro + process.exit(1)
-    else Configuración válida
-        ENV-->>APP: Variables tipadas
-        APP->>DB: Conexión SSL
-    end
-```
+| Paso | Accion |
+|---|---|
+| 1 | El pipeline publica el build sin versionar secretos. |
+| 2 | PM2 o el sistema operativo inyecta variables reales del ambiente. |
+| 3 | `env.ts` valida configuracion con Zod durante el arranque. |
+| 4 | Si falta una variable critica, el backend falla rapido con un error claro. |
+| 5 | Si la configuracion es valida, el backend inicia y conecta a la base de datos por SSL cuando aplica. |
 
 PM2 debe recibir las variables reales al iniciar el proceso. El archivo
 `server/ecosystem.config.js` no debe contener passwords, tokens ni certificados.

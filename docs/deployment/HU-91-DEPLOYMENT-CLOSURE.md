@@ -10,7 +10,7 @@ El objetivo es que un integrante del equipo, evaluador o responsable tecnico pue
 
 | Artefacto | Proposito |
 |---|---|
-| [`Manual de Despliegue Simulador - CTIC.pdf`](../Manual%20de%20Despliegue%20Simulador%20-%20CTIC.pdf) | Manual formal de despliegue y validacion para CTIC. |
+| [`Manual de Despliegue Simulador - CTIC.pdf`](./Manual%20de%20Despliegue%20Simulador%20-%20CTIC.pdf) | Manual formal de despliegue y validacion para CTIC. |
 | [`CTIC-RHEL-RUNBOOK.md`](./CTIC-RHEL-RUNBOOK.md) | Runbook operativo para ejecutar el despliegue en VM RHEL. |
 | [`CTIC-PROD-DEPLOYMENT.md`](./CTIC-PROD-DEPLOYMENT.md) | Guia tecnica de arquitectura productiva, variables, puertos y operacion. |
 | [`ctic-rhel10-bootstrap.sh`](./ctic-rhel10-bootstrap.sh) | Script maestro de bootstrap para RHEL 10. |
@@ -47,7 +47,7 @@ El objetivo es que un integrante del equipo, evaluador o responsable tecnico pue
 |---|---|
 | Backend local | `curl --fail http://localhost:3000/api/health` |
 | API por proxy | `curl --fail http://localhost/api/health` |
-| Nginx | `sudo nginx -t` |
+| Nginx | `nginx -t` con privilegios de administrador o mediante el helper `run_privileged` del bootstrap. |
 | Proceso PM2 | `pm2 status` y `pm2 logs simulador-backend --lines 100` |
 | Frontend | Abrir el dominio y verificar que la SPA cargue sin errores visibles. |
 | Flujo invitado | Crear simulacion de invitado y revisar tabla de resultado. |
