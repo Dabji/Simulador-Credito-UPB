@@ -1,37 +1,46 @@
 # =============================================================================
-# CAPA 2: DevSecOps — Dependabot (Gestión de Dependencias)
+# CAPA 2: DevSecOps — Dependabot (Gestión de Dependencias Optimizada)
 # =============================================================================
-# Revisa semanalmente las dependencias npm de cada directorio del monorepo.
-# Si detecta actualizaciones o vulnerabilidades, crea PRs automáticos.
+# Revisa mensualmente las dependencias del monorepo y las agrupa en un único PR
+# para evitar saturar la pestaña de Pull Requests en el repositorio público.
 # =============================================================================
 
 version: 2
 
 updates:
-  # ─── npm (Monorepo raíz — cubre client/ y server/ via workspaces) ───
+  # ─── npm (Monorepo raíz — mensual y agrupado) ───
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
       day: monday
       time: "08:00"
       timezone: America/Bogota
+    open-pull-requests-limit: 1 # Máximo un PR agrupado abierto a la vez
+    groups:
+      production-dependencies:
+        patterns:
+          - "*" # Agrupa TODOS los paquetes de npm en un solo Pull Request
     labels:
       - "dependencies"
     commit-message:
       prefix: "deps(npm):"
-    open-pull-requests-limit: 10
     reviewers:
       - "Dabji"
 
-  # ─── GitHub Actions ───
+  # ─── GitHub Actions (Mensual y agrupado) ───
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
       day: monday
       time: "08:00"
       timezone: America/Bogota
+    open-pull-requests-limit: 1
+    groups:
+      actions-dependencies:
+        patterns:
+          - "*" # Agrupa todas las actualizaciones de Actions en un solo PR
     labels:
       - "dependencies"
       - "ci/cd"
