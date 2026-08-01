@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: 📥 Descargar último código
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
