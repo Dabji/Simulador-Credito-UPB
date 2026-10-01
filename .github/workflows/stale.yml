@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 🧹 Marcar y cerrar stale
-        uses: actions/stale@v10
+        uses: actions/stale@v11
         with:
           # ─── Issues ───
           days-before-stale: 30
