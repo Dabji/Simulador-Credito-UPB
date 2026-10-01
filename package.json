@@ -15,7 +15,7 @@
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\""
   },
   "devDependencies": {
-    "concurrently": "^10.0.3"
+    "concurrently": "^10.0.5"
   },
   "overrides": {
     "rollup": "^4.20.0",
